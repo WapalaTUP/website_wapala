@@ -1,0 +1,22 @@
+[Unit]
+Description=WAPALA overdue loan reconciliation
+After=network-online.target postgresql.service
+# Root-controlled opt-in gate: create only after deployment validation.
+ConditionPathExists=/etc/wapala/loans-overdue.enabled
+
+[Service]
+Type=oneshot
+User=wapala
+Group=wapala
+WorkingDirectory=/srv/wapala/current
+EnvironmentFile=/etc/wapala/production.env
+ExecStart=/usr/bin/npm run loans:overdue
+TimeoutStartSec=60
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryAccounting=true
+MemoryMax=256M
+TasksMax=64

@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.next-http-test/
+out/
+*.tsbuildinfo
+.env*
+!.env.example
+test-results/
+.codegraph/
+.codegraph-*/
+.local/
+src/generated/
+output/
+imports/

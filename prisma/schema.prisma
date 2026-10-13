@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_USER
+  POH
+  MULTIMEDIA
+  INVENTARIS
+}
+
+model User {
+  id                 String               @id @default(uuid()) @db.Uuid
+  email              String               @unique
+  name               String
+  role               Role
+  passwordHash       String
+  credentialVersion  Int                  @default(0)
+  mustChangePassword Boolean              @default(true)
+  recoveryEmail      String?
+  active             Boolean              @default(true)
+  archivedAt         DateTime?
+  failedLoginCount   Int                  @default(0)
+  lockUntil          DateTime?
+  requiresUnlock     Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  sessions           Session[]
+  resetTokens        PasswordResetToken[]
+}
+
+model Session {
+  id                String    @id @default(uuid()) @db.Uuid
+  tokenHash         String    @unique
+  csrfDigest        String
+  userId            String    @db.Uuid
+  user              User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  credentialVersion Int
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime
+  revokedAt         DateTime?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([userId, usedAt])
+  @@index([expiresAt])
+}
+
+model BootstrapState {
+  id          Int       @id
+  tokenHash   String?
+  expiresAt   DateTime?
+  completedAt DateTime?
+}
+
+model SiteSettings {
+  id                Int      @id
+  managementYear    Int      @default(2026)
+  recruitmentActive Boolean  @default(false)
+  config            Json     @default("{}")
+  updatedAt         DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorType String
+  actorId   String?
+  action    String
+  entityId  String?
+  summary   Json     @default("{}")
+  ipDigest  String
+  userAgent String
+  requestId String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt, id])
+}
+
+model SecurityThrottle {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model EmailOutbox {
+  id            String    @id @default(uuid()) @db.Uuid
+  payload       String?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  leaseUntil    DateTime?
+  leaseToken    String?
+  deliveredAt   DateTime?
+  expiresAt     DateTime
+  lastError     String?
+  createdAt     DateTime  @default(now())
+
+  @@index([deliveredAt, nextAttemptAt])
+}
+
+enum CampaignStatus {
+  draft
+  active
+  closed
+  archived
+}
+
+enum DonationStatus {
+  waiting
+  verified
+  rejected
+}
+
+model Campaign {
+  id           String @id @default(uuid()) @db.Uuid
+  version      Int @default(1)
+  title        String
+  description  String
+  target       Decimal @db.Decimal(16, 0)
+  collaborator String
+  start        DateTime? @db.Date
+  end          DateTime? @db.Date
+  status       CampaignStatus @default(draft)
+  cover        String @default("")
+  poster       String @default("")
+  qrisImage    String @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  bankAccounts CampaignBankAccount[]
+  donations    Donation[]
+  @@index([status, createdAt])
+}
+
+model CampaignBankAccount {
+  id         String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  bank       String
+  number     String
+  holder     String
+  position   Int
+  @@unique([campaignId, bank, number])
+}
+
+model Donation {
+  id               String @id @default(uuid()) @db.Uuid
+  campaignId       String @db.Uuid
+  campaign         Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  name             String
+  amount           Decimal @db.Decimal(16, 0)
+  method           String
+  bankAccountId    String? @db.Uuid
+  bankAccountLabel String?
+  proof            String @default("")
+  status           DonationStatus @default(waiting)
+  note             String @default("")
+  archivedAt       DateTime?
+  createdAt        DateTime @default(now())
+  reviewedAt       DateTime?
+  @@index([campaignId, status, archivedAt])
+}
+
+model RecruitmentPeriod {
+  year       Int @id
+  active     Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  applicants Applicant[]
+}
+
+model Applicant {
+  id          String @id @default(uuid()) @db.Uuid
+  code        String @unique
+  year        Int
+  period      RecruitmentPeriod @relation(fields: [year], references: [year], onDelete: Restrict)
+  nim         String
+  phoneDigest String
+  fields      Json
+  photo       String @default("")
+  revisions   Int @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  history     ApplicantRevision[]
+  @@unique([year, nim])
+  @@index([year, createdAt])
+}
+
+model ApplicantRevision {
+  id          String @id @default(uuid()) @db.Uuid
+  applicantId String @db.Uuid
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  number      Int
+  fields      Json
+  photo       String
+  createdAt   DateTime @default(now())
+  @@unique([applicantId, number])
+}
+
+model PublicFormReceipt {
+  id             String @id @default(uuid()) @db.Uuid
+  kind           String
+  idempotencyKey String @db.Uuid
+  ownerDigest    String
+  payloadDigest  String
+  response       Json
+  createdAt      DateTime @default(now())
+  @@unique([kind, idempotencyKey])
+  @@index([createdAt])
+}
+
+model Member {
+  id         String @id @default(uuid()) @db.Uuid
+  version    Int @default(1)
+  nia        String @unique
+  nim        String? @unique
+  fields     Json
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum ContentKind {
+  konten
+  galeri
+  buku
+}
+
+model ContentRecord {
+  id         String @id @default(uuid()) @db.Uuid
+  kind       ContentKind
+  version    Int @default(1)
+  fields     Json
+  published  Boolean @default(false)
+  sourceId   String?
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([kind, sourceId])
+  @@index([kind, published, archivedAt])
+}
+
+model Equipment {
+  id          String @id @default(uuid()) @db.Uuid
+  version     Int @default(1)
+  code        String @unique
+  name        String
+  category    String
+  brand       String @default("")
+  typeColor   String @default("")
+  source      String @default("")
+  yearEntered String @default("")
+  photo       String @default("")
+  total       Int
+  fit         Int
+  condition   String
+  location    String
+  available   Boolean @default(false)
+  maxDays     Int @default(7)
+  maxQuantity Int @default(1)
+  notes       String @default("")
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  loanItems   LoanItem[]
+}
+
+enum LoanStatus {
+  requested
+  approved
+  borrowed
+  awaiting_return
+  late
+  returned
+  rejected
+}
+
+model Loan {
+  id               String @id @default(uuid()) @db.Uuid
+  code             String @unique
+  institution      String
+  pic              String
+  phone            String
+  phoneDigest      String
+  email            String
+  start            DateTime @db.Date
+  end              DateTime @db.Date
+  purpose          String
+  event            String
+  collateral       String
+  collateralStatus String @default("pending")
+  status           LoanStatus @default(requested)
+  notes            String @default("")
+  originYear       Int
+  managementYear   Int
+  penalty          Decimal @default(0) @db.Decimal(16, 0)
+  penaltyStatus    String @default("none")
+  attachments      Json @default("[]")
+  archivedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  items            LoanItem[]
+  history          LoanHistory[]
+  @@index([status, start, end])
+  @@index([managementYear, archivedAt])
+}
+
+model LoanItem {
+  id              String @id @default(uuid()) @db.Uuid
+  loanId          String @db.Uuid
+  loan            Loan @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  equipmentId     String @db.Uuid
+  equipment       Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  requested       Int
+  approved        Int @default(0)
+  reason          String @default("")
+  outCondition    String @default("Baik")
+  returnCondition String @default("")
+  @@unique([loanId, equipmentId])
+  @@index([equipmentId])
+}
+
+model LoanHistory {
+  id        String @id @default(uuid()) @db.Uuid
+  loanId    String @db.Uuid
+  loan      Loan @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  status    LoanStatus
+  note      String
+  actorId   String?
+  createdAt DateTime @default(now())
+  @@index([loanId, createdAt])
+}
+
+model Media {
+  id            String @id @default(uuid()) @db.Uuid
+  purpose       String
+  visibility    String
+  mime          String
+  extension     String
+  checksum      String
+  originalHash  String
+  size          Int
+  width         Int?
+  height        Int?
+  ownerId       String? @db.Uuid
+  ownerDigest   String?
+  boundTo       String?
+  scannedAt     DateTime
+  createdAt     DateTime @default(now())
+  @@index([purpose, createdAt])
+}
+
+model Event {
+  id String @id @default(uuid()) @db.Uuid
+  version Int @default(1)
+  status String @default("draft")
+  draft Json
+  publishedRevisionId String? @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  revisions EventFormRevision[]
+  registrations EventRegistration[]
+  replayFences EventReplayFence[]
+}
+
+model EventFormRevision {
+  id String @id @default(uuid()) @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  number Int
+  snapshot Json
+  createdBy String @db.Uuid
+  createdAt DateTime @default(now())
+  registrations EventRegistration[]
+  @@unique([eventId, number])
+  @@unique([id, eventId])
+}
+
+model EventRegistration {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  eventId String @db.Uuid
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  revisionId String @db.Uuid
+  revision EventFormRevision @relation(fields: [revisionId, eventId], references: [id, eventId], onDelete: Restrict)
+  idempotencyKey String @db.Uuid
+  ownerDigest String
+  payloadDigest String
+  answers Json
+  createdAt DateTime @default(now())
+  @@unique([eventId, idempotencyKey])
+  @@index([eventId, createdAt])
+}
+
+model EventReplayFence {
+  eventId String @db.Uuid
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  idempotencyKey String @db.Uuid
+  ownerDigest String
+  payloadDigest String
+  createdAt DateTime @default(now())
+  @@id([eventId, idempotencyKey])
+}

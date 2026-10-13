@@ -1,0 +1,275 @@
+{
+  "fileKey": "DyJtOaAL48FToc6HAH3pyU",
+  "createdNodeIds": [
+    "6:244",
+    "6:245",
+    "6:246",
+    "6:247",
+    "6:248",
+    "6:249",
+    "6:250",
+    "6:251",
+    "6:252",
+    "6:253",
+    "6:254",
+    "6:255",
+    "6:256",
+    "6:257",
+    "6:258",
+    "6:259",
+    "6:260",
+    "6:261",
+    "6:262",
+    "6:263",
+    "6:264",
+    "6:265",
+    "6:266",
+    "6:267",
+    "6:268",
+    "6:269",
+    "6:270",
+    "6:271",
+    "6:272",
+    "6:273",
+    "6:274",
+    "6:275",
+    "6:276",
+    "6:277",
+    "6:278",
+    "6:279",
+    "6:280",
+    "6:281",
+    "6:282",
+    "6:283",
+    "6:284",
+    "6:285",
+    "6:286",
+    "6:287",
+    "6:288",
+    "6:289",
+    "6:290",
+    "6:291",
+    "6:292",
+    "6:293",
+    "6:294",
+    "6:295",
+    "6:296",
+    "6:297",
+    "6:298",
+    "6:299",
+    "6:300",
+    "6:301",
+    "6:302",
+    "6:303",
+    "6:304",
+    "6:305",
+    "6:306",
+    "6:307",
+    "6:308",
+    "6:309",
+    "6:310",
+    "6:311",
+    "6:312",
+    "6:313",
+    "6:314",
+    "6:315",
+    "6:316",
+    "6:317",
+    "6:318",
+    "6:319",
+    "6:320",
+    "6:321",
+    "6:322",
+    "6:323",
+    "6:324",
+    "6:325",
+    "6:326",
+    "6:327",
+    "6:328",
+    "6:329",
+    "6:330",
+    "6:331",
+    "6:332",
+    "6:333",
+    "6:334",
+    "6:335",
+    "6:336",
+    "6:338",
+    "6:339",
+    "6:340",
+    "6:341",
+    "6:342",
+    "6:343",
+    "6:344",
+    "6:345",
+    "6:346",
+    "6:347"
+  ],
+  "mutatedNodeIds": [
+    "0:1"
+  ],
+  "pageId": "0:1",
+  "pages": {
+    "01 · Website publik & alur": "6:346",
+    "02 · Admin & mobile": "6:347"
+  },
+  "components": {
+    "Button": {
+      "id": "6:292",
+      "primary": "6:274",
+      "secondary": "6:280",
+      "ghost": "6:286",
+      "labelKey": "Label#6:22"
+    },
+    "Input": {
+      "id": "6:309",
+      "default": "6:293",
+      "error": "6:301",
+      "labelKey": "Label#6:32",
+      "valueKey": "Value#6:37"
+    },
+    "Status": {
+      "id": "6:320",
+      "variants": [
+        {
+          "id": "6:310",
+          "name": "Status=Diajukan"
+        },
+        {
+          "id": "6:312",
+          "name": "Status=Disetujui"
+        },
+        {
+          "id": "6:314",
+          "name": "Status=Dipinjam"
+        },
+        {
+          "id": "6:316",
+          "name": "Status=Ditolak"
+        },
+        {
+          "id": "6:318",
+          "name": "Status=Diarsipkan"
+        }
+      ]
+    },
+    "Card": {
+      "id": "6:321",
+      "titleKey": "Title#6:42",
+      "metaKey": "Meta#6:43"
+    },
+    "Nav": {
+      "id": "6:325",
+      "logo": "6:327"
+    },
+    "Footer": {
+      "id": "6:338"
+    }
+  },
+  "assets": {
+    "logo": "6:268",
+    "arti-logo": "6:269",
+    "hero": "6:270",
+    "hutan": "6:271",
+    "climbing": "6:272",
+    "camp": "6:273"
+  },
+  "collections": [
+    {
+      "id": "VariableCollectionId:6:175",
+      "name": "WAPALA / Primitives",
+      "modes": [
+        {
+          "name": "Value",
+          "modeId": "6:4"
+        }
+      ],
+      "variables": 17
+    },
+    {
+      "id": "VariableCollectionId:6:193",
+      "name": "WAPALA / Light",
+      "modes": [
+        {
+          "name": "Light",
+          "modeId": "6:5"
+        }
+      ],
+      "variables": 13
+    },
+    {
+      "id": "VariableCollectionId:6:194",
+      "name": "WAPALA / Dark",
+      "modes": [
+        {
+          "name": "Dark",
+          "modeId": "6:6"
+        }
+      ],
+      "variables": 13
+    },
+    {
+      "id": "VariableCollectionId:6:221",
+      "name": "WAPALA / Spacing & shape",
+      "modes": [
+        {
+          "name": "Value",
+          "modeId": "6:7"
+        }
+      ],
+      "variables": 14
+    }
+  ],
+  "variables": {
+    "paper": "VariableID:6:195",
+    "dark/paper": "VariableID:6:196",
+    "ink": "VariableID:6:197",
+    "dark/ink": "VariableID:6:198",
+    "muted": "VariableID:6:199",
+    "dark/muted": "VariableID:6:200",
+    "border": "VariableID:6:201",
+    "dark/border": "VariableID:6:202",
+    "surface": "VariableID:6:203",
+    "dark/surface": "VariableID:6:204",
+    "sky": "VariableID:6:205",
+    "dark/sky": "VariableID:6:206",
+    "field": "VariableID:6:207",
+    "dark/field": "VariableID:6:208",
+    "trail": "VariableID:6:209",
+    "dark/trail": "VariableID:6:210",
+    "trailHover": "VariableID:6:211",
+    "dark/trailHover": "VariableID:6:212",
+    "white": "VariableID:6:213",
+    "dark/white": "VariableID:6:214",
+    "successBg": "VariableID:6:215",
+    "dark/successBg": "VariableID:6:216",
+    "warning": "VariableID:6:217",
+    "dark/warning": "VariableID:6:218",
+    "warningBg": "VariableID:6:219",
+    "dark/warningBg": "VariableID:6:220",
+    "space/4": "VariableID:6:222",
+    "space/8": "VariableID:6:223",
+    "space/12": "VariableID:6:224",
+    "space/16": "VariableID:6:225",
+    "space/24": "VariableID:6:226",
+    "space/32": "VariableID:6:227",
+    "space/40": "VariableID:6:228",
+    "space/48": "VariableID:6:229",
+    "space/64": "VariableID:6:230",
+    "space/80": "VariableID:6:231",
+    "space/96": "VariableID:6:232",
+    "radius/0": "VariableID:6:233",
+    "radius/4": "VariableID:6:234",
+    "radius/8": "VariableID:6:235"
+  },
+  "styles": {
+    "Display": "S:e0494e20d981cb063ec68ff49c2d2f784c7fb074,",
+    "H1": "S:ce2be793a62dc301bbd1a46395b8253677c33c06,",
+    "H2": "S:ad6009e369d9188f57c769921e906f8ad9da9b19,",
+    "H3": "S:e0dd4ea4474d0ca5a6c23d8259bb7da25c5af943,",
+    "Body": "S:2e17095238066c9c6f8fd15aa9bcb21cc525a7d7,",
+    "Lead": "S:47637adb0fa647b93dde41a1f2d3d62757ce0d82,",
+    "Label": "S:3359b38e8380e3979ac62cca215037ee7f40f158,",
+    "Caption": "S:aa6855da05e80a029276ec00e5fced798def0929,"
+  }
+}

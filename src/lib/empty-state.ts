@@ -1,0 +1,35 @@
+import type { DemoState } from "./types";
+export function emptyState(): DemoState {
+  return {
+    backend: true,
+    campaigns: [],
+    publicEquipment: [],
+    equipment: [],
+    loans: [],
+    applicants: [],
+    donations: [],
+    audit: [],
+    records: { anggota: [], konten: [], galeri: [], buku: [], pengguna: [] },
+    settings: {
+      managementPeriod: "",
+      recruitmentActive: false,
+      donationActive: false,
+      period: "",
+      periods: [],
+      email: "",
+      whatsapp: "",
+      address: "",
+      instagram: "",
+      tiktok: "",
+      youtube: "",
+      map: "",
+      campaignTitle: "",
+      campaignDescription: "",
+      campaignTarget: 0,
+      campaignBank: "",
+      campaignAccount: "",
+      campaignCollaborator: "",
+      campaignEnd: "",
+    },
+  };
+}

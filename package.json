@@ -1,0 +1,70 @@
+{
+  "name": "wapala-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx scripts/backend-dev.ts",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "tsx --test tests/*.test.ts",
+    "test:backend": "tsx --conditions=react-server --test tests/backend/*.test.ts",
+    "test:backend:integration": "tsx --conditions=react-server scripts/backend-integration.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "auth:bootstrap-token": "tsx --conditions=react-server scripts/bootstrap-token.ts",
+    "auth:recover-superuser": "tsx --conditions=react-server scripts/recover-superuser.ts",
+    "email:worker": "tsx --conditions=react-server scripts/email-worker.ts",
+    "loans:overdue": "tsx --conditions=react-server scripts/loan-overdue.ts",
+    "media:cleanup-events": "tsx --conditions=react-server scripts/event-media-cleanup.ts",
+    "db:local": "tsx scripts/local-postgres.ts"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.2.0",
+    "@fontsource/manrope": "^5.2.0",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "argon2": "0.45.1",
+    "dotenv": "17.2.3",
+    "epubjs": "^0.3.93",
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.468.0",
+    "next": "16.4.0",
+    "nodemailer": "10.1.0",
+    "pdfjs-dist": "^6.4.299",
+    "pg": "8.23.1",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "server-only": "0.0.1",
+    "sharp": "0.35.5",
+    "yauzl": "3.4.0",
+    "zod": "4.6.7"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "mysql2": "3.24.5",
+    "@xmldom/xmldom": "^0.9.12",
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "8.0.2",
+    "@types/pg": "8.23.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/yauzl": "3.4.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.4.0",
+    "prettier": "^3.9.10",
+    "prisma": "7.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
