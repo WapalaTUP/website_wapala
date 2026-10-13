@@ -32,6 +32,15 @@ Format: tanggal, status (diagnosis/perbaikan), file yang disentuh, dan alasannya
 - `.gitignore` sudah menutup `.env*` (kecuali example), `.local/`, `node_modules/`, `.next/`, `src/generated/`, `output/`.
 - Scan secret: tidak ada secret hardcoded di `src/`; template env hanya placeholder.
 - Remote: `https://github.com/hulwanulazka-companion/wapala_dev.git` (repo kosong, terverifikasi `git ls-remote`).
+- Commit pertama `715342c` — 454 file, terverifikasi 0 `node_modules`, 0 `.env` asli.
+- Push awal gagal 403 (kredensial tersimpan milik akun `HulwanulAzkaP`, repo milik `hulwanulazka-companion`); SSH key lokal juga belum terdaftar di GitHub.
+- User mengundang `HulwanulAzkaP` sebagai collaborator → push ulang SUKSES: `master` → `origin/master` (tracking aktif).
+- Isi commit: kode sumber audited + konfigurasi + migrasi Prisma + docs + deploy; TANPA node_modules (user clone lalu `npm ci` + `db:generate` + `db:migrate` + `build`).
+
+### Perubahan 4 — README ditulis ulang (perintah user)
+- `README.md` lama adalah catatan checkpoint UI yang sudah kedaluwarsa ("backend belum dimulai") — dipindahkan apa adanya ke `agent_readme.md` baru, diberi header arsip riwayat agent + peringatan info basi.
+- `README.md` baru ditulis sebagai dokumentasi proyek: fitur situs publik & portal admin (divisi alam: Gunung & Hutan, Rock Climbing, Caving, Rafting), tabel teknologi, quickstart development, bootstrap Super User, perintah verifikasi, deployment (pointer ke `docs/` + `deploy/`), ringkasan keamanan formulir publik (tanpa verifikasi pihak ketiga), dan struktur folder.
+- Fakta diambil dari kode (navigasi `shell.tsx`, divisi `lib/content.ts`, skrip `package.json`); teks profil/vision tidak di-hard-code karena tersimpan di database.
 
 ### Status diagnosis bug submit peminjaman (MASIH TERBUKA)
 - Log dev: 12x `POST /api/public/forms/submit 500` `INTERNAL` — error asli ditelan catch-all `route()` (`src/server/http/auth-handler.ts:81-91`) tanpa stack, sehingga penyebab belum terlihat di log.
