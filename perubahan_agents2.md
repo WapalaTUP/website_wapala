@@ -42,10 +42,18 @@ Format: tanggal, status (diagnosis/perbaikan), file yang disentuh, dan alasannya
 - `README.md` baru ditulis sebagai dokumentasi proyek: fitur situs publik & portal admin (divisi alam: Gunung & Hutan, Rock Climbing, Caving, Rafting), tabel teknologi, quickstart development, bootstrap Super User, perintah verifikasi, deployment (pointer ke `docs/` + `deploy/`), ringkasan keamanan formulir publik (tanpa verifikasi pihak ketiga), dan struktur folder.
 - Fakta diambil dari kode (navigasi `shell.tsx`, divisi `lib/content.ts`, skrip `package.json`); teks profil/vision tidak di-hard-code karena tersimpan di database.
 
-### Status diagnosis bug submit peminjaman (MASIH TERBUKA)
-- Log dev: 12x `POST /api/public/forms/submit 500` `INTERNAL` — error asli ditelan catch-all `route()` (`src/server/http/auth-handler.ts:81-91`) tanpa stack, sehingga penyebab belum terlihat di log.
-- Error `useRef is not defined` di log = keadaan lama; kini `public-transport.tsx` sudah benar dan halaman `/peminjaman` 200.
-- Diagnosis lanjutan menyusul; BELUM ada perubahan pada jalur submit.
+### Status diagnosis bug submit peminjaman (SELESAI — akar masalah ditemukan & diperbaiki)
+
+**Akar masalah:** migrasi `202610140002_public_forms` (membuat tabel `PublicFormReceipt` + `ApplicantRevision`) belum diterapkan ke database dev lokal. DB hanya sampai `202610130009_event_replay_fences`. Setiap submit memanggil `publicFormReceipt.findUnique` di transaksi awal → Prisma error "relation does not exist" → bukan `DomainError` → catch-all `route()` → **500 INTERNAL ~13ms** (12x di log). Admin/katalog/context tidak menyentuh tabel itu sehingga tampak normal; test lulus karena memakai schema per-run yang selalu di-migrate.
+
+**Tindakan:**
+1. Terapkan migrasi: `npm run db:migrate` → `202610140002_public_forms` sukses (murni additive, data aman).
+2. Verifikasi end-to-end via HTTP (persis jalur browser: cookie preauth + form-owner + header CSRF + Origin): `POST /api/public/forms/submit` → **200**, kode `WPL6P54L`, status `requested`; baris terkonfirmasi di DB (Loan + PublicFormReceipt).
+   - Catatan: uji pertama sempat 400 INVALID_INPUT — artefak alat uji (BOM UTF-8 PowerShell membuat JSON.parse gagal), BUKAN bug produk.
+   - Record uji sengaja dibiarkan: loan `WPL6P54L` institution "UJI KONEKSI (hapus)" — bukti di `/admin/peminjaman`, silakan dihapus/ditolak dari admin.
+3. Perubahan 5: `src/server/http/auth-handler.ts` — log INTERNAL kini menyertakan `message` + ringkasan `stack` (sebelumnya error asli ditelan, penyebab diagnosis kemarin lambat). Typecheck + lint lulus.
+
+**Belum berubah (fitur):** tidak ada perubahan logika fitur pada jalur submit.
 
 ---
 

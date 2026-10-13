@@ -79,7 +79,13 @@ export async function route(
         400,
       );
     console.error(
-      JSON.stringify({ event: "request_failed", requestId, code: "INTERNAL" }),
+      JSON.stringify({
+        event: "request_failed",
+        requestId,
+        code: "INTERNAL",
+        message: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack?.split("\n").slice(0, 4).join(" | ") : undefined,
+      }),
     );
     return jsonResponse(
       {
