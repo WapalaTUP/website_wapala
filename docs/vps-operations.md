@@ -114,7 +114,27 @@ Informasi pengguna: source port 33335 diteruskan ke destination port 33335.
 Nginx harus listen pada 33335; Node tetap 127.0.0.1:3000 dan PostgreSQL tetap
 localhost:5432. Jangan membuka kedua port backend/database ke publik.
 
-Akses `http://185.205.222.202:33335` mungkin untuk pemeriksaan sementara,
+Aturan SSH yang dilaporkan sudah dibuat adalah TCP, source port 33333 ke
+destination 10.88.0.51 port 22. Untuk web, tambahkan aturan TCP terpisah:
+source port 33335 ke destination 10.88.0.51 port 33335. Jangan mengubah
+aturan SSH yang sudah berhasil. Protocol TCP sesuai ketika Nginx pada VPS
+yang menangani HTTP/TLS sendiri; pilihan HTTP/HTTPS pada panel provider
+perlu diperiksa apakah merupakan layanan reverse proxy/terminasi TLS.
+Ini port forwarding, bukan pengadaan domain atau pengaturan DNS.
+
+Alamat SSH dikonfirmasi pengguna melalui Termius: 185.205.222.202 port
+33333, user codex. Penyebutan 185.202.222.202 sebelumnya adalah perbedaan
+alamat yang tidak dipakai sebagai acuan. OpenSSH langsung dari mesin development
+timeout, tetapi koneksi SSH berhasil melalui relay TCP Node lokal dengan host-key
+verification tetap aktif. Pemeriksaan read-only menunjukkan Ubuntu 22.04.5,
+RAM sekitar 1 GB (bukan 2 GB seperti rencana), tanpa swap; Node/PostgreSQL/Nginx
+tersedia, PostgreSQL active, Nginx failed, ClamAV daemon inactive, dan
+wapala.service belum terpasang. Akun codex memerlukan password untuk sudo.
+Belum ada perubahan firewall, environment, database atau service pada VPS.
+Auto-start ditunda sesuai
+instruksi terakhir pengguna; bagian enable di atas adalah panduan nanti.
+
+Akses `http://IP_PUBLIK:33335` mungkin untuk pemeriksaan sementara,
 tetapi bukan endpoint login/form produksi: konfigurasi production mensyaratkan
 HTTPS dan cookie Secure. Jangan mematikan Secure atau memakai mode development
 untuk menjadikannya produksi. Sertifikat tepercaya harus siap sebelum TLS
