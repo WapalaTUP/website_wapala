@@ -9,10 +9,21 @@ test("an approved loan prints two copies on a single A4 landscape sheet", () => 
   assert.ok(Math.abs(doc.internal.pageSize.getWidth() - 297) < 0.1);
   assert.ok(Math.abs(doc.internal.pageSize.getHeight() - 210) < 0.1);
   const pdf = doc.output();
-  assert.equal((pdf.match(/WAPALA TELKOM UNIVERSITY/g) || []).length, 2);
+  assert.equal(
+    (pdf.match(/FORM PEMINJAMAN ALAT LOGISTIK/g) || []).length,
+    2,
+  );
   assert.equal((pdf.match(/\(WPL4N8Q2\) Tj/g) || []).length, 2);
   assert.ok(pdf.includes("Salinan peminjam"));
   assert.ok(pdf.includes("Arsip logistik"));
+  assert.ok(!pdf.includes("Pratinjau frontend"));
+  assert.ok(pdf.includes("FORM PEMINJAMAN ALAT LOGISTIK"));
+  assert.ok(pdf.includes("WAHANA PENCINTA ALAM \\(WAPALA\\)"));
+  assert.ok(pdf.includes("TELKOM UNIVERSITY PURWOKERTO"));
+  assert.ok(
+    pdf.includes("Jl. D.I. Panjaitan No. 128 Purwokerto Gedung DSP TUP"),
+  );
+  assert.ok(pdf.includes("Email: wapalaittelkom@gmail.com"));
 });
 test("long equipment lists continue in matching pairs instead of running beyond the sheet", () => {
   const loan = {
@@ -23,7 +34,7 @@ test("long equipment lists continue in matching pairs instead of running beyond 
   assert.ok(doc.getNumberOfPages() > 1);
   const text = doc.output();
   assert.equal(
-    (text.match(/WAPALA TELKOM UNIVERSITY/g) || []).length,
+    (text.match(/FORM PEMINJAMAN ALAT LOGISTIK/g) || []).length,
     doc.getNumberOfPages() * 2,
   );
 });

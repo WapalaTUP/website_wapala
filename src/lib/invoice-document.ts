@@ -3,7 +3,11 @@ import type { DemoState, Loan } from "./types";
 import { date } from "./content";
 export interface InvoiceAssets {
   logo?: string;
+  logoFormat?: "PNG" | "JPEG" | "WEBP";
+  logoRatio?: number;
   telLogo?: string;
+  telLogoFormat?: "PNG" | "JPEG" | "WEBP";
+  telLogoRatio?: number;
   qr?: string;
 }
 export function buildInvoiceDocument(
@@ -51,7 +55,7 @@ export function buildInvoiceDocument(
     })),
   );
   const infoEnd =
-    64 +
+    62 +
     compactInfo.reduce(
       (height, row) =>
         height + Math.max(...row.map((v) => v.lines.length)) * 3.5 + 6,
@@ -102,76 +106,97 @@ export function buildInvoiceDocument(
         right = x + half - margin;
       const label = copy === 0 ? "Salinan peminjam" : "Arsip logistik";
       if (assets.logo) {
+        const ratio = assets.logoRatio || 2 / 3;
+        const watermarkWidth = Math.min(58, 86 * ratio);
+        const watermarkHeight = watermarkWidth / ratio;
+        const headerHeight = 15;
+        const headerWidth = headerHeight * ratio;
         doc.saveGraphicsState();
         doc.setGState(doc.GState({ opacity: 0.075 }));
         doc.addImage(
           assets.logo,
-          "PNG",
-          center - 29,
-          73,
-          58,
-          86,
+          assets.logoFormat || "PNG",
+          center - watermarkWidth / 2,
+          116 - watermarkHeight / 2,
+          watermarkWidth,
+          watermarkHeight,
           "wapala-logo",
           "FAST",
         );
         doc.restoreGraphicsState();
         doc.addImage(
           assets.logo,
-          "PNG",
+          assets.logoFormat || "PNG",
           left,
           8,
-          10,
-          15,
+          headerWidth,
+          headerHeight,
           "wapala-logo",
           "FAST",
         );
       }
-      if (assets.telLogo)
+      if (assets.telLogo) {
+        const ratio = assets.telLogoRatio || 23 / 7.88;
+        const height = 9;
+        const width = Math.min(25, height * ratio);
         doc.addImage(
           assets.telLogo,
-          "PNG",
-          right - 23,
-          10,
-          23,
-          7.88,
+          assets.telLogoFormat || "PNG",
+          right - width,
+          9,
+          width,
+          height,
           "telu-header",
           "FAST",
         );
+      }
       doc.setTextColor(24, 36, 34);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9.6);
-      doc.text("WAPALA TELKOM UNIVERSITY", center, 13, { align: "center" });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.9);
-      doc.text(doc.splitTextToSize(state.settings.address, 96), center, 18, {
+      doc.setFontSize(6.8);
+      doc.text("FORM PEMINJAMAN ALAT LOGISTIK", center, 8, {
         align: "center",
-        lineHeightFactor: 1.15,
       });
-      doc.text(state.settings.email, center, 26, { align: "center" });
+      doc.text("WAHANA PENCINTA ALAM (WAPALA)", center, 12, {
+        align: "center",
+      });
+      doc.text("TELKOM UNIVERSITY PURWOKERTO", center, 16, {
+        align: "center",
+      });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(5.7);
+      doc.text(
+        "Jl. D.I. Panjaitan No. 128 Purwokerto Gedung DSP TUP",
+        center,
+        20,
+        { align: "center" },
+      );
+      doc.text("Email: wapalaittelkom@gmail.com", center, 24, {
+        align: "center",
+      });
       doc.setDrawColor(40, 100, 65);
       doc.setLineWidth(0.35);
-      doc.line(left, 30, right, 30);
+      doc.line(left, 28, right, 28);
       doc.setFontSize(6.8);
       doc.setTextColor(86, 105, 95);
-      doc.text(label, left, 35);
+      doc.text(label, left, 33);
       doc.setTextColor(24, 36, 34);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Peminjaman alat", left, 43);
+      doc.text("Peminjaman alat", left, 41);
       doc.setFontSize(9);
-      doc.text(loan.code, left, 50);
+      doc.text(loan.code, left, 48);
       if (assets.qr)
         doc.addImage(
           assets.qr,
           "PNG",
           right - 22,
-          36,
+          34,
           22,
           22,
           "loan-qr",
           "FAST",
         );
-      let y = 64;
+      let y = 62;
       for (const row of compactInfo) {
         row.forEach((entry, col) => {
           const columnX = left + col * (contentWidth / 2 + 1);
@@ -227,7 +252,7 @@ export function buildInvoiceDocument(
       doc.line(right - 53, 195, right - 5, 195);
       doc.setFontSize(6.2);
       doc.setTextColor(86, 105, 95);
-      doc.text("Pratinjau frontend - data contoh", left, 202);
+      doc.text("Dokumen peminjaman resmi", left, 202);
       doc.text(
         loan.code + " / " + (pageIndex + 1) + " dari " + pages.length,
         right,

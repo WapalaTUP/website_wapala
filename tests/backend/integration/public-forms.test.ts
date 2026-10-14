@@ -61,7 +61,14 @@ test("native public capability routes reject foreign owners and preserve return 
     const capability=issuePublicCapability("loan",loan.id,o);
     const foreignCookies=`${cookieName("preauth")}=${csrf}; ${formOwnerCookieName()}=${issueFormOwner()}`;
     assert.equal((await send("invoice",{capability},foreignCookies)).status,403);
-    const pdf=await send("invoice",{capability});assert.equal(pdf.status,200);assert.match(pdf.headers.get("content-type")!,/application\/pdf/);assert.match(Buffer.from(await pdf.arrayBuffer()).subarray(0,8).toString(),/^%PDF-/);
+    const pdf=await send("invoice",{capability});assert.equal(pdf.status,200);assert.match(pdf.headers.get("content-type")!,/application\/pdf/);
+    const bytes=Buffer.from(await pdf.arrayBuffer());
+    assert.match(bytes.subarray(0,8).toString(),/^%PDF-/);
+    const source=bytes.toString("latin1");
+    assert.ok(source.includes("FORM PEMINJAMAN ALAT LOGISTIK"));
+    assert.ok(source.includes("Dokumen peminjaman resmi"));
+    assert.ok(source.includes("Salinan peminjam"));
+    assert.ok(source.includes("Arsip logistik"));
     assert.equal((await send("return",{capability,note:""})).status,409);
     await getDb().loan.update({where:{id:loan.id},data:{status:"borrowed"}});
     assert.equal((await send("return",{capability,note:"Diserahkan"})).status,200);assert.equal((await getDb().loan.findUniqueOrThrow({where:{id:loan.id}})).status,"awaiting_return");

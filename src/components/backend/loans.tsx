@@ -252,6 +252,16 @@ export function BackendLoans({
               </p>
             ))}
             <div className="button-row">
+              {detail.status !== "requested" &&
+                detail.status !== "rejected" &&
+                detail.items.some((item) => item.approved > 0) && (
+                  <a
+                    className="btn secondary"
+                    href={`/api/admin/loans/${detail.id}/invoice`}
+                  >
+                    Unduh invoice PDF
+                  </a>
+                )}
               {actions[detail.status].map((next) => (
                 <button
                   key={next}

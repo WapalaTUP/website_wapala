@@ -176,6 +176,8 @@ export async function readMedia(
   return {
     bytes,
     mime: media.mime,
+    width: media.width,
+    height: media.height,
     checksum: media.checksum,
     visibility: media.visibility,
   };
