@@ -24,3 +24,14 @@ Build CI tidak otomatis deploy, tidak memerlukan SSH key VPS dalam GitHub,
 dan tidak mengaktifkan auto-start. Activation tetap membutuhkan database,
 konfigurasi email, HTTPS dan uji kapasitas aplikasi/antivirus. Kegagalan test
 atau build menghentikan penerbitan artifact.
+
+## Operasi awal tanpa email
+
+Jika provider memblokir SMTP dan operator memilih tanpa email, set
+`EMAIL_MODE=disabled` pada environment privat VPS. Jangan menyalakan timer
+email. Notifikasi tidak diantrekan, email worker tidak mengklaim pengiriman,
+dan endpoint pemulihan email ditutup dengan pesan untuk menghubungi pengelola.
+Formulir, autentikasi, cookie Secure, CSRF dan HTTPS tetap diberlakukan.
+Gunakan CLI `npm run auth:recover-superuser` dari terminal SSH interaktif dengan
+environment produksi yang dimuat privat; jangan berikan password sebagai
+argumen. Admin lainnya direset oleh Super User dari panel pengguna.
