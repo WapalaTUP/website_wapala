@@ -16,12 +16,18 @@ const strings = (value: Prisma.JsonValue): Record<string, string> => {
 };
 // Branding read-only untuk segmen non-publik (portal login, admin) supaya logo
 // memakai sumber logoUrl yang sama dengan website publik.
+// Fail-soft: logo adalah branding non-kritis; bila database tidak terjangkau,
+// halaman login tetap dapat dibuka dengan logo fallback.
 export async function brandLogoUrl() {
-  const settings = await getDb().siteSettings.findUnique({
-    where: { id: 1 },
-    select: { config: true },
-  });
-  return strings(settings?.config || {}).logoUrl || "";
+  try {
+    const settings = await getDb().siteSettings.findUnique({
+      where: { id: 1 },
+      select: { config: true },
+    });
+    return strings(settings?.config || {}).logoUrl || "";
+  } catch {
+    return "";
+  }
 }
 export async function publicState() {
   const db = getDb(),

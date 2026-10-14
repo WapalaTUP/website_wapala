@@ -42,6 +42,13 @@ Format: tanggal, status (diagnosis/perbaikan), file yang disentuh, dan alasannya
 - `README.md` baru ditulis sebagai dokumentasi proyek: fitur situs publik & portal admin (divisi alam: Gunung & Hutan, Rock Climbing, Caving, Rafting), tabel teknologi, quickstart development, bootstrap Super User, perintah verifikasi, deployment (pointer ke `docs/` + `deploy/`), ringkasan keamanan formulir publik (tanpa verifikasi pihak ketiga), dan struktur folder.
 - Fakta diambil dari kode (navigasi `shell.tsx`, divisi `lib/content.ts`, skrip `package.json`); teks profil/vision tidak di-hard-code karena tersimpan di database.
 
+### Perubahan 8 — DB mati membuat /wapala 500 → fail-soft logo + DB dinyalakan ulang
+**Insiden:** user melaporkan `PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:54329` di `/wapala` (`brandLogoUrl` → `PortalLayout`). Penyebab: PostgreSQL portable (.local/postgres, port 54329) MATI — bukan bug kode; DB harus dinyalakan manual via `npm run db:local` setelah mesin/prosesnya berhenti.
+**Tindakan:**
+1. DB dinyalakan ulang (`pg_ctl start` port 54329) — verifikasi query OK, `/wapala` dan `/` kembali 200.
+2. `src/server/public-data.ts` — `brandLogoUrl()` kini fail-soft (try/catch → `""`): bila DB tidak terjangkau, halaman login tetap terbuka dengan logo fallback "W". Logo = branding non-kritis, tidak boleh menutup akses login. Halaman publik TETAP bergantung DB untuk datanya (perilaku lama, tidak diubah).
+**Verifikasi:** typecheck 0; lint 0; test lulus.
+
 ### Perubahan 7 — Visual login + alur data peminjam (permintaan user, 14 Okt)
 **1. Background halaman `/wapala` (panel kiri) memakai foto booth WAPALA:**
 - Foto sumber: `Src/IMG_20230912_064038_230.jpg` (path diberikan user; hardcode diizinkan).
