@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Empty, Field, Notice, Textarea, Modal, Upload } from "../ui";
 import { backendApi, uploadMedia } from "./api";
@@ -134,6 +135,7 @@ export function BackendSettings({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(false);
+  const router = useRouter();
   const uploadBranding = async (
     key:
       | "logoUrl"
@@ -198,9 +200,10 @@ export function BackendSettings({
               logoMeaningImageUrl: fields.logoMeaningImageUrl,
               ...(fields.whatsapp ? { whatsapp: fields.whatsapp } : {}),
             },
-            "PATCH",
-          );
+          "PATCH",
+        );
           setSaved(true);
+          router.refresh();
         } catch (e) {
           setError(
             e instanceof Error ? e.message : "Pengaturan belum dapat disimpan.",

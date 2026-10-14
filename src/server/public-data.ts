@@ -14,6 +14,15 @@ const strings = (value: Prisma.JsonValue): Record<string, string> => {
       .map(([k, v]) => [k, Array.isArray(v) ? JSON.stringify(v) : String(v)]),
   );
 };
+// Branding read-only untuk segmen non-publik (portal login, admin) supaya logo
+// memakai sumber logoUrl yang sama dengan website publik.
+export async function brandLogoUrl() {
+  const settings = await getDb().siteSettings.findUnique({
+    where: { id: 1 },
+    select: { config: true },
+  });
+  return strings(settings?.config || {}).logoUrl || "";
+}
 export async function publicState() {
   const db = getDb(),
     state = emptyState();

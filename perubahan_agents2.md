@@ -42,6 +42,24 @@ Format: tanggal, status (diagnosis/perbaikan), file yang disentuh, dan alasannya
 - `README.md` baru ditulis sebagai dokumentasi proyek: fitur situs publik & portal admin (divisi alam: Gunung & Hutan, Rock Climbing, Caving, Rafting), tabel teknologi, quickstart development, bootstrap Super User, perintah verifikasi, deployment (pointer ke `docs/` + `deploy/`), ringkasan keamanan formulir publik (tanpa verifikasi pihak ketiga), dan struktur folder.
 - Fakta diambil dari kode (navigasi `shell.tsx`, divisi `lib/content.ts`, skrip `package.json`); teks profil/vision tidak di-hard-code karena tersimpan di database.
 
+### Perubahan 6 — Logo konsisten di `/wapala` dan `/admin` (permintaan user)
+**Penyebab inkonsistensi:** komponen `Logo` (satu komponen sama untuk semua halaman) membaca `settings.logoUrl` dari `DataProvider`. Layout publik membungkus halaman dengan `publicState()` (memuat `logoUrl`), tetapi `/wapala` (login) dan `/admin` TIDAK punya provider → `Logo` menerima state kosong → jatuh ke placeholder "W".
+
+**Perbaikan (pola sama dengan layout publik):**
+- `src/server/public-data.ts` — helper baru `brandLogoUrl()`: baca `config.logoUrl` dari `SiteSettings` id=1 (sumber sama persis dengan website publik).
+- `src/app/wapala/layout.tsx` (baru) dan `src/app/admin/layout.tsx` (baru) — layout server yang membungkus children dengan `DataProvider` berisi `settings.logoUrl`.
+- `src/components/backend/administration.tsx` — `BackendSettings` kini memanggil `router.refresh()` setelah simpan, supaya logo baru langsung terlihat di sidebar admin tanpa reload manual.
+
+**Perbaikan tooling typecheck (muncul saat verifikasi):**
+- `next-env.d.ts` — menghapus dua import basi ke `.next-http-test/dev/types/` (sisa build uji integrasi jam 5:28) yang mendeklarasikan global `LayoutProps` dengan batasan `"/"` (pralayout), membuat `tsc` gagal di `.next/dev/types/validator.ts(30)`.
+- Menghapus `.next/types/` basi (hasil build pralayout, constraint sama) — dibuat ulang otomatis oleh `next build`.
+- Catatan: bila `test:backend:integration` dijalankan, Next dapat menulis ulang `next-env.d.ts` mengarah ke `.next-http-test`; tipe itu diregenerasi per-run sehingga tetap konsisten.
+
+**Verifikasi:**
+- typecheck 0 error; lint 0 error (8 warning lama); `npm test` lulus; `npm run test:backend` lulus.
+- SSR HTTP: `/wapala` dan `/` sama-sama memuat logo DB `fcf404c3-43b9-4c18-b7e8-97f1a5da458a` (sumber identik); `/admin` tanpa sesi tetap 307 ke login.
+- Catatan verifikasi visual `/admin` (setelah login) menjadi konfirmasi UAT user.
+
 ### Status diagnosis bug submit peminjaman (SELESAI — akar masalah ditemukan & diperbaiki)
 
 **Akar masalah:** migrasi `202610140002_public_forms` (membuat tabel `PublicFormReceipt` + `ApplicantRevision`) belum diterapkan ke database dev lokal. DB hanya sampai `202610130009_event_replay_fences`. Setiap submit memanggil `publicFormReceipt.findUnique` di transaksi awal → Prisma error "relation does not exist" → bukan `DomainError` → catch-all `route()` → **500 INTERNAL ~13ms** (12x di log). Admin/katalog/context tidak menyentuh tabel itu sehingga tampak normal; test lulus karena memakai schema per-run yang selalu di-migrate.
