@@ -76,6 +76,56 @@ export function LoanForm() {
         (category === "Semua kategori" || e.category === category) &&
         e.name.toLowerCase().includes(search.toLowerCase()),
     );
+  const stepsNav = (
+    <ol className="steps">
+      {["Pilih alat", "Data peminjam", "Periksa pengajuan"].map(
+        (label, i) => (
+          <li key={label} className={i === step ? "active" : ""}>
+            <span>{i + 1}</span>
+            {label}
+          </li>
+        ),
+      )}
+    </ol>
+  );
+  const asideInfo = (
+    <>
+      <h3>Sebelum berangkat</h3>
+      <p>Jumlah akhir yang disetujui ditentukan tim inventaris.</p>
+      <p>
+        Pengembalian wajib diverifikasi pengelola sebelum barang kembali
+        tersedia.
+      </p>
+      <Link href="/peminjaman/status">Lacak pengajuan</Link>
+      <p>{chosen.length} jenis alat dipilih</p>
+    </>
+  );
+  const actions = (
+    <div className="form-actions">
+      {step > 0 && (
+        <button
+          type="button"
+          className="btn secondary"
+          disabled={t.busy}
+          onClick={() => {
+            key.current = null;
+            setStep(step - 1);
+          }}
+        >
+          Kembali
+        </button>
+      )}
+      <button className="btn primary" disabled={t.busy}>
+        {t.busy
+          ? "Mengirim…"
+          : step === 0
+            ? "Lanjut: data peminjam"
+            : step === 1
+              ? "Periksa pengajuan"
+              : "Kirim pengajuan"}
+      </button>
+    </div>
+  );
   async function next(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     t.setError("");
@@ -125,86 +175,11 @@ export function LoanForm() {
         }
         description="Ajukan peralatan untuk kegiatan MAPALA, lembaga, atau UKM."
       />
-      <section className="container form-section form-layout">
-        <form className="form-main" onSubmit={next}>
-          <ol className="steps">
-            {["Pilih alat", "Data peminjam", "Periksa pengajuan"].map(
-              (label, i) => (
-                <li key={label} className={i === step ? "active" : ""}>
-                  <span>{i + 1}</span>
-                  {label}
-                </li>
-              ),
-            )}
-          </ol>
-          {step === 0 ? (
-            <>
-              <div className="form-grid">
-                <Field
-                  label="Cari alat"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Select
-                  label="Kategori"
-                  options={[
-                    "Semua kategori",
-                    ...new Set(catalog.map((e) => e.category)),
-                  ]}
-                  value={category}
-                  onChange={setCategory}
-                />
-              </div>
-              <div className="equipment-list">
-                {filtered.map((eq) => (
-                  <div className="equipment-card" key={eq.id}>
-                    <div>
-                      <h3>{eq.name}</h3>
-                      <p>{eq.category}</p>
-                      <p>
-                        {eq.available ? "Tersedia" : "Tidak tersedia saat ini"}
-                      </p>
-                      <p>
-                        Maksimal {eq.maxDays} hari · {eq.maxQuantity} per
-                        pengajuan
-                      </p>
-                    </div>
-                    <div>
-                      <label htmlFor={eq.id}>Jumlah</label>
-                      <input
-                        id={eq.id}
-                        type="number"
-                        min={0}
-                        max={eq.maxQuantity}
-                        disabled={!eq.available}
-                        aria-label={"Jumlah " + eq.name}
-                        value={selection[eq.id] ?? 0}
-                        onChange={(e) => {
-                          key.current = null;
-                          setSelection({
-                            ...selection,
-                            [eq.id]: Math.max(
-                              0,
-                              Math.min(
-                                eq.maxQuantity,
-                                Math.floor(Number(e.target.value) || 0),
-                              ),
-                            ),
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {!filtered.length && (
-                <Empty
-                  title="Alat tidak ditemukan"
-                  description="Coba nama atau kategori lain."
-                />
-              )}
-            </>
-          ) : step === 1 ? (
+      {step === 1 ? (
+        <section className="container form-section">
+          <form className="form-main" onSubmit={next}>
+            {stepsNav}
+            <aside className="form-aside aside-inline">{asideInfo}</aside>
             <div className="form-grid">
               {loanFields.map(([key, label]) => (
                 <Field
@@ -228,79 +203,119 @@ export function LoanForm() {
                 />
               ))}
             </div>
-          ) : (
-            <>
-              <div className="paper-summary">
-                <h2>Data peminjaman</h2>
-                <div className="data-grid">
-                  {loanFields.map(([key, label]) => (
-                    <div key={key}>
-                      <small>{label}</small>
-                      <p>{fields[key]}</p>
+            {actions}
+          </form>
+        </section>
+      ) : (
+        <section className="container form-section form-layout">
+          <form className="form-main" onSubmit={next}>
+            {stepsNav}
+            {step === 0 ? (
+              <>
+                <div className="form-grid">
+                  <Field
+                    label="Cari alat"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <Select
+                    label="Kategori"
+                    options={[
+                      "Semua kategori",
+                      ...new Set(catalog.map((e) => e.category)),
+                    ]}
+                    value={category}
+                    onChange={setCategory}
+                  />
+                </div>
+                <div className="equipment-list">
+                  {filtered.map((eq) => (
+                    <div className="equipment-card" key={eq.id}>
+                      <div>
+                        <h3>{eq.name}</h3>
+                        <p>{eq.category}</p>
+                        <p>
+                          {eq.available ? "Tersedia" : "Tidak tersedia saat ini"}
+                        </p>
+                        <p>
+                          Maksimal {eq.maxDays} hari · {eq.maxQuantity} per
+                          pengajuan
+                        </p>
+                      </div>
+                      <div>
+                        <label htmlFor={eq.id}>Jumlah</label>
+                        <input
+                          id={eq.id}
+                          type="number"
+                          min={0}
+                          max={eq.maxQuantity}
+                          disabled={!eq.available}
+                          aria-label={"Jumlah " + eq.name}
+                          value={selection[eq.id] ?? 0}
+                          onChange={(e) => {
+                            key.current = null;
+                            setSelection({
+                              ...selection,
+                              [eq.id]: Math.max(
+                                0,
+                                Math.min(
+                                  eq.maxQuantity,
+                                  Math.floor(Number(e.target.value) || 0),
+                                ),
+                              ),
+                            });
+                          }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Alat</th>
-                      <th>Jumlah diminta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {chosen.map((eq) => (
-                      <tr key={eq.id}>
-                        <td>{eq.name}</td>
-                        <td>{selection[eq.id]}</td>
-                      </tr>
+                {!filtered.length && (
+                  <Empty
+                    title="Alat tidak ditemukan"
+                    description="Coba nama atau kategori lain."
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <div className="paper-summary">
+                  <h2>Data peminjaman</h2>
+                  <div className="data-grid">
+                    {loanFields.map(([key, label]) => (
+                      <div key={key}>
+                        <small>{label}</small>
+                        <p>{fields[key]}</p>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-              <Consent />
-            </>
-          )}
-          <div className="form-actions">
-            {step > 0 && (
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={t.busy}
-                onClick={() => {
-                  key.current = null;
-                  setStep(step - 1);
-                }}
-              >
-                Kembali
-              </button>
+                  </div>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Alat</th>
+                        <th>Jumlah diminta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chosen.map((eq) => (
+                        <tr key={eq.id}>
+                          <td>{eq.name}</td>
+                          <td>{selection[eq.id]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Consent />
+              </>
             )}
-            <button
-              className="btn primary"
-              disabled={t.busy}
-            >
-              {t.busy
-                ? "Mengirim…"
-                : step === 0
-                  ? "Lanjut: data peminjam"
-                  : step === 1
-                    ? "Periksa pengajuan"
-                    : "Kirim pengajuan"}
-            </button>
-          </div>
-        </form>
-        <aside className="form-aside">
-          <h3>Sebelum berangkat</h3>
-          <p>Jumlah akhir yang disetujui ditentukan tim inventaris.</p>
-          <p>
-            Pengembalian wajib diverifikasi pengelola sebelum barang kembali
-            tersedia.
-          </p>
-          <Link href="/peminjaman/status">Lacak pengajuan</Link>
-          <p>{chosen.length} jenis alat dipilih</p>
-        </aside>
-      </section>
+            {actions}
+          </form>
+          <aside className="form-aside">{asideInfo}</aside>
+        </section>
+      )}
     </>
   );
 }

@@ -42,6 +42,20 @@ Format: tanggal, status (diagnosis/perbaikan), file yang disentuh, dan alasannya
 - `README.md` baru ditulis sebagai dokumentasi proyek: fitur situs publik & portal admin (divisi alam: Gunung & Hutan, Rock Climbing, Caving, Rafting), tabel teknologi, quickstart development, bootstrap Super User, perintah verifikasi, deployment (pointer ke `docs/` + `deploy/`), ringkasan keamanan formulir publik (tanpa verifikasi pihak ketiga), dan struktur folder.
 - Fakta diambil dari kode (navigasi `shell.tsx`, divisi `lib/content.ts`, skrip `package.json`); teks profil/vision tidak di-hard-code karena tersimpan di database.
 
+### Perubahan 7 — Visual login + alur data peminjam (permintaan user, 14 Okt)
+**1. Background halaman `/wapala` (panel kiri) memakai foto booth WAPALA:**
+- Foto sumber: `Src/IMG_20230912_064038_230.jpg` (path diberikan user; hardcode diizinkan).
+- Disalin ke `public/assets/login-stand.jpg` dan dioptimasi dengan sharp: resize 1600px + JPEG quality 78 → 3.5 MB menjadi 297 KB.
+- `globals.css` — `.login-visual-art` diganti: foto `cover` + gradient overlay gelap (#102419) agar teks putih "Setiap perjalanan berawal dari persiapan…" tetap terbaca; watermark `::after` "WAPALA" dihapus (bentrok dengan foto).
+
+**2. `/peminjaman` — step "Data peminjam" jadi satu kontainer (klik "Lanjut" → data peminjam berada DI BAWAH kontainer info):**
+- `src/components/forms.tsx` — restrukturisasi render `LoanForm`: variabel bersama `stepsNav`, `asideInfo`, `actions`; saat `step === 1` satu `<form>` tunggal berisi: indikator langkah → blok info "Sebelum berangkat / Jumlah akhir… / Pengembalian… / Lacak pengajuan / N jenis alat dipilih" (`.form-aside.aside-inline`) → form data peminjam → tombol aksi. Step 0 dan 2 tetap layout dua kolom seperti semula.
+- `globals.css` — `.form-aside.aside-inline` (non-sticky) dan `.form-section > .form-main:only-child` (maks 780px, tengah).
+- Perilaku submit tidak berubah (input controlled, `onSubmit` sama, idempotency tetap).
+
+**Verifikasi:** typecheck 0 error; lint 0 error (8 warning lama); `npm test` + `npm run test:backend` lulus; HTTP: `/assets/login-stand.jpg` 200, `/peminjaman` 200, CSS tersaji memuat background foto + `aside-inline`.
+**Catatan UAT:** perubahan visual perlu konfirmasi user di browser (desktop + mobile).
+
 ### Perubahan 6 — Logo konsisten di `/wapala` dan `/admin` (permintaan user)
 **Penyebab inkonsistensi:** komponen `Logo` (satu komponen sama untuk semua halaman) membaca `settings.logoUrl` dari `DataProvider`. Layout publik membungkus halaman dengan `publicState()` (memuat `logoUrl`), tetapi `/wapala` (login) dan `/admin` TIDAK punya provider → `Logo` menerima state kosong → jatuh ke placeholder "W".
 

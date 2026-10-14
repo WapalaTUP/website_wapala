@@ -1322,6 +1322,15 @@ select {
   margin-top: 18px;
   width: 100%;
 }
+.form-aside.aside-inline {
+  position: static;
+  font-size: 14px;
+}
+.form-section > .form-main:only-child {
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+}
 .steps {
   display: flex;
   gap: 30px;
@@ -2281,20 +2290,11 @@ td select {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 84% 14%, #b7d7a451 0 9%, transparent 9.5%),
-    linear-gradient(130deg, transparent 0 47%, #7aa07622 47.5% 61%, transparent 61.5%),
-    linear-gradient(160deg, #244d3a 0%, #102419 100%);
+    linear-gradient(160deg, #102419e6 0%, #10241999 55%, #213d2fb3 100%),
+    url("/assets/login-stand.jpg") center / cover no-repeat;
 }
 .login-visual-art::after {
-  content: "WAPALA";
-  position: absolute;
-  right: 8%;
-  bottom: 10%;
-  color: #ffffff1c;
-  font-family: var(--display);
-  font-size: clamp(100px, 16vw, 240px);
-  line-height: 0.8;
-  letter-spacing: -0.05em;
+  content: none;
 }
 .login-visual > div {
   position: relative;
