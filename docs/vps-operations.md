@@ -7,6 +7,37 @@ untuk mengambil paket; ambil foldernya terpisah seperti perintah di bawah.
 
 ## Jika website/service berhenti
 
+### Akses operasional codex
+
+SSH key sudah diuji. Pada mesin Windows pengelola, alias `ssh wapala-vps`
+menggunakan key lokal dan relay TCP Node, dengan verifikasi host key tetap
+aktif. Tidak ada password/private key di repo. Perubahan password akun Linux
+tidak menghapus authorized_keys; jangan menonaktifkan akses key saat mengganti
+password jika key masih ingin dipakai.
+
+Wrapper root-owned `/usr/local/sbin/wapala-service` dan aturan
+`/etc/sudoers.d/wapala-codex` memberi codex akses tanpa password hanya untuk:
+
+```sh
+sudo /usr/local/sbin/wapala-service status
+sudo /usr/local/sbin/wapala-service start
+sudo /usr/local/sbin/wapala-service stop
+sudo /usr/local/sbin/wapala-service restart
+```
+
+Argumen lain, unit lain, shell, dan environment override tidak diizinkan.
+Sudo umum tetap meminta password; tidak ada NOPASSWD: ALL. Aturan luas lama
+dicadangkan privat di root sebelum diganti, dan visudo memvalidasi aturan
+pengganti. Template audit tersedia di deploy/wapala-service.sh dan
+deploy/wapala-codex-sudo.conf. File executable/kebijakan pada VPS harus tetap
+root-owned, bukan writable oleh codex. `gitupdate` belum diberikan akses
+tanpa password: runner deployment perlu diselesaikan dan ditinjau terpisah,
+bukan mengeksekusi git/npm/source aplikasi sebagai root.
+
+Wrapper tidak memasang service. Selama wapala.service belum dibuat,
+status akan mengembalikan unit-not-found walaupun autentikasi sudo berhasil.
+Auto-start belum diaktifkan, sesuai instruksi pengguna.
+
 Perintah ini untuk VPS yang **sudah selesai dipasang** mengikuti
 `docs/deployment-ubuntu.md`: user wapala, release `/srv/wapala/current`,
 environment `/etc/wapala/production.env`, database, scanner dan unit systemd
@@ -111,6 +142,8 @@ untuk runtime setelah selesai. Tidak ada import anggota/inventaris dalam paket.
 ## NAT HostData: port 33335
 
 Informasi pengguna: source port 33335 diteruskan ke destination port 33335.
+Rentang source port yang diperbolehkan provider adalah 30000–60000; public
+80/443 tidak termasuk. SSH 33333 dan web 33335 berada dalam rentang tersebut.
 Nginx harus listen pada 33335; Node tetap 127.0.0.1:3000 dan PostgreSQL tetap
 localhost:5432. Jangan membuka kedua port backend/database ke publik.
 
@@ -144,7 +177,7 @@ HTTPS tidak mutlak memerlukan domain: Let's Encrypt sudah mendukung sertifikat
 IP berumur pendek, tetapi validasi ACME IP memerlukan akses pada public port
 80 (HTTP-01) atau 443 (TLS-ALPN-01), bukan 33335. Pada NAT/shared IP yang hanya
 memberikan port tinggi, kita belum membuktikan kontrol IP dan jalur validasi
-tersebut. Minta provider akses/terminasi HTTPS atau gunakan domain yang dikontrol
+tersebut. Minta provider layanan domain/terminasi HTTPS atau gunakan domain yang dikontrol
 dengan validasi DNS-01. Sertifikat self-signed bukan HTTPS tepercaya bagi publik.
 
 Sumber resmi: [sertifikat IP](https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability),
