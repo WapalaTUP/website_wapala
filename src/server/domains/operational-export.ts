@@ -8,6 +8,9 @@ import { assertFresh } from "../auth/sessions";
 import { applicantFields, periodSchema } from "./recruitment";
 import { memberFields } from "../../lib/operational-schema";
 import { listArchives } from "./archives";
+import { readMedia } from "../media/storage";
+import sharp from "sharp";
+import { applicantPdfTable } from "./applicant-pdf";
 export async function exportOperational(
   p: Principal,
   kind: "members" | "inventory" | "archives",
@@ -223,6 +226,7 @@ export async function exportApplicants(
       });
       return result.map((r) => ({
         code: r.code,
+        photo: r.photo,
         time: r.createdAt.toISOString(),
         fields: applicantFields.parse(r.fields),
       }));
@@ -238,7 +242,37 @@ export async function exportApplicants(
     r.time,
     ...keys.map((k) => r.fields[k]),
   ]);
-  return format === "xlsx"
-    ? operationalWorkbook("OR " + year, headers, values)
-    : operationalPdf("OR " + year, headers, values);
+  if (format === "xlsx")
+    return operationalWorkbook("OR " + year, headers, values);
+  if (rows.length > 200)
+    throw new DomainError(
+      "EXPORT_LIMIT",
+      413,
+      "PDF maksimal 200 pendaftar. Gunakan Excel untuk periode yang lebih besar.",
+    );
+  const illustrated = [];
+  for (const row of rows) {
+    let photoData: string | undefined;
+    const id = /^\/api\/media\/([a-f0-9-]{36})$/.exec(row.photo)?.[1];
+    if (id) {
+      try {
+        const media = await readMedia(id, p);
+        const thumbnail = await sharp(media.bytes)
+          .resize({
+            width: 180,
+            height: 240,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .png()
+          .toBuffer();
+        photoData = "data:image/png;base64," + thumbnail.toString("base64");
+      } catch (error) {
+        if (error instanceof DomainError && error.status === 403) throw error;
+        // Preserve all registration data even when an old photo is unavailable.
+      }
+    }
+    illustrated.push({ ...row, photoData });
+  }
+  return applicantPdfTable(year, illustrated);
 }

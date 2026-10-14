@@ -27,16 +27,24 @@ export function usePublicTransport() {
     data: Record<string, unknown> | FormData,
   ): Promise<T> {
     if (inFlight.current) throw Error("Permintaan masih diproses.");
-    if (!context) throw Error("Layanan formulir belum siap.");
     inFlight.current = true;
     setBusy(true);
     setError("");
     try {
+      // Refresh before sending, including after another tab renews the cookie.
+      const contextResponse = await fetch("/api/public/forms/context", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const freshContext = await contextResponse.json();
+      if (!contextResponse.ok)
+        throw Error(freshContext.error || "Layanan formulir belum siap.");
+      setContext(freshContext);
       const multipart = data instanceof FormData;
       const r = await fetch("/api/public/forms/" + action, {
         method: "POST",
         headers: {
-          "x-csrf-token": context.csrfToken,
+          "x-csrf-token": freshContext.csrfToken,
           ...(!multipart ? { "content-type": "application/json" } : {}),
         },
         body: multipart ? data : JSON.stringify(data),
@@ -117,10 +125,8 @@ export function PublicUpload({
         Unggah {label.toLowerCase()}
       </button>
       {name && <p role="status">Tersimpan: {name}</p>}
-      <p className="field-hint">
-        JPG / PNG / WebP · maksimal 5 MB. Selesaikan verifikasi sebelum
-        mengunggah.
-      </p>
+      <p className="field-hint">JPG / PNG / WebP · maksimal 5 MB.</p>
+      {t.error && <Notice tone="error">{t.error}</Notice>}
     </div>
   );
 }

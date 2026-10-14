@@ -5,6 +5,7 @@ import type { EventAdminDto } from "@/lib/event-types";
 import { backendApi } from "./api";
 import { Empty, Notice, Badge } from "../ui";
 import { EventEditor } from "../events/event-editor";
+import { MediaPreview } from "./media-preview";
 const status = {
   draft: "Draft",
   active: "Aktif",
@@ -96,6 +97,12 @@ export function BackendEvents({
             <div>
               <Badge>{status[e.status]}</Badge>
               <h2>{e.draft.title}</h2>
+              {e.draft.cover && (
+                <MediaPreview src={e.draft.cover} label="Sampul event" />
+              )}
+              {e.draft.poster && (
+                <MediaPreview src={e.draft.poster} label="Poster event" />
+              )}
               <p>{e.draft.description.slice(0, 200)}</p>
               <p>
                 {e.registrationCount} pendaftar.{" "}

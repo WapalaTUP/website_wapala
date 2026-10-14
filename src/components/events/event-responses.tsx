@@ -4,6 +4,7 @@ import { backendApi } from "../backend/api";
 import { Empty, Modal, Notice } from "../ui";
 import { eventAnswerLabel } from "@/lib/event-form";
 import type { EventRegistrationDto } from "@/lib/event-types";
+import { MediaPreview } from "../backend/media-preview";
 type Data = {
   rows: EventRegistrationDto[];
   total: number;
@@ -258,14 +259,11 @@ export function EventResponses({
                       {selected.answers[q.id] === undefined ? (
                         "Tidak diisi"
                       ) : q.kind === "upload" ? (
-                        <a
-                          className="text-link"
-                          href={"/api/media/" + selected.answers[q.id]}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Lihat berkas
-                        </a>
+                        <MediaPreview
+                          key={String(selected.answers[q.id])}
+                          src={"/api/media/" + selected.answers[q.id]}
+                          label={q.title}
+                        />
                       ) : (
                         String(eventAnswerLabel(q, selected.answers[q.id]))
                       )}

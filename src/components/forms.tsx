@@ -11,10 +11,7 @@ import { money, date } from "@/lib/content";
 import { orPersonal, orAcademic } from "@/lib/recruitment-fields";
 import { PageIntro } from "./page-intro";
 import { Empty, Field, Notice, Select, Textarea } from "./ui";
-import {
-  PublicUpload,
-  usePublicTransport,
-} from "./public-transport";
+import { PublicUpload, usePublicTransport } from "./public-transport";
 function Consent() {
   return (
     <label className="consent">
@@ -78,14 +75,12 @@ export function LoanForm() {
     );
   const stepsNav = (
     <ol className="steps">
-      {["Pilih alat", "Data peminjam", "Periksa pengajuan"].map(
-        (label, i) => (
-          <li key={label} className={i === step ? "active" : ""}>
-            <span>{i + 1}</span>
-            {label}
-          </li>
-        ),
-      )}
+      {["Pilih alat", "Data peminjam", "Periksa pengajuan"].map((label, i) => (
+        <li key={label} className={i === step ? "active" : ""}>
+          <span>{i + 1}</span>
+          {label}
+        </li>
+      ))}
     </ol>
   );
   const asideInfo = (
@@ -101,30 +96,33 @@ export function LoanForm() {
     </>
   );
   const actions = (
-    <div className="form-actions">
-      {step > 0 && (
-        <button
-          type="button"
-          className="btn secondary"
-          disabled={t.busy}
-          onClick={() => {
-            key.current = null;
-            setStep(step - 1);
-          }}
-        >
-          Kembali
+    <>
+      {t.error && <Notice tone="error">{t.error}</Notice>}
+      <div className="form-actions">
+        {step > 0 && (
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={t.busy}
+            onClick={() => {
+              key.current = null;
+              setStep(step - 1);
+            }}
+          >
+            Kembali
+          </button>
+        )}
+        <button className="btn primary" disabled={t.busy}>
+          {t.busy
+            ? "Mengirim…"
+            : step === 0
+              ? "Lanjut: data peminjam"
+              : step === 1
+                ? "Periksa pengajuan"
+                : "Kirim pengajuan"}
         </button>
-      )}
-      <button className="btn primary" disabled={t.busy}>
-        {t.busy
-          ? "Mengirim…"
-          : step === 0
-            ? "Lanjut: data peminjam"
-            : step === 1
-              ? "Periksa pengajuan"
-              : "Kirim pengajuan"}
-      </button>
-    </div>
+      </div>
+    </>
   );
   async function next(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -235,7 +233,9 @@ export function LoanForm() {
                         <h3>{eq.name}</h3>
                         <p>{eq.category}</p>
                         <p>
-                          {eq.available ? "Tersedia" : "Tidak tersedia saat ini"}
+                          {eq.available
+                            ? "Tersedia"
+                            : "Tidak tersedia saat ini"}
                         </p>
                         <p>
                           Maksimal {eq.maxDays} hari · {eq.maxQuantity} per
@@ -474,16 +474,14 @@ export function LoanTracking({ initialCode = "" }: { initialCode?: string }) {
                   value={note}
                   onChange={setNote}
                 />
-                <button
-                  className="btn primary"
-                  disabled={t.busy}
-                >
+                <button className="btn primary" disabled={t.busy}>
                   Ajukan pengembalian
                 </button>
               </form>
             )}
           </>
         )}
+        {t.error && <Notice tone="error">{t.error}</Notice>}
       </section>
     </>
   );
@@ -657,6 +655,7 @@ export function Recruitment() {
             )}
           </div>
           <Consent />
+          {t.error && edit && <Notice tone="error">{t.error}</Notice>}
           {!edit && (
             <PublicUpload
               label="Pas foto"
@@ -803,10 +802,7 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
                 transport={t}
                 onUploaded={setProof}
               />
-              <button
-                className="btn primary"
-                disabled={t.busy || !proof}
-              >
+              <button className="btn primary" disabled={t.busy || !proof}>
                 Kirim konfirmasi
               </button>
             </>

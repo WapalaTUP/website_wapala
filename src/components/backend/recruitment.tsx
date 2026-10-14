@@ -4,6 +4,8 @@ import type { listApplicants, listPeriods } from "@/server/domains/recruitment";
 import { Badge, Empty, Field, Modal, Notice } from "../ui";
 import { backendApi } from "./api";
 import { date } from "@/lib/content";
+import { MediaPreview } from "./media-preview";
+import { orFieldLabel } from "@/lib/recruitment-fields";
 type Period = Awaited<ReturnType<typeof listPeriods>>[number];
 type Applicant = Awaited<ReturnType<typeof listApplicants>>[number];
 export function BackendRecruitment({
@@ -180,14 +182,21 @@ export function BackendRecruitment({
         onClose={() => setSelected(null)}
       >
         {selected && (
-          <dl>
-            {Object.entries(selected.fields).map(([key, value]) => (
-              <div key={key}>
-                <dt>{key.replaceAll("_", " ")}</dt>
-                <dd>{value || "—"}</dd>
-              </div>
-            ))}
-          </dl>
+          <>
+            <MediaPreview
+              key={selected.photo}
+              src={selected.photo}
+              label="Foto pendaftar"
+            />
+            <dl>
+              {Object.entries(selected.fields).map(([key, value]) => (
+                <div key={key}>
+                  <dt>{orFieldLabel(key)}</dt>
+                  <dd>{value || "—"}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
         )}
       </Modal>
     </>

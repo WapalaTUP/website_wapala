@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { config } from "dotenv";
 config({ path: ".local/backend.env", quiet: true });
+config({ path: ".local/scanner.env", quiet: true });
 import { Client } from "pg";
 import { randomUUID, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";

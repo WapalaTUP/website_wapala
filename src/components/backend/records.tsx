@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Empty, Field, Modal, Notice, Textarea, Upload } from "../ui";
 import { backendApi, uploadMedia } from "./api";
 import { BackendImport } from "./import";
+import { contentSlug } from "@/lib/content-slug";
 export type BackendRecord = {
   id: string;
   version: number;
@@ -88,7 +89,19 @@ export function BackendRecords({
     setBusy(true);
     setError("");
     try {
-      await backendApi("/api/admin/records/" + kind, csrfToken, value);
+      const fields =
+        kind === "konten"
+          ? {
+              ...value.fields,
+              slug: contentSlug(
+                String(value.fields.slug || value.fields.judul || ""),
+              ),
+            }
+          : value.fields;
+      await backendApi("/api/admin/records/" + kind, csrfToken, {
+        ...value,
+        fields,
+      });
       await refresh();
       setDraft(null);
       setArchive(null);
@@ -257,6 +270,12 @@ export function BackendRecords({
                     key={key}
                     label={label}
                     type={key.startsWith("tanggal") ? "date" : "text"}
+                    required={key === "judul"}
+                    placeholder={
+                      key === "slug"
+                        ? "Otomatis dari judul bila kosong"
+                        : undefined
+                    }
                     value={String(draft.fields[key] || "")}
                     onChange={(e) =>
                       setDraft({

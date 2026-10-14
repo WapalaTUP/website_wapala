@@ -17,6 +17,17 @@ export const orAcademic = [
   ["alamat_rumah", "Alamat Rumah"],
   ["alamat_domisili", "Alamat Domisili"],
 ];
+const orLabels: Record<string, string> = Object.fromEntries([
+  ...orPersonal,
+  ...orAcademic,
+  ["nama_orangtua", "Nama Orang Tua"],
+  ["telepon_orangtua", "No Handphone Orang Tua"],
+  ["motivasi", "Motivasi"],
+  ["pengalaman_organisasi", "Pengalaman Organisasi"],
+  ["riwayat_penyakit", "Riwayat Penyakit"],
+]);
+export const orFieldLabel = (key: string) =>
+  orLabels[key] || key.replaceAll("_", " ");
 export function applicantExportRow(
   a: Applicant,
   index: number,

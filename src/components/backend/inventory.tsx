@@ -4,6 +4,7 @@ import type { listEquipment } from "@/server/domains/inventory";
 import { Badge, Empty, Field, Modal, Notice, Upload } from "../ui";
 import { BackendImport } from "./import";
 import { backendApi, uploadMedia } from "./api";
+import { MediaPreview } from "./media-preview";
 type Equipment = Awaited<ReturnType<typeof listEquipment>>[number];
 type Draft = Omit<Equipment, "id" | "version" | "archived"> & {
   id?: string;
@@ -174,6 +175,20 @@ export function BackendInventory({
                 <tr key={row.id}>
                   <td>
                     <strong>{row.code}</strong>
+                    {row.photo && (
+                      <img
+                        src={row.photo}
+                        alt={"Foto " + row.name}
+                        width={64}
+                        height={64}
+                        loading="lazy"
+                        style={{
+                          display: "block",
+                          objectFit: "contain",
+                          marginTop: 8,
+                        }}
+                      />
+                    )}
                     <br />
                     {row.name}
                   </td>
@@ -325,6 +340,11 @@ export function BackendInventory({
                   setBusy(false);
                 }
               }}
+            />
+            <MediaPreview
+              key={draft.photo}
+              src={draft.photo}
+              label="Foto alat"
             />
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">

@@ -230,12 +230,6 @@ test("Event HTTP flow publishes form registers participant and exports session-o
       body: JSON.stringify(body),
     });
   assert.equal((await send("https://bad.example")).status, 403);
-  // No challenge is accepted for a new HTTP attempt. Seed a provider-verified
-  // receipt through the domain adapter, then exercise native HTTP replay.
-  assert.equal((await send(base)).status, 400);
-  const {verifyEventFormToken}=await import("../../../src/server/security/event-form-token");
-  const {submitEventRegistration}=await import("../../../src/server/domains/event-registrations");
-  await submitEventRegistration(body,verifyEventFormToken(context.token).ownerDigest,ctx,async()=>{});
   const response = await send(base);
   assert.equal(response.status, 201);
   const receipt = await response.json();

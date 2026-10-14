@@ -53,7 +53,15 @@ export async function route(
     return await fn({ ...requestContext(request), requestId });
   } catch (e) {
     if (e instanceof EventAnswerError)
-      return jsonResponse({error:e.message,code:e.code,questions:e.questions.slice(0,200),requestId},e.status);
+      return jsonResponse(
+        {
+          error: e.message,
+          code: e.code,
+          questions: e.questions.slice(0, 200),
+          requestId,
+        },
+        e.status,
+      );
     if (e instanceof DomainError)
       return jsonResponse(
         { error: e.message, code: e.code, requestId },
@@ -62,7 +70,21 @@ export async function route(
     if (e instanceof ZodError)
       return jsonResponse(
         {
-          error: "Periksa isian formulir.",
+          error: e.issues.some((issue) => issue.path[0] === "fields")
+            ? "Periksa field: " +
+              [
+                ...new Set(
+                  e.issues
+                    .map((issue) =>
+                      issue.path.filter((part) => part !== "fields").join("."),
+                    )
+                    .filter(Boolean),
+                ),
+              ]
+                .slice(0, 10)
+                .join(", ") +
+              "."
+            : "Periksa isian formulir.",
           code: "INVALID_INPUT",
           requestId,
           ...(e.issues.some((issue) => issue.path[0] === "rows")
@@ -84,7 +106,10 @@ export async function route(
         requestId,
         code: "INTERNAL",
         message: e instanceof Error ? e.message : String(e),
-        stack: e instanceof Error ? e.stack?.split("\n").slice(0, 4).join(" | ") : undefined,
+        stack:
+          e instanceof Error
+            ? e.stack?.split("\n").slice(0, 4).join(" | ")
+            : undefined,
       }),
     );
     return jsonResponse(

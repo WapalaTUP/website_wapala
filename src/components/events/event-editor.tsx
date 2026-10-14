@@ -19,6 +19,7 @@ import { Notice } from "../ui";
 import { QuestionEditor } from "./question-editor";
 import { EventFormRenderer } from "./form-renderer";
 import { EventResponses } from "./event-responses";
+import { MediaPreview } from "../backend/media-preview";
 const localTime = (iso: string) =>
   iso
     ? new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 16)
@@ -379,14 +380,13 @@ export function EventEditor({
                   </label>
                   {draft[key] && (
                     <>
-                      <a
-                        className="text-link"
-                        href={draft[key]}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Lihat gambar tersimpan
-                      </a>
+                      <MediaPreview
+                        key={draft[key]}
+                        src={draft[key]}
+                        label={
+                          key === "poster" ? "Poster event" : "Sampul event"
+                        }
+                      />
                       <button
                         className="text-link"
                         onClick={() => patch({ [key]: "" })}

@@ -8,6 +8,7 @@ import {
 } from "../../../src/server/auth/bootstrap";
 import { login } from "../../../src/server/auth/login";
 import type { Principal } from "../../../src/server/auth/policy";
+import { contentSlug } from "../../../src/lib/content-slug";
 let su: Principal;
 const service = () =>
   import("../../../src/server/domains/records").catch(() => null);
@@ -115,4 +116,18 @@ test("public content cannot disclose members and rejects executable media URLs",
       ctx,
     ),
   );
+});
+test("complete Berita and Announcement editor values save with a normalized or generated slug", async () => {
+  const m = await service();
+  assert.ok(m);
+  for (const tipe of ["Berita", "Announcement"] as const) {
+    const judul = tipe + " Camp Fire 2026";
+    const record = await m.saveContent(su, "konten", {
+      fields: { judul, slug: contentSlug(tipe === "Berita" ? "BERITA Camp Fire 2026!" : judul), tipe,
+        kategori: "Kegiatan", penulis: "WAPALA", tanggal: "2026-10-14",
+        status: "Publik", sampul: "", ringkasan: "Ringkasan", isi: "Isi lengkap" },
+    }, ctx);
+    assert.ok(record.id);
+  }
+  assert.equal((await m.publicContent("konten")).length, 2);
 });

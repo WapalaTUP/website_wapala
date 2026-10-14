@@ -90,8 +90,42 @@ test("native Event registration preserves owner-bound receipts without third-par
     const replay=await send();assert.equal(replay.status,201);assert.deepEqual(await replay.json(),receipt);assert.equal(await getDb().eventRegistration.count(),1);
     assert.equal((await send(issueEventFormToken(event.id,revisionId))).status,409);
     const upload=new FormData();upload.set("file",new Blob(["test"],{type:"image/png"}),"photo.png");upload.set("questionId",randomUUID());
-    const missing=await fetch(server.url+"/uploads",{method:"POST",headers:{origin:process.env.APP_URL!,"x-event-token":token},body:upload});assert.equal(missing.status,400);
+    const missing=await fetch(server.url+"/uploads",{method:"POST",headers:{origin:process.env.APP_URL!,"x-event-token":token},body:upload});assert.equal(missing.status,409);
+    assert.equal((await missing.json()).code,"FORM_CHANGED");
   } finally {await server.close();}
+});
+
+test("donation proof uploads and submits after repeated context refreshes with native scanning", {skip:process.env.WAPALA_TEST_NATIVE_SCANNER!=="1"}, async()=>{
+  const campaign=await getDb().campaign.create({data:{title:"Donasi uji",description:"Uji alur",target:1000,collaborator:"WAPALA",status:"active",bankAccounts:{create:{bank:"Bank uji",number:"001234",holder:"WAPALA",position:0}}},include:{bankAccounts:true}});
+  const server=await nativeHandlerServer(request=>{
+    const path=new URL(request.url).pathname;
+    if(path.endsWith("/context"))return formContext(request);
+    if(path.endsWith("/uploads"))return handlePublicUpload(request);
+    return handlePublicSubmit(request);
+  });
+  let imageId="";
+  try {
+    const initial=await fetch(server.url+"/api/public/forms/context");
+    const initialData=await initial.json();
+    const cookies=initial.headers.getSetCookie().map(c=>c.split(";")[0]).join("; ");
+    for(let i=0;i<3;i++) {
+      const refreshed=await fetch(server.url+"/api/public/forms/context",{headers:{cookie:cookies}});
+      assert.equal((await refreshed.json()).csrfToken,initialData.csrfToken);
+    }
+    const headers={origin:process.env.APP_URL!,cookie:cookies,"x-csrf-token":initialData.csrfToken};
+    const bytes=await sharp({create:{width:24,height:32,channels:3,background:"green"}}).png().toBuffer();
+    const upload=new FormData(); upload.set("file",new Blob([new Uint8Array(bytes)],{type:"image/png"}),"proof.png");upload.set("purpose","donation-proof");upload.set("scope",campaign.id);
+    const uploaded=await fetch(server.url+"/api/public/forms/uploads",{method:"POST",headers,body:upload});
+    assert.equal(uploaded.status,201,await uploaded.clone().text());
+    const media=await uploaded.json();imageId=media.id;
+    const receipt=await fetch(server.url+"/api/public/forms/submit",{method:"POST",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({kind:"donation",idempotencyKey:randomUUID(),consent:true,payload:{campaignId:campaign.id,name:"Donatur uji",amount:100,method:"bank",bankAccountId:campaign.bankAccounts[0].id,proof:media.url}})});
+    assert.equal(receipt.status,200,await receipt.clone().text());
+    assert.equal(await getDb().donation.count(),1);
+    const principal=(await login({email:"superuser@wapala.org",password:"public-forms-test-passphrase"},ctx)).principal;
+    const {readMedia}=await import("../../../src/server/media/storage");
+    assert.equal((await readMedia(imageId,principal)).mime,"image/webp");
+    await assert.rejects(readMedia(imageId,null));
+  } finally {await server.close();if(imageId)await unlink(mediaPath(mediaRoot(),imageId,"webp"));}
 });
 
 test("native scanner public uploads stay private and bind atomically to the owner's receipt",{skip:process.env.WAPALA_TEST_NATIVE_SCANNER!=="1"},async()=>{
@@ -106,6 +140,11 @@ test("native scanner public uploads stay private and bind atomically to the owne
     const upload=await response.json();id=upload.id;const media=await getDb().media.findUniqueOrThrow({where:{id}});assert.equal(media.visibility,"private");assert.equal(media.boundTo,null);
     await submitPublicForm(submit({year:2026,fields,photo:upload.url}),o,ctx,async()=>{});
     assert.ok((await getDb().media.findUniqueOrThrow({where:{id}})).boundTo);
+    const principal=(await login({email:"superuser@wapala.org",password:"public-forms-test-passphrase"},ctx)).principal;
+    const {exportApplicants}=await import("../../../src/server/domains/operational-export");
+    const pdf=await exportApplicants(principal,2026,"pdf");
+    assert.match(pdf.toString("latin1"),/\/Subtype \/Image/);
+    assert.match(pdf.toString("latin1"),/Data pendaftar/);
   } finally {await server.close();if(id)await unlink(mediaPath(mediaRoot(),id,"webp"));}
 });
 after(() => getDb().$disconnect());
@@ -114,7 +153,7 @@ test("concurrent public submissions atomically issue one receipt and encrypted e
   const input=submit({year:2026,fields,photo:""}), o=owner();
   let calls=0;const verify=async()=>{calls++;};
   const responses=await Promise.all([submitPublicForm(input,o,ctx,verify),submitPublicForm(input,o,ctx,verify)]);
-  assert.deepEqual(responses[0],responses[1]);assert.equal(calls,1);
+  assert.deepEqual(responses[0],responses[1]);assert.equal(calls,0);
   assert.equal(await getDb().applicant.count(),1);assert.equal(await getDb().publicFormReceipt.count(),1);
   const emails=await getDb().emailOutbox.findMany();assert.equal(emails.length,1);assert.ok(!emails[0].payload?.includes(fields.email));
   await assert.rejects(submitPublicForm({...input,payload:{year:2026,fields:{...fields,nama:"Berbeda"},photo:""}},o,ctx,verify),{code:"IDEMPOTENCY_CONFLICT"});
@@ -183,6 +222,7 @@ test("public HTTP requires origin, consent and owner cookie, then replays across
     const first=await send(input);assert.equal(first.status,200);const receipt=await first.json();
     const renewed=await fetch(server.url+"/api/public/forms/context",{headers:{cookie:cookies}});
     const renewedData=await renewed.json(), renewedCookies=renewed.headers.getSetCookie().map(c=>c.split(";")[0]).join("; ");
+    assert.equal(renewedData.csrfToken,data.csrfToken);
     const retry=await send(input,renewedCookies,renewedData.csrfToken);assert.equal(retry.status,200);assert.deepEqual(await retry.json(),receipt);
     const look=(phone:string)=>fetch(server.url+"/api/public/forms/lookup",{method:"POST",headers:{"content-type":"application/json",origin:process.env.APP_URL!,cookie:renewedCookies,"x-csrf-token":renewedData.csrfToken},body:JSON.stringify({kind:"recruitment",code:receipt.code,phone})});
     assert.equal((await look("081111111111")).status,404);

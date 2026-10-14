@@ -5,6 +5,7 @@ import type { listCampaigns, listDonations } from "@/server/domains/campaigns";
 import { money, date } from "@/lib/content";
 import { Badge, Empty, Field, Modal, Notice, Textarea, Upload } from "../ui";
 import { backendApi, uploadMedia } from "./api";
+import { MediaPreview } from "./media-preview";
 type Campaign = Awaited<ReturnType<typeof listCampaigns>>[number];
 type Donation = Awaited<ReturnType<typeof listDonations>>[number];
 type Draft = Omit<Campaign, "id" | "version"> & {
@@ -457,12 +458,10 @@ export function BackendCampaigns({
             <p>{campaigns.find((c) => c.id === review.campaignId)?.title}</p>
             <p>{review.bankAccountLabel || "QRIS"}</p>
             {review.proof ? (
-              <Image
+              <MediaPreview
+                key={review.proof}
                 src={review.proof}
-                width={500}
-                height={400}
-                alt="Bukti transfer"
-                unoptimized
+                label="Bukti transfer"
               />
             ) : (
               <Notice>Bukti belum tersedia.</Notice>
