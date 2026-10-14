@@ -66,6 +66,12 @@ npm run build                 # build produksi
 
 ## Deployment produksi
 
+Branch `main` adalah sumber deployment VPS. `staging` digunakan untuk integrasi
+dan pengujian sebelum perubahan yang disetujui dipromosikan ke `main`.
+Dokumen dan konfigurasi pendukung AI disimpan di branch `Agents`.
+Jangan merge keseluruhan branch `Agents` ke `main`; ambil hanya commit kode yang
+sudah ditinjau melalui `staging`. Panduan: `docs/branch-workflow.md`.
+
 Target produksi adalah Ubuntu native (tanpa Docker) dengan Nginx/TLS, systemd, PostgreSQL native, dan ClamAV untuk pemindaian unggahan yang fail-closed. Panduan lengkap tersedia di:
 
 - `docs/deployment-ubuntu.md` — persiapan host, lingkungan, build & aktivasi.
@@ -85,7 +91,7 @@ src/server/         domain logic, auth, media, email, keamanan
 src/lib/            utilitas bersama
 prisma/             skema, migrasi, seed
 tests/              uji frontend, unit backend, dan integrasi
-docs/               panduan setup, deployment, dan catatan kerja
+docs/               panduan setup, deployment, dan operasional
 deploy/             artefak deployment Ubuntu
 scripts/            CLI operasional (worker email, overdue, backup, dst.)
 ```

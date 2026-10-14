@@ -12,3 +12,21 @@ test-results/
 src/generated/
 output/
 imports/
+
+# Agent workspace files belong to the Agents branch.
+AGENTS.md
+agent_readme.md
+codegraph.json
+perubahan_agent*.md
+scripts/codegraph.ps1
+docs/codegraph-map.md
+docs/*ledger.md
+docs/*review-package.md
+docs/backend-handoff.md
+docs/design.md
+docs/implementation-plan.md
+docs/public-module-diagnostics.md
+docs/release-package-report.md
+docs/superpowers/
+docs/figma-*
+tmp/
