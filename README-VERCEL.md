@@ -1,106 +1,139 @@
-# WAPALA — deployment tambahan untuk testing Vercel
+# Deploy ke Vercel
 
-Kode aplikasi yang sama digunakan kembali; tidak ditulis ulang. Checkout lokal
-`Dev_Website/Vercel` memakai branch `vercel`. Tidak ada koneksi Git yang diperlukan
-untuk mengunggah atau memperbarui deployment ini.
+Panduan ini berlaku untuk akun, team, dan project Vercel yang dipilih pengelola.
+Tidak ada ketergantungan pada nama project, akun GitHub, domain, atau database
+deployment sebelumnya. Persiapan database, izin runtime, dan pemulihan akun
+dijelaskan lengkap di [README utama](README.md).
 
-## Target dan batas isolasi
+## Persiapan
 
-- Akun/workspace: `hulwanulazkap`.
-- Proyek: `wapala-testing` (bukan `wapala_dev`, SLA, atau VPS).
-- Database cloud: schema khusus `wapala_vercel_testing` di Neon, dengan role
-  runtime `wapala_vercel_app`. Data VPS tidak disalin. Tabel/schema lama tidak dihapus.
-- Password, sesi, kunci keamanan, dan inisialisasi Super User testing terpisah.
-- `wapala.my.id`, DNS, main, dan layanan VPS tidak berubah.
-- File `.env*`, `.local`, `.git`, hasil build, serta generated Prisma tidak
-  diunggah. Prisma Client dibuat ulang saat cloud build, bukan disimpan ke Git.
+- Berikan Vercel akses ke repository yang akan dideploy.
+- Siapkan PostgreSQL cloud dan jalankan seluruh migrasi pada database tujuan.
+  Pisahkan role migrator dari role runtime aplikasi.
+- Tentukan origin HTTPS yang dipakai pengunjung.
+- Buat `SECURITY_KEY` dan token instalasi baru. Jangan menyalin secret atau sesi
+  dari instalasi lain.
+- Pisahkan database dan secret untuk Production, Preview, serta Development.
 
-## Upload langsung dari folder ini
+Build belum menjalankan migrasi atau import otomatis. Menyalin repository tidak
+ikut menyalin resource cloud, akun pengguna, data, atau media.
 
-```powershell
-npx --yes vercel@64.0.2 login
-npx --yes vercel@64.0.2 link --yes --scope hulwanulazkap --project wapala-testing
-npx --yes vercel@64.0.2 project inspect --non-interactive --scope hulwanulazkap
-npx --yes vercel@64.0.2 deploy --dry --json --scope hulwanulazkap
-npx --yes vercel@64.0.2 deploy --target preview --scope hulwanulazkap --project wapala-testing
+## Deploy melalui Git
+
+Import repository melalui **Add New → Project**, pada akun/team tujuan.
+Gunakan pengaturan ini:
+
+| Pengaturan | Nilai |
+| --- | --- |
+| Framework | Next.js |
+| Root Directory | Root repository yang berisi `package.json` dan `vercel.json` |
+| Node.js | `24.x` |
+| Install Command | `npm ci` |
+| Build Command | `npm run db:generate && npm run build` |
+| Output Directory | Default Next.js |
+| Production Branch | Branch rilis yang dipilih pengelola, biasanya `main` |
+
+Konfigurasi build tersedia di `vercel.json`. Jangan memakai `npm run dev` untuk
+deployment. Push ke Production Branch memicu deployment produksi; branch lain
+menjadi Preview sesuai pengaturan project.
+
+Sebelum deploy, isi environment pada project tujuan:
+
+| Variabel | Keterangan |
+| --- | --- |
+| `APP_URL` | Origin HTTPS canonical, tanpa path/query |
+| `DATABASE_URL` | URL PostgreSQL runtime dengan izin terbatas |
+| `SECURITY_KEY` | 32 byte acak, format base64 |
+| `INITIAL_SETUP_TOKEN` | 32 byte acak, base64url sepanjang 43 karakter; hanya saat instalasi baru |
+| `WAPALA_MODE` | `backend` |
+| `EMAIL_MODE` | `disabled` untuk operasi tanpa email |
+| `TRUST_PROXY` | `true` untuk ingress langsung Vercel; tinjau ulang jika ada proxy tambahan |
+| `NEXT_TELEMETRY_DISABLED` | `1`, opsional |
+
+Gunakan tipe **Secret** untuk URL database, kunci, dan token. Jangan memberi
+prefix `NEXT_PUBLIC_` pada secret. Preview memerlukan origin dan database sendiri,
+bukan salinan koneksi Production. Mode `preview` aplikasi dan email `sink` tidak
+diizinkan pada runtime production, termasuk deployment Preview Vercel.
+
+Setelah mengubah environment, buat deployment baru. Deployment sebelumnya tidak
+mengambil perubahan tersebut. Pastikan URL yang dibuka sama dengan `APP_URL`
+sebelum menguji login dan formulir.
+
+## Alternatif: upload melalui CLI
+
+Jalankan dari root checkout. Ganti `NAMA_TEAM` dan `NAMA_PROJECT` dengan tujuan
+yang sebenarnya; keduanya bukan nilai bawaan aplikasi.
+
+```sh
+npx vercel login
+npx vercel link --scope NAMA_TEAM --project NAMA_PROJECT
+npx vercel project inspect --scope NAMA_TEAM
+npx vercel deploy --dry --json --scope NAMA_TEAM
 ```
 
-Pastikan owner/project sesuai sebelum deploy. Proyek baru dapat menjadikan
-deployment pertamanya sebagai production di proyek testing tersebut; label itu
-tidak menunjuk VPS. Gunakan URL testing yang ditetapkan pada `APP_URL` untuk
-login/form agar pemeriksaan Origin/CSRF tetap konsisten. Setelah deployment baru
-lulus verifikasi, arahkan alias testing ke URL deployment itu jika diperlukan:
+Periksa `.vercel/project.json` dan hasil inspeksi sebelum mengunggah. Pastikan
+team/project benar dan daftar file tidak mencakup `.env*` privat, `.local`,
+database, hasil build lokal, atau paket data organisasi.
 
-```powershell
-npx --yes vercel@64.0.2 alias set <deployment-url> wapala-testing-hulwanulazkap.vercel.app --scope hulwanulazkap
+Setelah itu, pilih target yang memang ingin diterbitkan:
+
+```sh
+# Preview
+npx vercel deploy --target preview --scope NAMA_TEAM
+
+# Production
+npx vercel deploy --prod --scope NAMA_TEAM
 ```
 
-Build Vercel: `npm run db:generate && npm run build`. Migrasi database adalah
-langkah operator terpisah pada schema testing yang telah diverifikasi, bukan
-reset/seed otomatis setiap deployment. Jangan arahkan `DATABASE_URL` ke VPS.
+Dua perintah tersebut adalah pilihan, bukan urutan yang wajib dijalankan.
+Periksa target dan URL hasilnya, terutama pada deployment pertama project baru.
+Upload CLI tidak otomatis menghubungkan repository Git untuk update berikutnya.
 
-## Batas testing saat ini
+## Inisialisasi akun
 
-- Build/deployment dan database dapat diuji; ini belum migrasi penuh seluruh
-  layanan VPS ke Vercel.
-- Upload media masih menggunakan private filesystem dan executable ClamAV lokal.
-  Belum ada object storage atau scanner remote untuk proyek ini. Jangan menganggap
-  upload/penyimpanan file sudah berfungsi di Vercel; keamanan tidak dibypass.
-- Email dinonaktifkan. Akun testing tidak memakai password/email pemulihan VPS.
-- Deployment protection Vercel tidak dinonaktifkan. Pemilik dapat login Vercel;
-  operator dapat memeriksa preview menggunakan `vercel curl`.
-- Inisialisasi baru dapat memakai Secret Environment Variable
-  `INITIAL_SETUP_TOKEN`; tidak perlu SSH untuk menerbitkan token. Lihat prosedur
-  di bawah. File token testing lama tidak menjadi prasyarat deployment baru.
+Buat `INITIAL_SETUP_TOKEN` pada perangkat operator, simpan salinannya secara
+privat, lalu tambahkan nilainya ke environment Vercel sebelum deploy. File lokal
+seperti `.env.secret.token` bukan file konfigurasi yang dibaca otomatis Vercel.
+Cara membuat token tanpa mencetaknya tersedia di [README utama](README.md).
 
-Verifikasi build/health bukan bukti semua alur fitur (khususnya upload) telah QA.
+Buka `/wapala`, masukkan token, lalu tentukan password Super User sendiri.
+Token berlaku 30 menit sejak konteks login/bootstrap pertama diakses. Database
+menyimpan hash, bukan nilai token asli. Membuka ulang halaman dan redeploy tidak
+memperpanjang masa berlaku.
 
-## Inisialisasi Super User dari environment (termasuk akun WAPALA baru)
+Token langsung hangus setelah akun berhasil dibuat. Setup tetap tertutup meski
+secret diganti atau aplikasi dideploy ulang. Hapus secret instalasi dan salinan
+token lokal setelah berhasil; pertahankan `SECURITY_KEY`.
 
-Kode mekanisme token ini tersedia pada branch `vercel`. Terapkan semua migrasi
-sebelum menjalankan versi ini, termasuk
-`202610160002_environment_bootstrap_token`. Dengan koneksi **migrator** database
-tujuan yang sudah dikonfigurasi secara privat, jalankan `npm ci`,
-`npm run db:generate`, lalu `npm run db:migrate`. Jangan memakai database VPS atau
-`db push`/reset. Build saat ini belum menjalankan migrasi secara otomatis.
+Jika token kedaluwarsa sebelum selesai, buat token baru, ubah environment, lalu
+redeploy. Token lama tidak dapat diaktifkan lagi. Jangan menghapus status
+instalasi atau akun untuk mengulang setup, dan jangan mencampur token CLI dengan
+token environment yang masih aktif.
 
-1. Buat token acak 32 byte, format base64url (43 karakter). Contoh PowerShell
-   berikut menyimpannya ke file privat lokal tanpa mencetak nilai ke terminal;
-   perintah menolak menimpa file yang sudah ada:
+## Batas yang perlu diperhatikan
 
-   ```powershell
-   node -e "const fs=require('node:fs'),c=require('node:crypto');fs.writeFileSync('.env.secret.token','INITIAL_SETUP_TOKEN='+c.randomBytes(32).toString('base64url')+'\n',{flag:'wx',mode:0o600})"
-   ```
+Storage media masih filesystem privat dengan scanner ClamAV native. Adapter
+Blob dan scanner yang cocok untuk Vercel belum tersedia pada kode ini. Menambah
+Blob store atau tokennya tidak membuat upload dan pembacaan media otomatis
+berfungsi. Jangan memakai `/tmp` sebagai penyimpanan permanen atau melewati
+pemeriksaan scanner.
 
-   Lindungi akses file tersebut pada komputer bersama. File `.env.secret.token`
-   sudah dikecualikan oleh `.gitignore` dan `.vercelignore`. Jangan masukkan ke
-   Git, ZIP, folder `public`, atau membagikannya. Nama file ini **tidak** membuat
-   Vercel otomatis membacanya.
-2. Pada project Vercel tujuan, buka Settings → Environment Variables. Tambahkan
-   `INITIAL_SETUP_TOKEN` sebagai **Secret**, berisi nilai setelah tanda `=` dari
-   file tadi (bukan seluruh baris), untuk environment Production. Jangan gunakan
-   prefix `NEXT_PUBLIC_`. Preview harus memakai database dan token berbeda.
-3. Deploy/redeploy agar secret tersedia pada runtime. Buka `/wapala`; akses
-   pertama ke konteks login mendaftarkan **hash** token dan memulai masa berlaku
-   30 menit. Membuka ulang halaman atau redeploy tidak memperpanjangnya. Tidak
-   ada token yang ditampilkan di website, database dalam bentuk asli, atau log.
-4. Masukkan token yang disimpan tadi dan tentukan password baru minimal
-   12 karakter. Akun yang dibuat adalah `superuser@wapala.org`. Tidak ada
-   password bawaan atau akun yang disalin dari VPS.
-5. Setelah berhasil, token langsung hangus dalam transaksi pembuatan akun.
-   Redeploy, nilai secret lama/baru, maupun penghapusan secret tidak membuka
-   ulang instalasi. Hapus `INITIAL_SETUP_TOKEN` dari pengaturan Vercel dan hapus
-   file lokal sesudah berhasil; nilai secret pada deployment lama pun tidak
-   dapat dipakai menginisialisasi ulang akun.
+Migrasi data, media lama, worker email, dan pekerjaan terjadwal memerlukan
+penyiapan tersendiri. Dengan `EMAIL_MODE=disabled`, email pemulihan tidak dikirim;
+pemulihan Super User dilakukan dari terminal operator yang terhubung ke database
+tujuan, bukan melalui SSH ke Vercel.
 
-Jika lewat 30 menit sebelum selesai: buat **token baru**, ubah secret, lalu
-redeploy dan buka `/wapala` kembali. Token kedaluwarsa yang sama tidak dapat
-diaktifkan lagi, termasuk setelah pernah diganti token lain. Jika token aktif
-berbeda (misalnya token CLI sebelumnya), tunggu token itu kedaluwarsa atau
-gunakan deployment dengan konfigurasi token yang sesuai; aplikasi tidak diam-
-diam menimpanya. Jangan menghapus `BootstrapState` atau akun untuk mengulang
-setup. Mekanisme CLI `npm run auth:bootstrap-token` tetap tersedia bagi operator
-yang mengelola server sendiri; jangan mencampur kedua alur saat token masih aktif.
+## Setelah deploy
 
-Penerapan token ini **tidak** mengubah batas upload/filesystem/scanner di atas
-dan bukan klaim bahwa keseluruhan aplikasi sudah siap produksi di Vercel.
+Periksa halaman publik, `/api/health`, setup/login/logout, izin admin, formulir,
+dan runtime logs. Health hanya memeriksa koneksi database, bukan seluruh schema
+atau fitur. Status Ready juga bukan hasil pengujian semua alur.
+
+Sebelum layanan dibuka untuk umum, selesaikan storage/scanning dan uji upload,
+media privat, alur bisnis, serta backup/restore. Gunakan domain sendiri setelah
+deployment tujuan lolos pemeriksaan; perbarui `APP_URL` dan redeploy ketika
+origin canonical berubah.
+
+Rujukan platform: [deploy dari Git](https://vercel.com/docs/git),
+[environment variables](https://vercel.com/docs/environment-variables), dan
+[batas Functions](https://vercel.com/docs/functions/limitations).
