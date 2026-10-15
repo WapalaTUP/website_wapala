@@ -1,6 +1,6 @@
 # Website WAPALA
 
-Website resmi WAPALA — organisasi kemahasiswaan pecinta alam Telkom University dengan empat divisi: Gunung & Hutan, Rock Climbing, Caving, dan Rafting. Website menyediakan profil organisasi, publikasi kegiatan, arsip dokumentasi, serta layanan daring untuk publik yang seluruh datanya dikelola melalui portal admin.
+Website resmi WAPALA — unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University dengan empat divisi: Gunung & Hutan, Rock Climbing, Caving, dan Rafting. Website menyediakan profil organisasi, publikasi kegiatan, arsip dokumentasi, serta layanan daring untuk publik yang seluruh datanya dikelola melalui portal admin.
 
 ## Fitur
 
