@@ -1,0 +1,12 @@
+[Unit]
+Description=Reconcile overdue WAPALA loans every five minutes
+ConditionPathExists=/etc/wapala/loans-overdue.enabled
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=5min
+AccuracySec=30s
+Unit=wapala-loans-overdue.service
+
+[Install]
+WantedBy=timers.target

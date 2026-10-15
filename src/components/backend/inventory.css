@@ -1,0 +1,59 @@
+.inventory-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.inventory-availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.inventory-availability-track {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 1.15rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: #667069;
+}
+.inventory-availability-track > span {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: white;
+  transition: transform 150ms ease;
+}
+.inventory-availability[aria-pressed="true"] .inventory-availability-track {
+  background: #237845;
+}
+.inventory-availability[aria-pressed="true"] .inventory-availability-track > span {
+  transform: translateX(0.85rem);
+}
+.inventory-availability:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.inventory-availability:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.inventory-availability-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .inventory-availability-track > span { transition: none; }
+}
