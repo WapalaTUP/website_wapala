@@ -1,14 +1,12 @@
 [Unit]
-Description=WAPALA Next.js application
-After=network-online.target postgresql.service clamav-daemon.service
+Description=WAPALA Next.js application (host deploy)
+After=network-online.target postgresql.service
 Wants=network-online.target
-Requires=clamav-daemon.service
 
 [Service]
 Type=simple
 User=wapala
 Group=wapala
-SupplementaryGroups=clamav
 WorkingDirectory=/srv/wapala/current
 EnvironmentFile=/etc/wapala/production.env
 ExecStart=/usr/bin/node .next/standalone/server.js
@@ -21,6 +19,7 @@ ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/wapala/media /srv/wapala/current/.next
 MemoryAccounting=true
+# Sesuaikan dengan RAM VPS; lihat README bagian kapasitas.
 MemoryMax=900M
 TasksMax=128
 

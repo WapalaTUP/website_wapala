@@ -1,195 +1,250 @@
-# Website WAPALA
+# Website WAPALA — Production Deploy (`host`)
 
-Website resmi WAPALA — unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University dengan empat divisi: Gunung & Hutan, Rock Climbing, Caving, dan Rafting.
+[![Deploy host](https://github.com/hulwanulazka-companion/wapala_dev/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/hulwanulazka-companion/wapala_dev/actions/workflows/deploy-host.yml)
 
-**`main` adalah source deployment production.** Server production menjalankan hasil `npm run build`, bukan `npm run dev`. Clone repository tidak otomatis menyiapkan database, akun, data, sertifikat atau layanan server. Situs yang sudah dideploy: [wapala.my.id](https://wapala.my.id).
+Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif: [wapala.my.id](https://wapala.my.id).
 
-## Branch dan isi repository
+Satu alur untuk semua VPS: **push ke branch `host` → GitHub Actions menyambung SSH ke server → aplikasi di-build hemat memori, dimigrasi, diaktifkan atomik, dan diperiksa kesehatannya — otomatis dengan rollback bila gagal.**
 
-| Branch    | Kegunaan                                                       |
-| --------- | -------------------------------------------------------------- |
-| `main`    | Source aplikasi dan panduan deployment production              |
-| `staging` | Integrasi/pengujian dan paket import publik Album/Angkatan     |
-| `Agents`  | Instruksi AI, catatan perubahan dan panduan pendukung operator |
+## Fitur aplikasi (ringkas)
 
-Jangan merge keseluruhan `staging`/`Agents` ke `main`; promosikan hanya perubahan kode yang disetujui. Database, media pengguna dan secret tidak disimpan di `main`. Clone baru tidak otomatis mempunyai album/angkatan atau akun dari server aktif.
+- Situs publik: profil/angkatan, divisi, berita, galeri, pembaca PDF/EPUB, kontak.
+- Peminjaman alat: katalog, pengajuan, invoice, persetujuan, verifikasi pengembalian.
+- Open Recruitment, Donasi (QRIS + verifikasi bukti), Event (formulir dinamis + ekspor Excel).
+- Admin: anggota, angkatan, inventaris, konten, pengguna/peran, arsip, audit.
 
-Script `dev`, `devDependencies` dan tes boleh tetap ada: TypeScript, Prisma CLI dan `tsx` diperlukan untuk build/operasi tertentu. Jangan menjalankan `npm prune --omit=dev` tanpa menyediakan pengganti CLI operasional. Versi paket `0.1.0` bukan penentu mode runtime.
+| Lapisan | Teknologi |
+| --- | --- |
+| Aplikasi | Next.js 16 (standalone), React 19, TypeScript |
+| Data | PostgreSQL + Prisma 7 (adapter `pg`) |
+| Keamanan | Argon2, sesi HttpOnly, CSRF, throttling, media privat |
+| Media | Disk lokal `MEDIA_ROOT`, pemindaian ClamAV (opsional, fail-closed) |
+| Runtime | systemd + Nginx + TLS (Let's Encrypt) |
 
-## Fitur dan teknologi
+## Arsitektur deployment
 
-- Situs publik: profil/angkatan, divisi, berita/pengumuman, galeri, pembaca PDF/EPUB dan kontak.
-- Peminjaman alat: katalog database, pengajuan, pelacakan, invoice, persetujuan dan verifikasi pengembalian.
-- Open Recruitment: periode tahunan, pendaftaran, foto, revisi dan ekspor.
-- Donasi: beberapa kampanye, rekening penerima, poster, QRIS dan verifikasi bukti transfer.
-- Event: pembuat formulir dinamis, pendaftaran, unggahan dan ekspor Excel.
-- Reset Anggota/Inventaris khusus Super User: arsipkan data aktif atau hapus permanen termasuk arsip. Tersedia pada toolbar modul masing-masing; wajib pemeriksaan jumlah, teks konfirmasi, dan password Super User. Arsip bisa dipulihkan melalui menu Arsip; identitas/kode arsip tetap terpakai. Hapus anggota terkait akun/koreksi tetap ditolak. Inventaris dari peminjaman yang sudah dikembalikan/ditolak boleh dihapus: detail item disalin secara atomik ke riwayat pinjaman agar tabel, pelacakan, dan invoice tetap lengkap. Peminjaman yang belum selesai/ditolak memblokir arsip maupun hapus seluruh batch. Akun, foto tersimpan, Album/Angkatan dan riwayat peminjaman tidak ikut dihapus. Buat backup sebelum reset; setelah memakai snapshot riwayat, jangan menurunkan versi ke kode lama yang belum membaca snapshot.
-- Admin: anggota, angkatan, inventaris, konten, pengguna/peran, pengaturan, arsip, audit dan reset kepengurusan sesuai izin.
-
-Stack: Next.js 16.4, React 19, TypeScript, PostgreSQL + Prisma 7, Zod, Argon2, cookie sesi HttpOnly, CSRF, throttling, media privat dan ClamAV. Login melalui `/wapala`; tidak ada password bawaan.
-
-## Deployment production
-
-### Prasyarat server
-
-Target native yang sudah digunakan: **Ubuntu 22.04 x64, Node.js 24, PostgreSQL 14+, Nginx/TLS dan systemd**, tanpa Docker di VPS. Artifact GitHub Actions dibuat untuk Linux x64, bukan semua arsitektur.
-
-Siapkan sebelum aktivasi:
-
-1. SSH/sudo untuk provisioning dan service user non-login `wapala`.
-2. Database kosong, role migration terpisah dari runtime non-superuser. Runtime tidak boleh DDL/truncate; audit hanya select/insert.
-3. Domain/DNS, forwarding bila NAT, dan sertifikat HTTPS valid.
-4. ClamAV dengan signature resmi lengkap, socket lokal grup `clamav`, serta [wrapper scanner](deploy/clamdscan-wapala.sh) di `/usr/local/libexec/clamdscan-wapala`.
-5. `/srv/wapala/releases`, `/etc/wapala`, dan media privat `/var/lib/wapala/media` (owner `wapala`, mode `0700`).
-
-Build langsung berhasil di VPS 2 GB setelah instalasi dibuat serial dan heap dibatasi. **Ini bukan jaminan kapasitas semua VPS/beban.** Instalasi/build sebelumnya gagal pada 1 GB. Aplikasi, PostgreSQL dan scanner berbagi RAM; ukur kapasitas server tujuan. Jangan menambah swap bila dilarang provider atau menonaktifkan keamanan unggahan agar muat.
-
-### 1. Clone, verifikasi dan build
-
-Gunakan direktori checkout/release **baru**, bukan menimpa release aktif:
-
-```sh
-git clone --branch main --single-branch https://github.com/hulwanulazka-companion/wapala_dev.git wapala-release
-cd wapala-release
-npm ci
-npm run db:generate
-npm run typecheck
-npm run lint
-npm test
-npm run test:backend
-npm run build
+```text
+  Git push (branch host)
+        │
+        ▼
+  GitHub Actions ── SSH (kunci deploy) ──▶ VPS: host/host-deploy.sh
+                                              │  1. git clone release baru
+                                              │  2. npm ci + next build   (heap dibatasi)
+                                              │  3. prisma migrate deploy (+ grant role runtime)
+                                              │  4. symlink /srv/wapala/current → release baru
+                                              │  5. systemctl restart wapala
+                                              │  6. health check /api/health
+                                              ▼
+                                     gagal ⟶ rollback otomatis ke release sebelumnya
 ```
 
-Tes integrasi: `npm run test:backend:integration` dengan database terisolasi berakhiran `_test` pada `TEST_DATABASE_URL`. Jangan memuat environment produksi untuk menjalankan tes integrasi.
+Aplikasi berjalan sebagai user non-root `wapala`, hanya listen `127.0.0.1:3000`; Nginx meneruskan trafik HTTPS dari publik.
 
-Jika instalasi pada VPS kecil mengalami lonjakan memori, berikut alternatif instalasi/build yang digunakan saat deployment. Tetap lakukan pemeriksaan kode/tes di atas dan jangan menjalankan kedua build bersamaan:
+## Prasyarat
 
-```sh
-export UV_THREADPOOLSIZE=1
-export MALLOC_ARENA_MAX=2
-export npm_config_maxsockets=1
-export NEXT_TELEMETRY_DISABLED=1
-export NODE_OPTIONS=--max-old-space-size=512
-task_cache=$(mktemp -d /var/tmp/wapala-npm-cache.XXXXXX)
-npm ci --cache "$task_cache" --no-audit --no-fund
-npm run db:generate
-NODE_OPTIONS=--max-old-space-size=768 npm run build
-```
+| Kebutuhan | Nilai minimum | Catatan |
+| --- | --- | --- |
+| VPS | Ubuntu 22.04/24.04, **2 GB RAM**, disk ≥ 3 GB | 1 GB berisiko OOM saat build (lihat [Kapasitas](#kapasitas--build-hemat-memori)) |
+| Akses | SSH root atau sudo | Provisioning + deploy butuh systemd |
+| Domain | 1 domain (A record) | NAT VPS: daftarkan domain di panel provider |
+| Repository | GitHub repo ini | Private repo tetap bisa (atur `VPS_REPO_URL` + deploy key) |
 
-Cache baru membatasi lonjakan ekstraksi cache lama; RAM/jaringan tetap harus mencukupi. `Killed`/exit nonzero berarti gagal. Build sukses harus menghasilkan `.next/BUILD_ID` dan `.next/standalone/server.js`.
+## Pilih mode VPS
 
-Alternatif: jalankan workflow manual **Linux runtime release** pada `main`. Lihat [panduan artifact Linux](docs/linux-runtime-build.md). Artifact tidak otomatis dideploy. Docker/GitHub Actions tidak diperlukan untuk build langsung di VPS.
+| | **A. Dedicated IP** | **B. NAT VPS** |
+| --- | --- | --- |
+| IP publik | Khusus untuk VPS ini | Dibagi antar pelanggan provider |
+| Port | 22, 80, 443 standar | Terbatas pada port yang diteruskan provider (mis. SSH `33333`, HTTP `33335`, HTTPS `33336`) |
+| DNS | `A record domain → IP VPS` | `A record domain → IP publik provider` **+** daftarkan domain di panel provider agar gateway tahu rute ke VPS Anda |
+| Sertifikat | Certbot HTTP-01 (port 80) | Certbot HTTP-01 hanya bila provider meneruskan publik `:80` → port HTTP internal; bila tidak, gunakan DNS-01 atau `WAPALA_SKIP_CERTBOT=1` |
+| Biaya relatif | Lebih mahal | **Lebih murah** |
 
-### 2. Environment privat dan email
+> NAT bukan "DNS forwarding". DNS hanya menerjemahkan nama → IP; rute port publik → port internal ditentukan panel provider (port forwarding). Di provider yang sama, pastikan HTTP publik (80) dan HTTPS publik (443 atau port khusus) diteruskan ke port internal yang benar.
 
-Isi [.env.production.example](.env.production.example) pada `/etc/wapala/production.env` melalui terminal privat. File root-owned, mode `0600`; jangan commit secret, memasukkannya ke artifact, atau membagikannya ke chat/log.
+---
 
-| Variabel           | Ketentuan                                                             |
-| ------------------ | --------------------------------------------------------------------- |
-| `NODE_ENV`         | `production`                                                          |
-| `WAPALA_MODE`      | `backend`, bukan `preview`                                            |
-| `APP_URL`          | Origin HTTPS canonical, contoh `https://wapala.my.id`                 |
-| `DATABASE_URL`     | PostgreSQL localhost dengan role runtime terbatas                     |
-| `SECURITY_KEY`     | 32 byte acak dalam base64; backup privat, jangan rotasi sembarangan   |
-| `TRUST_PROXY`      | `true` hanya dengan app loopback di belakang proxy tepercaya          |
-| `EMAIL_MODE`       | `disabled` untuk VPS WAPALA saat ini; `smtp` bila SMTP nyata tersedia |
-| `MEDIA_ROOT`       | `/var/lib/wapala/media`                                               |
-| `MEDIA_SCANNER`    | `/usr/local/libexec/clamdscan-wapala`                                 |
-| `HOSTNAME`, `PORT` | `127.0.0.1`, `3000`                                                   |
+## Langkah 1 — Provisioning (sekali saja)
 
-Provider WAPALA memblokir SMTP. Dengan **`EMAIL_MODE=disabled`**, notifikasi tidak diantrekan dan pemulihan email web tidak tersedia. **Jangan menjalankan timer email.** Super User dipulihkan melalui SSH; akun lain direset Super User lewat panel. `sink` hanya untuk development dan ditolak di production.
-
-Untuk mode `smtp`, isi seluruh `SMTP_*`, siapkan worker/timer dan verifikasi delivery nyata. Jangan memasang konfigurasi palsu agar pemeriksaan terlihat lulus.
-
-### 3. Migration, assets dan layanan
-
-Ambil backup database/media sebelum migration pada instalasi berisi data. Jalankan `npm run db:migrate` dengan environment migration yang dimuat privat oleh runner operator, bukan dengan role runtime. **Jangan menjalankan seed/demo/import otomatis pada database production.**
-
-Setelah build, siapkan static/public untuk standalone:
+SSH ke VPS, lalu clone branch `host` dan jalankan provisioning:
 
 ```sh
-mkdir -p .next/standalone/.next
-cp -a .next/static .next/standalone/.next/
-cp -a public .next/standalone/
+apt-get update && apt-get install -y git
+git clone --branch host --single-branch https://github.com/hulwanulazka-companion/wapala_dev.git wapala-setup
+cd wapala-setup
 ```
 
-Tempatkan release pada `/srv/wapala/releases/ID_RELEASE`, lalu arahkan `/srv/wapala/current` secara atomik ke release siap pakai. Pertahankan release sebelumnya. Berikan service user hak baca/traverse kode/generated/assets dan hak eksekusi binary native yang diperlukan; hanya media/cache yang perlu writable. Secret environment tetap privat.
-
-Pasang [unit aplikasi](deploy/wapala.service) ke `/etc/systemd/system/wapala.service`; sesuaikan path Node bila perlu:
+**Opsi A — Dedicated IP:**
 
 ```sh
-sudo systemctl daemon-reload
-sudo systemctl start wapala.service
-sudo systemctl status wapala.service --no-pager
+sudo bash host/host-provision.sh contoh-domain.com admin@contoh-domain.com
 ```
 
-Entrypoint: `node .next/standalone/server.js`, **bukan `npm run dev`**. Unit memerlukan daemon scanner. Node/PostgreSQL hanya localhost; jangan forward port 3000/5432 ke publik.
+**Opsi B — NAT VPS** (sesuaikan pasangan port dari panel provider):
 
-`start` tidak mengaktifkan auto-start. Auto-start aplikasi VPS WAPALA masih ditunda sesuai keputusan operator; `systemctl enable` hanya jika disetujui. Timer overdue/cleanup perlu aktivasi terpisah; timer email hanya untuk SMTP.
+```sh
+sudo WAPALA_NAT_MODE=1 \
+     WAPALA_NAT_HTTP_PORT=33335 \
+     WAPALA_NAT_HTTPS_PORT=33336 \
+     bash host/host-provision.sh contoh-domain.com admin@contoh-domain.com
+```
 
-### 4. Nginx, DNS dan VPS NAT
+Script melakukan semua hal berikut secara idempoten: paket sistem + Node.js 24, PostgreSQL, Nginx, Certbot, pembuatan user layanan `wapala`, database beserta **dua role** (owner untuk migrasi, runtime terbatas tanpa DDL), file env privat `0600`, unit systemd, Nginx HTTP → sertifikat TLS → Nginx HTTPS.
 
-VPS publik biasa: sesuaikan domain/certificate pada [template Nginx](deploy/nginx-wapala.conf). **VPS NAT WAPALA memakai listener berbeda:**
+Opsi tambahan (environment sebelum perintah):
 
-| Jalur publik             | Tujuan internal          |
-| ------------------------ | ------------------------ |
-| SSH TCP `33333`          | `10.88.0.51:22`          |
-| HTTP `wapala.my.id:80`   | Nginx `10.88.0.51:33335` |
-| HTTPS `wapala.my.id:443` | Nginx `10.88.0.51:33336` |
+| Variabel | Fungsi |
+| --- | --- |
+| `WAPALA_PROVISION_CLAMAV=1` | Pasang ClamAV + wrapper scanner. **Tanpa ini, unggahan media ditolak (fail-closed).** |
+| `WAPALA_SKIP_CERTBOT=1` | Lewati penerbitan sertifikat (atur TLS/DNS-01 manual). |
+| `WAPALA_ENABLE_UFW=1` | Aktifkan firewall (SSH, 80/443 + port NAT). |
+| `WAPALA_DB_PASSWORD`, `WAPALA_APP_DB_PASSWORD` | Password database dibuat manual (bila kosong dibuat acak). |
 
-DNS A domain mengarah ke IP publik NAT provider. HTTP/HTTPS forwarding memakai domain pada Source Domain. IP internal/port di atas khusus server ini; sesuaikan di provider lain.
+Di akhir, script mencetak ringkasan berisi password database dan langkah berikutnya — **catat privat, jangan disebarkan**.
 
-Nginx listen `33335` dan `33336 ssl`, proxy ke `http://127.0.0.1:3000`, mempertahankan Host asli dan menimpa forwarded headers dari proxy tepercaya. **Jangan menyalin listener 80/443 template mentah-mentah atau menghentikan Apache provider pada port 80.**
+## Langkah 2 — DNS
 
-Sediakan lokasi HTTP `/.well-known/acme-challenge/`; webroot server ini `/var/www/wapala-acme`. Terbitkan sertifikat di VPS menggunakan Certbot webroot sebelum mengaktifkan TLS block. Kemudian arahkan HTTP biasa ke HTTPS, pasang renewal/reload hook, jalankan `nginx -t`, lalu reload. Domain forwarding tidak otomatis membuat DNS atau sertifikat.
+- **Dedicated:** buat `A record` `@` (dan `www`) → IP publik VPS. Verifikasi: `dig +short contoh-domain.com`.
+- **NAT:** `A record` → IP publik provider **dan** daftarkan/forwarding domain di panel provider (Source Domain) sesuai pasangan port. Verifikasi juga dari luar: `curl -I http://contoh-domain.com`.
 
-### 5. Bootstrap dan pemulihan
+DNS harus aktif **sebelum** provisioning jika ingin sertifikat diterbitkan otomatis.
 
-Dengan environment produksi dimuat privat, jalankan `npm run auth:bootstrap-token` dari release aktif. Token sekali pakai berlaku 30 menit; buat Super User di `https://DOMAIN/wapala`. Setup yang sudah selesai tidak perlu diulang.
+## Langkah 3 — Environment privat
 
-Pada VPS WAPALA yang telah diprovision, jalankan melalui SSH:
+```sh
+sudo nano /etc/wapala/production.env
+```
+
+File dibuat oleh provisioning dengan nilai aman bawaan. Yang perlu diperiksa:
+
+| Variabel | Ketentuan |
+| --- | --- |
+| `APP_URL` | Origin HTTPS canonical, mis. `https://contoh-domain.com` |
+| `DATABASE_URL` | Role runtime `wapala_app` (tanpa DDL) — bawaan provisioning |
+| `MIGRATE_DATABASE_URL` | Role owner `wapala` untuk `db:migrate` — bawaan provisioning |
+| `SECURITY_KEY` | 32 byte base64 (sudah digenerate; backup privat, jangan rotasi sembarangan) |
+| `EMAIL_MODE` | `disabled` bila provider memblokir SMTP (notifikasi off, pemulihan via SSH). `smtp` + isi `SMTP_*` bila tersedia |
+| `MEDIA_SCANNER` | Aktif hanya bila ClamAV terpasang (`WAPALA_PROVISION_CLAMAV=1`) |
+| `PORT` | `3000` (internal; Nginx yang membuka port publik) |
+
+Format file adalah assignment shell-compatible (`KEY=value`), dimuat systemd dan script deploy.
+
+## Langkah 4 — GitHub secrets
+
+Buat kunci SSH khusus deploy (di mesin lokal), tanpa passphrase agar otomatis:
+
+```sh
+ssh-keygen -t ed25519 -f wapala_deploy_key -C "wapala-deploy" -N ""
+ssh-copy-id -i wapala_deploy_key.pub root@IP_VPS        # atau manual ke ~/.ssh/authorized_keys
+ssh-keyscan -p PORT_SSH IP_VPS                          # output → VPS_KNOWN_HOSTS
+```
+
+Tambahkan di **Settings → Secrets and variables → Actions**:
+
+| Secret | Wajib | Isi |
+| --- | --- | --- |
+| `VPS_HOST` | ✅ | IP/host VPS (dedicated) atau IP publik provider (NAT) |
+| `VPS_USER` | ✅ | `root` atau user sudo |
+| `VPS_SSH_KEY` | ✅ | Isi file kunci **privat** `wapala_deploy_key` |
+| `VPS_PORT` | NAT | Port SSH publik dari provider (dedicated: kosongkan = 22) |
+| `VPS_KNOWN_HOSTS` | disarankan | Output `ssh-keyscan` (mencegah MITM) |
+| `VPS_REPO_URL` | repo private | URL clone + kredensial/deploy key bila repo tidak publik |
+
+## Langkah 5 — Deploy
+
+Deploy pertama: push apa pun ke branch `host`, atau jalankan manual **Actions → Deploy host → Run workflow**. Pantau log di tab Actions; tahapan clone → build → migrate → restart → health check tampil lengkap di sana.
+
+Verifikasi setelah hijau:
+
+```sh
+curl -fsS https://contoh-domain.com/api/health
+```
+
+## Langkah 6 — Bootstrap Super User
 
 ```sh
 sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:bootstrap-token'
 ```
 
-Perintah tersebut hanya untuk environment **root-owned, tepercaya dan berformat assignment shell-compatible** yang dibuat operator. Jangan source file tak tepercaya. Untuk pemulihan, ganti subcommand dengan `npm run auth:recover-superuser`; password dimasukkan melalui prompt tersembunyi, bukan argumen. Sesi lama dicabut.
+Token sekali pakai berlaku 30 menit — buka `https://contoh-domain.com/wapala` dan buat akun Super User. Tidak ada password bawaan; setup sudah selesai tidak perlu diulang. Pemulihan akun Super User: `npm run auth:recover-superuser` (prompt password tersembunyi via SSH).
 
-Pada server yang sudah dipasang wrapper/sudo terbatas, tersedia:
+---
 
-```sh
-sudo /usr/local/sbin/wapala-service status
-sudo /usr/local/sbin/wapala-service start
-sudo /usr/local/sbin/wapala-service stop
-sudo /usr/local/sbin/wapala-service restart
+## Operasional harian
+
+| Kebutuhan | Perintah |
+| --- | --- |
+| Deploy rilis baru | `git push origin host` (atau Run workflow) |
+| Deploy manual di server | `sudo WAPALA_REPO_URL=https://github.com/.../wapala_dev.git bash host/host-deploy.sh` |
+| Log aplikasi | `journalctl -u wapala -f` |
+| Status service | `systemctl status wapala` |
+| Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
+| Backup database+media | `sudo node scripts/release-backup.mjs backup /root/backup-$(date +%F)` |
+| Migration manual | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run db:migrate'` |
+
+Rollback **otomatis** terjadi bila health check gagal setelah deploy: symlink dikembalikan ke release sebelumnya dan service direstart. Database rollback bukan bagian dari symlink — gunakan backup.
+
+Tiga release terakhir disimpan di `/srv/wapala/releases`; yang lebih lama dihapus otomatis.
+
+### Worker terjadwal (opsional)
+
+Bila `EMAIL_MODE=smtp`, jalankan worker email via cron/systemd timer: `npm run email:worker`. Worker `loans:overdue` (denda/keterlambatan) dan `media:cleanup-events` serupa. Contoh crontab (sebagai root, memuat env privat):
+
+```cron
+17 1 * * * sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run loans:overdue'
 ```
 
-Clone baru tidak memasang wrapper/sudo policy otomatis. **`sudo gitupdate main` belum diinstal.** `git pull` pada source tidak mengganti release aktif: update memerlukan build, backup/migration bila perlu, promote dan restart.
+Jangan menjadwalkan worker email pada mode `disabled`.
 
-## Pemeriksaan dan batas panduan lama
+## Kapasitas & build hemat memori
 
-Periksa HTTPS, halaman publik/login, `/api/health`, izin/CSRF, alur bisnis, upload/media, backup/restore dan kapasitas server sebelum menyatakan production acceptance lengkap. Build sukses bukan jaminan semua flow bebas bug.
+VPS 2 GB menjalankan PostgreSQL + Next.js (+ ClamAV bila dipasang) sekaligus. `host/host-deploy.sh` sudah menerapkan batas bawaan:
 
-`deploy/release-readiness.sh` saat ini masih mewajibkan timer email dan memeriksa profil SMTP. **Belum sesuai untuk mode disabled/NAT tanpa penyesuaian**; jangan mengaktifkan email palsu agar script hijau. Gunakan pemeriksaan per komponen yang sesuai.
+| Variabel | Default | Fungsi |
+| --- | --- | --- |
+| `WAPALA_HEAP_CI` | `512` | Heap MB saat `npm ci` |
+| `WAPALA_HEAP_BUILD` | `768` | Heap MB saat `next build` |
+| `WAPALA_MIN_DISK_MB` | `2048` | Tolak deploy bila disk kurang |
+| `WAPALA_KEEP_RELEASES` | `3` | Jumlah release yang disimpan |
 
-Rincian: [deployment Ubuntu](docs/deployment-ubuntu.md), [operasional VPS](docs/vps-operations.md), [paket Linux/mode email](docs/linux-runtime-build.md), dan [alur branch](docs/branch-workflow.md). Bagian SMTP wajib/port publik biasa pada panduan lama bukan instruksi mengganti konfigurasi NAT/tanpa-email di README ini.
+Selain itu build di-set serial (`UV_THREADPOOLSIZE=1`, `MALLOC_ARENA_MAX=2`, `npm_config_maxsockets=1`) dan runtime dibatasi systemd (`MemoryMax=900M`). Bila build tetap terbunuh (`Killed`/exit non-nol): kurangi beban lain saat deploy, atau naikkan sementara ke `WAPALA_HEAP_BUILD=1024` **hanya jika RAM cukup**. Bila runtime sering restart (OOM di `journalctl`), turunkan `NODE_OPTIONS` di env file atau pindahkan ClamAV/naikkan kapasitas.
 
-## Data dan import
+Build sukses ditandai `.next/BUILD_ID` dan `.next/standalone/server.js`; script menolak mengaktifkan rilis tanpa keduanya.
 
-Repository bukan backup website. Snapshot Album/Angkatan berada di `staging`, folder `import-packages/wapala-public-site`, beserta manifest/checksum dan instruksi import. Lakukan dry-run, backup, lalu apply yang disetujui. Jangan memasukkan data ke `main` atau mengimpor ulang setiap restart/build. Data Anggota/Inventaris tidak ikut paket tersebut.
+## Keamanan & batasan
 
-## Pengembangan lokal — bukan production
+- Aplikasi non-root, `ProtectSystem=strict`, hanya loopback `:3000`; Nginx satu-satunya gerbang publik dengan TLS.
+- Dua role database: runtime tanpa DDL/TRUNCATE; migrasi lewat role owner terpisah (`MIGRATE_DATABASE_URL`).
+- Media privat di `MEDIA_ROOT` (mode `0700`), pemindaian malware **fail-closed** — tanpa scanner, unggahan ditolak.
+- HSTS aktif di produksi; `TRUST_PROXY=true` hanya aman karena Nginx loopback tepercaya.
+- Jangan menjalankan seed/demo di production; database diisi via panel + bootstrap.
+- Secret hanya di `/etc/wapala/production.env` (root, `0600`) dan GitHub Secrets — jangan pernah di-commit atau ke artifact.
 
-Gunakan database development terpisah dan ikuti [setup backend lokal](docs/backend-local-setup.md):
+## Troubleshooting
 
-```sh
-npm ci
-cp .env.example .env
-# Isi environment lokal privat, termasuk DATABASE_URL, TEST_DATABASE_URL dan SECURITY_KEY.
-npm run db:generate
-npm run db:migrate
-npm run db:seed
-npm run dev
+| Gejala | Periksa |
+| --- | --- |
+| Actions merah di tahap SSH | Secrets `VPS_HOST/PORT/USER/SSH_KEY/KNOWN_HOSTS`, kunci terpasang di `authorized_keys` |
+| `Certbot gagal` saat provision | DNS/forwarding belum aktif, atau NAT tanpa forwarding publik `:80` → pakai `WAPALA_SKIP_CERTBOT=1` + DNS-01 |
+| Build `Killed` | RAM kurang — lihat [Kapasitas](#kapasitas--build-hemat-memori) |
+| Health check gagal lalu rollback | `journalctl -u wapala -n 100`; umumnya env/database salah |
+| `503` saat unggah media | ClamAV tidak terpasang/mati — pasang via opsi provisioning atau periksa `clamav-daemon` |
+| Halaman terbuka tapi aset 404 | Pastikan deploy melalui script (menyalin `.next/static` + `public` ke standalone) |
+
+## Struktur branch `host`
+
+```text
+.github/workflows/deploy-host.yml   # Pemicu otomatis: push/manuel → SSH → host/host-deploy.sh
+host/
+  host-provision.sh                 # Provisioning sekali (paket, DB, env, systemd, Nginx, TLS)
+  host-deploy.sh                    # Deploy berulang (clone, build, migrate, aktifkan, cek, rollback)
+  wapala-host.service               # Unit systemd aplikasi
+  nginx-wapala.conf                 # Nginx dedicated IP (80/443)
+  nginx-wapala-nat.conf             # Nginx NAT VPS (port khusus provider)
+  clamdscan-wapala.sh               # Wrapper scanner ClamAV
+scripts/                            # Tool operasional: bootstrap, recovery, worker, backup
+prisma/                             # Schema + migrations (tanpa seed)
+src/ public/                        # Source aplikasi (dibutuhkan build)
+README.md                           # Dokumen ini
 ```
 
-Email lokal boleh `sink`. Jangan memakai database produksi untuk development/tes. Script `db:local` khusus provisioning PostgreSQL development Windows, bukan installer database VPS.
+Branch ini sengaja **hanya berisi kode deployment**: test, dokumen pengembangan, dan script dev berada di branch lain (`main`/`staging`), tidak di sini.

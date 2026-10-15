@@ -1,0 +1,61 @@
+name: Deploy host
+
+on:
+  push:
+    branches: [host]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-host
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH deploy ke VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validasi secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret ${v} belum diset di Settings > Secrets and variables > Actions."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          REPO_URL: ${{ secrets.VPS_REPO_URL || format('https://github.com/{0}.git', github.repository) }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::Secret VPS_KNOWN_HOSTS kosong; ssh-keyscan dipakai sekali. Isi secret ini agar verifikasi host penuh."
+            ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" \
+            "WAPALA_REPO_URL='$REPO_URL' WAPALA_BRANCH='$DEPLOY_BRANCH' bash -s" \
+            < host/host-deploy.sh

@@ -1,0 +1,5 @@
+# Jaga line ending script shell/yaml agar aman dijalankan di VPS Linux.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
