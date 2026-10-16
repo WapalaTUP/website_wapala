@@ -106,6 +106,33 @@ sudo bash host/host-deploy.sh
 📖 Walkthrough end-to-end dari kasus nyata (termasuk pengaturan nameserver,
 DirectAdmin, dan jebakan yang ditemui): [host/deploy-walkthrough.md](host/deploy-walkthrough.md)
 
+## Cloudflare CDN
+
+Domain dapat diletakkan di belakang Cloudflare (proxy) untuk memangkas
+latency — khususnya bila origin VPS jauh dari pengunjung (contoh nyata:
+origin Los Angeles, pengunjung Indonesia, TCP connect 232 ms → 68 ms ke edge).
+
+**Setup di dashboard Cloudflare (bukan di VPS):**
+
+1. Tambahkan zone domain, arahkan nameserver registrar ke Cloudflare.
+2. A record apex → IP origin, status **Proxied** (awan oranye); CNAME `www` → apex, Proxied.
+3. SSL/TLS mode: **Full (strict)** — sertifikat origin (Let's Encrypt) tetap valid.
+4. Jangan aktifkan *Cache Everything* untuk HTML/auth/API: CSP nonce dibuat
+   per respons (HTML dinamis memang `cf-cache-status: DYNAMIC`). Aset immutable
+   `/_next/static` ter-cache otomatis di edge (`MISS` → `HIT` terverifikasi).
+
+**Yang sudah ditangani kode:**
+
+- Template Nginx memulihkan IP klien asli dari header `CF-Connecting-IP`
+  (hanya dipercaya dari rentang IP resmi Cloudflare) — throttle login/tetap
+  per-user, tidak lagi berbagi bucket antar pengunjung CDN.
+- Installer mengenali DNS yang mengarah ke edge Cloudflare dan tetap
+  menerbitkan sertifikat origin (ACME HTTP-01 diteruskan Cloudflare).
+- Renewal Let's Encrypt tetap berjalan normal dengan proxy aktif.
+
+**Hardening opsional:** batasi port 80/443 origin hanya menerima rentang IP
+Cloudflare (https://www.cloudflare.com/ips/) agar origin tidak bisa di-bypass.
+
 ## Manajemen server
 
 Setelah terpasang, seluruh operasional harian melalui satu menu:
@@ -201,6 +228,8 @@ Build `Killed` = RAM kurang; runtime sering restart = periksa OOM di
 | Login `423` | Lock per (email, IP) aktif (6× salah, 24 jam) — tunggu atau unlock via panel |
 | Upload `503` | ClamAV belum terpasang/mati — `host/wapala.sh` → Pasang ClamAV |
 | Upload `413` | Buku maks 50 MB; pastikan nginx `client_max_body_size 60m` |
+| Semua pengunjung berbagi throttle saat di belakang Cloudflare | Pastikan template Nginx terbaru (blok `real_ip_header CF-Connecting-IP`) terpasang — deploy ulang |
+| Akses normal masih `Server: nginx` padahal Cloudflare aktif | DNS cache jalur UDP lama — gunakan DNS over HTTPS (Secure OS/browser) atau tunggu TTL |
 | Aset 404 | Deploy harus via script (menyalin `.next/static` + `public` ke standalone) |
 
 ## Struktur repositori

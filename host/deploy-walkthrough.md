@@ -6,6 +6,12 @@
 > sebagai **referensi pemahaman**: apa yang sebenarnya terjadi di tiap tahap,
 > cara manual per langkah, dan jebakan yang kami temui di lapangan.
 
+> 🌐 **Cloudflare CDN di depan origin:** didukung penuh — setup dilakukan di
+> dashboard Cloudflare (zone + A record Proxied + SSL **Full strict**); kode
+> sudah menangani sisanya (pemulihan IP klien asli `CF-Connecting-IP`,
+> installer mengenali DNS edge CF, ACME tetap jalan). Lihat README bagian
+> *Cloudflare CDN*. Jangan Cache Everything untuk HTML/auth/API.
+
 Dokumen ini adalah **catatan deployment yang benar-benar dijalankan** (Oktober 2026):
 VPS **InterServer KVM Linux VPS Slice 1** (1 vCPU, 1.9 GB RAM + 1 GB swap, 38 GB disk,
 Ubuntu 24.04.5), akses SSH memakai user non-root `codex`, dan domain

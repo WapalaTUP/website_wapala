@@ -83,6 +83,19 @@ choose() { # choose PROMPT opt1 opt2 ... -> CHOSEN (global)
 validate_domain() { [[ "$1" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$ ]]; }
 validate_port()   { [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]; }
 validate_email()  { [[ "$1" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; }
+# Deteksi kasar IP edge Cloudflare (prefix /16 khas rentang resmi CF).
+# Dipakai installer agar domain ber-proxy CDN tidak dianggap "DNS salah".
+is_cf_ip() {
+  local a b
+  IFS=. read -r a b _ _ <<< "$1" 2>/dev/null || return 1
+  case "$a.$b" in
+    104.16|104.17|104.18|104.19|104.20|104.21|104.22|104.23|104.24|104.25|104.26|104.27|\
+    172.64|172.65|172.66|172.67|172.68|172.69|172.70|172.71|\
+    162.158|188.114|198.41|141.101|108.162|190.93|197.234|131.0|173.245|\
+    103.21|103.22|103.31) return 0 ;;
+  esac
+  return 1
+}
 
 # ---------- Preflight ----------
 preflight() {
@@ -187,15 +200,19 @@ install_flow() {
   echo "  IP server ini : ${server_ip:-tidak terdeteksi}"
   echo "  DNS $domain : ${resolved:-BELUM ADA}"
   if [ -n "$server_ip" ] && [ "$resolved" != "$server_ip" ]; then
-    choose "DNS belum mengarah ke server ini. Bagaimana?" \
-      "Lanjut TANPA TLS dulu (nanti aktifkan setelah DNS siap)" \
-      "Ulangi pengecekan DNS" \
-      "Batalkan"
-    case "$CHOSEN" in
-      Lanjut*) skip_certbot=1 ;;
-      Ulangi*) install_flow "$@"; return ;;
-      *) echo "Dibatalkan."; exit 0 ;;
-    esac
+    if is_cf_ip "$resolved"; then
+      ok "DNS $domain -> Cloudflare edge ($resolved) — proxy CDN aktif; TLS tetap diterbitkan di origin."
+    else
+      choose "DNS belum mengarah ke server ini. Bagaimana?" \
+        "Lanjut TANPA TLS dulu (nanti aktifkan setelah DNS siap)" \
+        "Ulangi pengecekan DNS" \
+        "Batalkan"
+      case "$CHOSEN" in
+        Lanjut*) skip_certbot=1 ;;
+        Ulangi*) install_flow "$@"; return ;;
+        *) echo "Dibatalkan."; exit 0 ;;
+      esac
+    fi
   fi
 
   echo
