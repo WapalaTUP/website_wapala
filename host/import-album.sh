@@ -78,7 +78,9 @@ if confirm "Jalankan backup database + media sekarang?" y; then
   repo_dir="$(dirname "$SCRIPT_DIR")"
   ask "Direktori tujuan backup" "$repo_dir/backups"
   backup_dir="$REPLY/backup-import-$(date +%F-%H%M%S)"
-  mkdir -p "$backup_dir"
+  # release-backup.mjs menolak folder tujuan yang SUDAH ada (ia membuatnya
+  # sendiri) dan membutuhkan parent siap — jadi hanya siapkan parent-nya.
+  mkdir -p "$REPLY"
   # release-backup.mjs menuntut WAPALA_WRITERS_STOPPED=yes setelah writer
   # benar-benar berhenti — jangan set env itu tanpa menghentikan app.
   warn "Backup konsisten butuh writer berhenti: aplikasi DIHENTIKAN sementara."

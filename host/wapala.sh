@@ -356,7 +356,9 @@ backup_flow() {
   repo_dir="$(dirname "$SCRIPT_DIR")"
   ask "Direktori tujuan backup" "$repo_dir/backups"
   dir="$REPLY/backup-$(date +%F-%H%M%S)"
-  mkdir -p "$dir"
+  # release-backup.mjs menolak folder tujuan yang SUDAH ada (ia membuatnya
+  # sendiri) dan membutuhkan parent siap — jadi hanya siapkan parent-nya.
+  mkdir -p "$(dirname "$dir")"
   # release-backup.mjs menuntut writer berhenti — hentikan app, backup,
   # lalu nyalakan lagi + health check.
   warn "Backup konsisten butuh writer berhenti: aplikasi DIHENTIKAN sementara."
