@@ -193,7 +193,7 @@ Build `Killed` = RAM kurang; runtime sering restart = periksa OOM di
 
 | Gejala | Periksa |
 | --- | --- |
-| CI merah sebelum deploy | Log workflow `CI host` — typecheck/lint/format/build |
+| CI merah sebelum deploy | Log workflow `CI host` (jalankan manual via Actions) — typecheck/lint/format/build |
 | Deploy gagal di tahap SSH | Secrets `VPS_HOST/PORT/USER/SSH_KEY/KNOWN_HOSTS` (semua wajib) |
 | `Certbot gagal` saat provisioning | DNS belum mengarah, atau NAT tanpa forwarding publik `:80` |
 | Build `Killed` | RAM — lihat [Kapasitas](#kapasitas) |
@@ -234,7 +234,8 @@ main  ◄──────── production (deploy dari sini)
 host  ──── development harian
 ```
 
-- Perubahan dikerjakan di `host`, diverifikasi CI, lalu di-merge ke `main`.
+- Perubahan dikerjakan di `host`, diverifikasi (CI dapat dijalankan manual via
+  **Actions → CI host → Run workflow**), lalu di-merge ke `main`.
 - Server men-deploy `main` (default `WAPALA_BRANCH=main` pada deploy script).
 - Branch ini sengaja hanya memuat kode deployment — tidak ada aset development
   yang tidak diperlukan runtime.
