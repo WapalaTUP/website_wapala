@@ -50,7 +50,7 @@ trap cleanup EXIT
 if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
 
 # ---------- Preflight ----------
-[ -n "${WAPALA_REPO_URL:-}" ] || die "WAPALA_REPO_URL wajib diisi."
+WAPALA_REPO_URL="${WAPALA_REPO_URL:-https://github.com/WapalaTUP/website_wapala.git}"
 command -v git >/dev/null || die "git tidak ditemukan."
 command -v node >/dev/null || die "node tidak ditemukan."
 command -v npm >/dev/null || die "npm tidak ditemukan."

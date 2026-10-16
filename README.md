@@ -4,7 +4,7 @@
 
 Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif: [wapala.my.id](https://wapala.my.id).
 
-Satu alur untuk semua VPS: **push ke branch `host` → GitHub Actions menyambung SSH ke server → aplikasi di-build hemat memori, dimigrasi, diaktifkan atomik, dan diperiksa kesehatannya — otomatis dengan rollback bila gagal.**
+Satu alur untuk semua VPS: **clone branch `host` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
 
 ## Fitur aplikasi (ringkas)
 
@@ -128,9 +128,9 @@ File dibuat oleh provisioning dengan nilai aman bawaan. Yang perlu diperiksa:
 
 Format file adalah assignment shell-compatible (`KEY=value`), dimuat systemd dan script deploy.
 
-## Langkah 4 — GitHub secrets
+## Langkah 4 — Opsional: deploy otomatis dari push
 
-Buat kunci SSH khusus deploy (di mesin lokal), tanpa passphrase agar otomatis:
+Lewati langkah ini bila cukup dengan deploy manual (Langkah 5). Untuk mode "push → server ter-update sendiri", buat kunci SSH khusus deploy (di mesin lokal), tanpa passphrase agar otomatis:
 
 ```sh
 ssh-keygen -t ed25519 -f wapala_deploy_key -C "wapala-deploy" -N ""
@@ -151,13 +151,21 @@ Tambahkan di **Settings → Secrets and variables → Actions**:
 
 ## Langkah 5 — Deploy
 
-Deploy pertama: push apa pun ke branch `host`, atau jalankan manual **Actions → Deploy host → Run workflow**. Pantau log di tab Actions; tahapan clone → build → migrate → restart → health check tampil lengkap di sana.
+Deploy pertama dan semua deploy berikutnya, dari folder clone di VPS:
 
-Verifikasi setelah hijau:
+```sh
+sudo bash host/host-deploy.sh
+```
+
+Script otomatis: clone release baru dari repo (default `https://github.com/WapalaTUP/website_wapala.git`, bisa diganti `WAPALA_REPO_URL=...`) → `npm ci` + `next build` dengan heap terbatas → `prisma migrate deploy` → aktifkan via symlink atomik → restart service → health check → rollback bila gagal. Pantau progres langsung di terminal.
+
+Verifikasi setelah selesai:
 
 ```sh
 curl -fsS https://contoh-domain.com/api/health
 ```
+
+Bila memakai mode otomatis (Langkah 4), deploy juga terpicu tombol **Actions → Deploy host → Run workflow**; log tahapan yang sama tampil di tab Actions.
 
 ## Langkah 6 — Bootstrap Super User
 
@@ -173,8 +181,8 @@ Token sekali pakai berlaku 30 menit — buka `https://contoh-domain.com/wapala` 
 
 | Kebutuhan | Perintah |
 | --- | --- |
-| Deploy rilis baru | `git push origin host` (atau Run workflow) |
-| Deploy manual di server | `sudo WAPALA_REPO_URL=https://github.com/.../wapala_dev.git bash host/host-deploy.sh` |
+| Deploy rilis baru | `sudo bash host/host-deploy.sh` (atau Run workflow bila mode otomatis aktif) |
+| Deploy manual dengan repo lain | `sudo WAPALA_REPO_URL=https://... bash host/host-deploy.sh` |
 | Log aplikasi | `journalctl -u wapala -f` |
 | Status service | `systemctl status wapala` |
 | Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |

@@ -1,8 +1,6 @@
 name: Deploy host
 
 on:
-  push:
-    branches: [host]
   workflow_dispatch:
 
 concurrency:
