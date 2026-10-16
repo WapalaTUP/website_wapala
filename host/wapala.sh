@@ -352,13 +352,31 @@ rollback_flow() {
 }
 
 backup_flow() {
-  local dir
-  ask "Direktori tujuan backup" "/root/wapala-backup"
+  local dir repo_dir
+  repo_dir="$(dirname "$SCRIPT_DIR")"
+  ask "Direktori tujuan backup" "$repo_dir/backups"
   dir="$REPLY/backup-$(date +%F-%H%M%S)"
   mkdir -p "$dir"
+  # release-backup.mjs menuntut writer berhenti — hentikan app, backup,
+  # lalu nyalakan lagi + health check.
+  warn "Backup konsisten butuh writer berhenti: aplikasi DIHENTIKAN sementara."
+  confirm "Hentikan app -> backup -> nyalakan lagi?" y || return
+  systemctl stop "$SERVICE" wapala-maintenance.timer 2>/dev/null || true
+  local failed=0
   run "node scripts/release-backup.mjs backup $dir"
-  sudo_and_env "node scripts/release-backup.mjs backup '$dir'" &&
+  sudo_and_env "node scripts/release-backup.mjs backup '$dir'" || failed=1
+  systemctl start "$SERVICE" wapala-maintenance.timer 2>/dev/null || true
+  sleep 3
+  if curl -fsS --max-time 5 "http://127.0.0.1:$(sed -n 's/^PORT=//p' "$ENV_FILE" | tail -n1)/api/health" >/dev/null 2>&1; then
+    ok "App kembali hidup."
+  else
+    err "App belum sehat — journalctl -u $SERVICE -n 50"
+  fi
+  if [ "$failed" = "0" ]; then
     ok "Backup selesai: $dir (salin ke luar server!)"
+  else
+    err "Backup gagal — lihat output."
+  fi
 }
 
 clamav_flow() {

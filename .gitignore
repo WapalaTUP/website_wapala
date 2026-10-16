@@ -30,3 +30,6 @@ docs/release-package-report.md
 docs/superpowers/
 docs/figma-*
 tmp/
+
+# Backup lokal (jangan pernah masuk repo)
+backups/

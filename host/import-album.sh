@@ -19,6 +19,7 @@ CURRENT_LINK="${WAPALA_BASE_DIR:-/srv/wapala}/current"
 DEFAULT_REPO="https://github.com/hulwanulazka-companion/wapala_dev.git"
 DEFAULT_BRANCH="staging"
 PACKAGE_PATH="import-packages/wapala-public-site"
+SERVICE_NAME="${WAPALA_SERVICE:-wapala}"
 
 if [ -t 1 ]; then
   C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'
@@ -31,6 +32,7 @@ fi
 ok()   { printf '%s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
 warn() { printf '%s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
 err()  { printf '%s✗%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+run()  { printf '\n%s%s$ %s%s\n' "$C_DIM" "$C_BOLD" "$*" "$C_RESET"; }
 title(){ printf '\n%s%s── %s ──────────────────────────────%s\n' "$C_BOLD" "$C_CYAN" "$*" "$C_RESET"; }
 step() { printf '%s▸%s %s\n' "$C_MAGENTA" "$C_RESET" "$*"; }
 ask() { # ask PROMPT [DEFAULT] -> REPLY
@@ -73,12 +75,34 @@ branch="$REPLY"
 # ---------- 2. Backup ----------
 title "Backup (WAJIB sebelum impor)"
 if confirm "Jalankan backup database + media sekarang?" y; then
-  ask "Direktori tujuan backup" "/root/wapala-backup"
+  repo_dir="$(dirname "$SCRIPT_DIR")"
+  ask "Direktori tujuan backup" "$repo_dir/backups"
   backup_dir="$REPLY/backup-import-$(date +%F-%H%M%S)"
   mkdir -p "$backup_dir"
+  # release-backup.mjs menuntut WAPALA_WRITERS_STOPPED=yes setelah writer
+  # benar-benar berhenti — jangan set env itu tanpa menghentikan app.
+  warn "Backup konsisten butuh writer berhenti: aplikasi DIHENTIKAN sementara."
+  confirm "Hentikan app -> backup -> nyalakan lagi?" y ||
+    { err "Siapkan backup manual dulu (pola: stop wapala -> backup -> start)."; exit 1; }
+  systemctl stop "$SERVICE_NAME" wapala-maintenance.timer 2>/dev/null || true
+  if systemctl is-active --quiet "$SERVICE_NAME"; then
+    err "App masih aktif — backup dibatalkan."; systemctl start "$SERVICE_NAME"; exit 1
+  fi
   step "Menjalankan backup ke $backup_dir ..."
-  sudo sh -c "set -a; . $ENV_FILE; set +a; cd $CURRENT_LINK; node scripts/release-backup.mjs backup '$backup_dir'" ||
-    { err "Backup gagal — IMPORT DIBATALKAN."; exit 1; }
+  backup_failed=0
+  sudo sh -c "set -a; . $ENV_FILE; set +a; export WAPALA_WRITERS_STOPPED=yes; cd $CURRENT_LINK; node scripts/release-backup.mjs backup '$backup_dir'" ||
+    backup_failed=1
+  systemctl start "$SERVICE_NAME" wapala-maintenance.timer 2>/dev/null || true
+  sleep 3
+  if curl -fsS --max-time 5 "http://127.0.0.1:$(env_value PORT)/api/health" >/dev/null 2>&1; then
+    ok "App kembali hidup."
+  else
+    err "App belum sehat setelah backup — journalctl -u $SERVICE_NAME -n 50"
+  fi
+  if [ "$backup_failed" = "1" ]; then
+    err "Backup gagal — IMPORT DIBATALKAN."
+    exit 1
+  fi
   ok "Backup selesai: $backup_dir (salin ke luar server!)"
 else
   confirm "Sudah ada backup yang valid? TANPA backup ini akan dibatalkan." n ||
