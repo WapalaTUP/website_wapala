@@ -3,14 +3,9 @@ import { exportOperational } from "@/server/domains/operational-export";
 import { z } from "zod";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export function GET(
-  request: Request,
-  { params }: { params: Promise<{ kind: string }> },
-) {
+export function GET(request: Request, { params }: { params: Promise<{ kind: string }> }) {
   return route(request, async () => {
-    const kind = z
-        .enum(["members", "inventory", "archives"])
-        .parse((await params).kind),
+    const kind = z.enum(["members", "inventory", "archives"]).parse((await params).kind),
       q = new URL(request.url).searchParams;
     const { principal } = await authenticated(
       request,
@@ -21,9 +16,7 @@ export function GET(
           : "users:write",
     );
     const format = z.enum(["xlsx", "pdf"]).parse(q.get("format") || "xlsx"),
-      archived =
-        z.enum(["true", "false"]).parse(q.get("archived") || "false") ===
-        "true";
+      archived = z.enum(["true", "false"]).parse(q.get("archived") || "false") === "true";
     const bytes = await exportOperational(principal, kind, format, archived);
     return new Response(new Uint8Array(bytes), {
       headers: {

@@ -3,10 +3,8 @@ import { config } from "dotenv";
 import { randomUUID } from "node:crypto";
 import { createBootstrapToken } from "../src/server/auth/bootstrap";
 import { getDb } from "../src/server/db";
-if (process.env.NODE_ENV !== "production")
-  config({ path: ".local/backend.env", quiet: true });
-if (process.argv.length > 2)
-  throw new Error("Tidak menerima argumen credential.");
+if (process.env.NODE_ENV !== "production") config({ path: ".local/backend.env", quiet: true });
+if (process.argv.length > 2) throw new Error("Tidak menerima argumen credential.");
 createBootstrapToken({
   ipDigest: "server-operator",
   userAgent: "bootstrap-cli",

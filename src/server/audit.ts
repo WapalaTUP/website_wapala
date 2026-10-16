@@ -9,10 +9,7 @@ export interface AuditEvent {
   summary?: Record<string, string | number | boolean>;
   context: RequestContext;
 }
-export async function writeAudit(
-  tx: Prisma.TransactionClient,
-  event: AuditEvent,
-) {
+export async function writeAudit(tx: Prisma.TransactionClient, event: AuditEvent) {
   const summary = event.summary || {};
   if (
     Object.keys(summary).some((k) => /password|token|hash|secret/i.test(k)) ||

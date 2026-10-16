@@ -23,9 +23,8 @@ export function FoundationHome({
         {name} · {role}
       </p>
       <Notice>
-        Sesi ini sudah diverifikasi server. Pilih modul organisasi di bawah
-        untuk mengelola data sesuai izin akun. Data berasal dari database, bukan
-        pratinjau browser.
+        Sesi ini sudah diverifikasi server. Pilih modul organisasi di bawah untuk mengelola data
+        sesuai izin akun. Data berasal dari database, bukan pratinjau browser.
       </Notice>
       {error && <Notice tone="error">{error}</Notice>}
       <nav aria-label="Modul organisasi" className="button-row">

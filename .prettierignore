@@ -1,0 +1,17 @@
+node_modules
+.next*
+.next-http-test
+.local
+output
+tmp
+Vercel
+public
+src/generated
+package-lock.json
+*.md
+*.sh
+*.conf
+*.service
+*.timer
+*.prisma
+prisma/migrations

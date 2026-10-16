@@ -21,8 +21,7 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
         });
         if (!response.ok) throw new Error("Buku belum tersedia.");
         const bytes = await response.arrayBuffer();
-        if (bytes.byteLength > 50 * 1024 * 1024)
-          throw new Error("Buku melebihi batas ukuran.");
+        if (bytes.byteLength > 50 * 1024 * 1024) throw new Error("Buku melebihi batas ukuran.");
         const { default: ePub } = await import("epubjs");
         if (stopped || !target.current) return;
         book = ePub(bytes);
@@ -30,11 +29,7 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
         if (stopped) return;
         const navigation = await book.loaded.navigation;
         if (!stopped)
-          setToc(
-            navigation.toc
-              .slice(0, 200)
-              .map((n) => ({ label: n.label, href: n.href })),
-          );
+          setToc(navigation.toc.slice(0, 200).map((n) => ({ label: n.label, href: n.href })));
         const view = book.renderTo(target.current, {
           width: "100%",
           height: 650,
@@ -42,24 +37,15 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
           allowScriptedContent: false,
         });
         rendition.current = view;
-        view.on(
-          "relocated",
-          (value: {
-            start: { displayed: { page: number; total: number } };
-          }) => {
-            if (!stopped)
-              setLocation(
-                "Halaman bagian " +
-                  value.start.displayed.page +
-                  " / " +
-                  value.start.displayed.total,
-              );
-          },
-        );
+        view.on("relocated", (value: { start: { displayed: { page: number; total: number } } }) => {
+          if (!stopped)
+            setLocation(
+              "Halaman bagian " + value.start.displayed.page + " / " + value.start.displayed.total,
+            );
+        });
         await view.display();
       } catch (e) {
-        if (!stopped)
-          setError(e instanceof Error ? e.message : "EPUB belum dapat dibuka.");
+        if (!stopped) setError(e instanceof Error ? e.message : "EPUB belum dapat dibuka.");
       }
     })();
     return () => {
@@ -73,9 +59,9 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
   const move = (href?: string, direction?: number) => {
     const view = rendition.current;
     if (!view) return;
-    void (
-      href ? view.display(href) : direction === -1 ? view.prev() : view.next()
-    ).catch(() => setError("Halaman belum dapat ditampilkan."));
+    void (href ? view.display(href) : direction === -1 ? view.prev() : view.next()).catch(() =>
+      setError("Halaman belum dapat ditampilkan."),
+    );
   };
   return (
     <section className="book-reader">
@@ -83,17 +69,11 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
         <div className="reader-toolbar">
           <h2>{title}</h2>
           <div className="reader-controls">
-            <button
-              className="btn secondary"
-              onClick={() => move(undefined, -1)}
-            >
+            <button className="btn secondary" onClick={() => move(undefined, -1)}>
               Sebelumnya
             </button>
             <span>{location}</span>
-            <button
-              className="btn secondary"
-              onClick={() => move(undefined, 1)}
-            >
+            <button className="btn secondary" onClick={() => move(undefined, 1)}>
               Berikutnya
             </button>
             <Link className="btn secondary" href="/buku">
@@ -111,11 +91,7 @@ export function EpubReader({ title, url }: { title: string; url: string }) {
               </button>
             ))}
           </aside>
-          <div
-            className="reader-canvas"
-            ref={target}
-            aria-label="Area baca EPUB"
-          />
+          <div className="reader-canvas" ref={target} aria-label="Area baca EPUB" />
         </div>
       </div>
     </section>

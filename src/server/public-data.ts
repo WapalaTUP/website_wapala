@@ -32,46 +32,41 @@ export async function brandLogoUrl() {
 export async function publicState() {
   const db = getDb(),
     state = emptyState();
-  const [
-    settings,
-    period,
-    periods,
-    posts,
-    galleries,
-    books,
-    campaigns,
-    equipment,
-    generations,
-  ] = await Promise.all([
-    db.siteSettings.findUnique({ where: { id: 1 } }),
-    db.recruitmentPeriod.findFirst({
-      where: { active: true },
-      select: { year: true },
-    }),
-    db.recruitmentPeriod.findMany({
-      select: { year: true },
-      orderBy: { year: "desc" },
-    }),
-    publicContent("konten"),
-    publicContent("galeri"),
-    publicContent("buku"),
-    publicCampaigns(),
-    db.equipment.findMany({
-      where: { archivedAt: null },
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        photo: true,
-        available: true,
-        maxDays: true,
-        maxQuantity: true,
-      },
-      orderBy: { name: "asc" },
-      take: 500,
-    }),
-    db.generation.findMany({ where: { archivedAt: null }, orderBy: { number: "desc" }, take: 500 }),
-  ]);
+  const [settings, period, periods, posts, galleries, books, campaigns, equipment, generations] =
+    await Promise.all([
+      db.siteSettings.findUnique({ where: { id: 1 } }),
+      db.recruitmentPeriod.findFirst({
+        where: { active: true },
+        select: { year: true },
+      }),
+      db.recruitmentPeriod.findMany({
+        select: { year: true },
+        orderBy: { year: "desc" },
+      }),
+      publicContent("konten"),
+      publicContent("galeri"),
+      publicContent("buku"),
+      publicCampaigns(),
+      db.equipment.findMany({
+        where: { archivedAt: null },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          photo: true,
+          available: true,
+          maxDays: true,
+          maxQuantity: true,
+        },
+        orderBy: { name: "asc" },
+        take: 500,
+      }),
+      db.generation.findMany({
+        where: { archivedAt: null },
+        orderBy: { number: "desc" },
+        take: 500,
+      }),
+    ]);
   const config = strings(settings?.config || {});
   for (const key of [
     "email",
@@ -96,9 +91,7 @@ export async function publicState() {
     "profileMissions",
   ] as const)
     state.settings[key] = config[key] || "";
-  state.settings.managementPeriod = settings
-    ? String(settings.managementYear)
-    : "";
+  state.settings.managementPeriod = settings ? String(settings.managementYear) : "";
   state.settings.recruitmentActive = !!period;
   state.settings.period = period ? String(period.year) : "";
   state.settings.periods = periods.map((p) => String(p.year));
@@ -109,11 +102,16 @@ export async function publicState() {
   state.records.galeri = rows(galleries);
   state.records.buku = rows(books);
   state.campaigns = campaigns.map((c) => ({ ...c, bank: "", account: "" }));
-  state.campaignTotals = Object.fromEntries(
-    campaigns.map((c) => [c.id, c.total]),
-  );
+  state.campaignTotals = Object.fromEntries(campaigns.map((c) => [c.id, c.total]));
   state.publicEquipment = equipment;
-  state.generations = generations.map(g => ({ number: String(g.number).padStart(2,"0"), name:g.name, label:g.label, image:g.photo, year:g.year, description:g.description }));
+  state.generations = generations.map((g) => ({
+    number: String(g.number).padStart(2, "0"),
+    name: g.name,
+    label: g.label,
+    image: g.photo,
+    year: g.year,
+    description: g.description,
+  }));
   state.events = await publicEvents();
   return state;
 }

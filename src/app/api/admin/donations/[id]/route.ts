@@ -4,10 +4,7 @@ import { readJson } from "@/server/http/body";
 import { reviewDonation } from "@/server/domains/campaigns";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "campaigns:write");
     const { id } = await params;
@@ -20,8 +17,6 @@ export function POST(
         })
         .strict(),
     );
-    return jsonResponse(
-      await reviewDonation(principal, id, input.status, input.note, ctx),
-    );
+    return jsonResponse(await reviewDonation(principal, id, input.status, input.note, ctx));
   });
 }

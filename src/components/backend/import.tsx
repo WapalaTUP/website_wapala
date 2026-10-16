@@ -1,11 +1,6 @@
 "use client";
 import { useId, useState } from "react";
-import {
-  FileSpreadsheet,
-  UploadCloud,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react";
+import { FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   importFields,
   normalizeImportHeader,
@@ -42,29 +37,15 @@ export function BackendImportPreview({
     <section className="import-preview" aria-label="Hasil validasi impor">
       <div className="import-preview-heading">
         <h3>Hasil pemeriksaan</h3>
-        <span
-          className={
-            result.errors.length ? "import-status is-error" : "import-status"
-          }
-        >
-          {result.errors.length ? (
-            <AlertCircle size={16} />
-          ) : (
-            <CheckCircle2 size={16} />
-          )}
+        <span className={result.errors.length ? "import-status is-error" : "import-status"}>
+          {result.errors.length ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
           {result.errors.length ? result.errors.length + " masalah" : "Valid"}
         </span>
       </div>
-      <p>
-        {result.displayRows.length} baris data diperiksa. Header dihitung
-        sebagai baris 1.
-      </p>
+      <p>{result.displayRows.length} baris data diperiksa. Header dihitung sebagai baris 1.</p>
       {result.errors.length > 0 && (
         <div className="import-issues" role="alert">
-          <p>
-            Perbaiki data atau pemetaan berikut sebelum impor. Tidak ada data
-            yang disimpan.
-          </p>
+          <p>Perbaiki data atau pemetaan berikut sebelum impor. Tidak ada data yang disimpan.</p>
           <div className="table-wrap">
             <table>
               <thead>
@@ -87,17 +68,15 @@ export function BackendImportPreview({
           </div>
           {result.errors.length > 100 && (
             <p>
-              Menampilkan 100 dari {result.errors.length} masalah. Perbaiki
-              berkas lalu periksa kembali.
+              Menampilkan 100 dari {result.errors.length} masalah. Perbaiki berkas lalu periksa
+              kembali.
             </p>
           )}
         </div>
       )}
       <div className="table-wrap import-data-preview">
         <table>
-          <caption>
-            Preview 10 baris pertama dari {result.displayRows.length} baris
-          </caption>
+          <caption>Preview 10 baris pertama dari {result.displayRows.length} baris</caption>
           <thead>
             <tr>
               <th>Baris CSV</th>
@@ -108,12 +87,7 @@ export function BackendImportPreview({
           </thead>
           <tbody>
             {result.displayRows.slice(0, 10).map((row, i) => (
-              <tr
-                key={i}
-                className={
-                  invalid.has(i + 2) ? "import-row-invalid" : undefined
-                }
-              >
+              <tr key={i} className={invalid.has(i + 2) ? "import-row-invalid" : undefined}>
                 <td>{i + 2}</td>
                 {columns.map((key) => (
                   <td key={key}>{row[key] || "Belum tersedia"}</td>
@@ -124,17 +98,13 @@ export function BackendImportPreview({
         </table>
       </div>
       <div className="import-submit">
-        <p>
-          Impor hanya menambah data baru. Batch bermasalah ditolak seluruhnya.
-        </p>
+        <p>Impor hanya menambah data baru. Batch bermasalah ditolak seluruhnya.</p>
         <button
           className="btn primary"
           disabled={busy || !!result.errors.length || !result.rows.length}
           onClick={onSubmit}
         >
-          {busy
-            ? "Memvalidasi dan menyimpan…"
-            : "Impor " + result.rows.length + " baris"}
+          {busy ? "Memvalidasi dan menyimpan…" : "Impor " + result.rows.length + " baris"}
         </button>
       </div>
     </section>
@@ -164,9 +134,7 @@ export function BackendImport({
     setError("");
     try {
       const result = await backendApi<{ imported: number }>(
-        "/api/admin/" +
-          (kind === "anggota" ? "members" : "inventory") +
-          "/import",
+        "/api/admin/" + (kind === "anggota" ? "members" : "inventory") + "/import",
         csrfToken,
         { rows: preview.rows },
       );
@@ -180,15 +148,9 @@ export function BackendImport({
       }
     } catch (e) {
       const issues =
-        e && typeof e === "object" && "issues" in e
-          ? (e.issues as ImportIssue[])
-          : null;
+        e && typeof e === "object" && "issues" in e ? (e.issues as ImportIssue[]) : null;
       if (issues?.length) setPreview({ ...preview, errors: issues });
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Impor gagal. Tidak ada baris disimpan.",
-      );
+      setError(e instanceof Error ? e.message : "Impor gagal. Tidak ada baris disimpan.");
     } finally {
       setBusy(false);
     }
@@ -218,22 +180,15 @@ export function BackendImport({
       >
         <div className="import-wizard">
           <ol className="import-steps" aria-label="Langkah impor">
-            <li className={!table ? "is-current" : "is-complete"}>
-              Pilih berkas
-            </li>
-            <li className={table && !preview ? "is-current" : ""}>
-              Cocokkan kolom
-            </li>
+            <li className={!table ? "is-current" : "is-complete"}>Pilih berkas</li>
+            <li className={table && !preview ? "is-current" : ""}>Cocokkan kolom</li>
             <li className={preview ? "is-current" : ""}>Periksa dan impor</li>
           </ol>
           {success !== null ? (
             <div className="import-success" role="status">
               <CheckCircle2 size={36} />
               <h3>{success} baris berhasil diimpor</h3>
-              <p>
-                Data sudah disimpan di database. Jangan mengunggah batch yang
-                sama kembali.
-              </p>
+              <p>Data sudah disimpan di database. Jangan mengunggah batch yang sama kembali.</p>
               {error && <Notice tone="error">{error}</Notice>}
               <button className="btn primary" onClick={() => setOpen(false)}>
                 Selesai
@@ -245,8 +200,7 @@ export function BackendImport({
                 <div>
                   <h3>Berkas sumber</h3>
                   <p>
-                    CSV atau XLSX, maksimal 2.000 baris. NIM, NIA dan kode alat
-                    tetap berupa teks.
+                    CSV atau XLSX, maksimal 2.000 baris. NIM, NIA dan kode alat tetap berupa teks.
                   </p>
                 </div>
                 <button
@@ -262,10 +216,7 @@ export function BackendImport({
                     <strong>{fileName || "Pilih berkas dari perangkat"}</strong>
                     <small>
                       {table
-                        ? table.rows.length +
-                          " baris · " +
-                          table.headers.length +
-                          " kolom"
+                        ? table.rows.length + " baris · " + table.headers.length + " kolom"
                         : "CSV / XLSX tanpa formula atau makro"}
                     </small>
                   </span>
@@ -290,19 +241,13 @@ export function BackendImport({
                             importFields[kind].map((key) => [
                               key,
                               data.headers.find(
-                                (h) =>
-                                  normalizeImportHeader(h) ===
-                                  normalizeImportHeader(key),
+                                (h) => normalizeImportHeader(h) === normalizeImportHeader(key),
                               ) || "",
                             ]),
                           ),
                         );
                       } catch (e) {
-                        setError(
-                          e instanceof Error
-                            ? e.message
-                            : "Berkas tidak dapat dibaca.",
-                        );
+                        setError(e instanceof Error ? e.message : "Berkas tidak dapat dibaca.");
                       } finally {
                         setBusy(false);
                       }
@@ -314,17 +259,15 @@ export function BackendImport({
                 <section className="import-mapping" aria-label="Pemetaan kolom">
                   <h3>Cocokkan kolom sumber</h3>
                   <p>
-                    Kolom bertanda * wajib dipetakan. Data yang belum tersedia
-                    tidak diisi nilai contoh.
+                    Kolom bertanda * wajib dipetakan. Data yang belum tersedia tidak diisi nilai
+                    contoh.
                   </p>
                   <div className="import-mapping-grid">
                     {importFields[kind].map((key) => (
                       <label key={key} className="import-mapping-field">
                         <span>
                           {importLabels[key]}
-                          {requiredImportFields[kind].includes(key) && (
-                            <b aria-label="wajib"> *</b>
-                          )}
+                          {requiredImportFields[kind].includes(key) && <b aria-label="wajib"> *</b>}
                         </span>
                         <select
                           disabled={busy}
@@ -343,13 +286,9 @@ export function BackendImport({
                           ))}
                         </select>
                         {key === "nim" || key === "kontak" ? (
-                          <small>
-                            Boleh kosong jika data lama belum tersedia.
-                          </small>
+                          <small>Boleh kosong jika data lama belum tersedia.</small>
                         ) : key === "foto" || key === "photo" ? (
-                          <small>
-                            Gunakan media terdaftar, atau biarkan kosong.
-                          </small>
+                          <small>Gunakan media terdaftar, atau biarkan kosong.</small>
                         ) : null}
                       </label>
                     ))}

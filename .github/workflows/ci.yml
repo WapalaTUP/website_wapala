@@ -1,0 +1,61 @@
+name: CI host
+
+on:
+  push:
+    branches: [host]
+  pull_request:
+    branches: [host]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-host
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          npm_config_update_notifier: "false"
+        run: npm ci --no-audit --no-fund
+
+      - name: Prisma generate
+        run: npm run db:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint -- --max-warnings=0
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          # Nilai dummy untuk build-time; runtime memakai env produksi.
+          NODE_ENV: production
+          DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci"
+          SECURITY_KEY: "Y2ktZHVtbXkta2V5LTMyLWJ5dGVzLWJhc2U2NC0hIQ=="
+          APP_URL: "http://127.0.0.1:3000"
+          WAPALA_MODE: backend
+          EMAIL_MODE: disabled
+          MEDIA_ROOT: /tmp/wapala-ci-media
+        run: npm run build

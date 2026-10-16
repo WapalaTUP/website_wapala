@@ -75,9 +75,7 @@ export function DataReset({
       try {
         await onReset();
       } catch {
-        setSuccess(
-          "Reset selesai. Muat ulang halaman untuk memperbarui daftar.",
-        );
+        setSuccess("Reset selesai. Muat ulang halaman untuk memperbarui daftar.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset gagal.");
@@ -104,9 +102,8 @@ export function DataReset({
       {success && <Notice>{success}</Notice>}
       <Modal open={open} title={`Reset ${label}`} onClose={close}>
         <Notice tone="error">
-          Tindakan massal khusus Super User. Ekspor/backup data sebelum
-          melanjutkan. Akun login, foto tersimpan, dan riwayat peminjaman tidak
-          ikut dihapus.
+          Tindakan massal khusus Super User. Ekspor/backup data sebelum melanjutkan. Akun login,
+          foto tersimpan, dan riwayat peminjaman tidak ikut dihapus.
         </Notice>
         <form
           onSubmit={(e) => {
@@ -128,12 +125,8 @@ export function DataReset({
                 setError("");
               }}
             >
-              <option value="archive">
-                Arsipkan semua data aktif (bisa dipulihkan)
-              </option>
-              <option value="delete">
-                Hapus permanen semua data, termasuk arsip
-              </option>
+              <option value="archive">Arsipkan semua data aktif (bisa dipulihkan)</option>
+              <option value="delete">Hapus permanen semua data, termasuk arsip</option>
             </select>
           </label>
           <p>
@@ -146,8 +139,7 @@ export function DataReset({
           {preview && (
             <>
               <Notice>
-                {preview.count} data terdampak; {preview.blocked} data
-                menghalangi reset.{" "}
+                {preview.count} data terdampak; {preview.blocked} data menghalangi reset.{" "}
                 {target === "inventory" &&
                   mode === "archive" &&
                   "Peminjaman yang belum selesai/ditolak harus diselesaikan dahulu."}
@@ -190,12 +182,7 @@ export function DataReset({
                     : "Hapus permanen"
                   : "Periksa data terdampak"}
             </button>
-            <button
-              className="btn secondary"
-              type="button"
-              disabled={busy}
-              onClick={close}
-            >
+            <button className="btn secondary" type="button" disabled={busy} onClick={close}>
               Batal
             </button>
           </div>

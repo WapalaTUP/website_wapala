@@ -27,10 +27,13 @@ const nativeScanner = (path: string, recursive = false): Promise<number> =>
       ],
       { stdio: "ignore", shell: false, windowsHide: true },
     );
-    const timeout = setTimeout(() => {
-      child.kill();
-      reject(new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage));
-    }, recursive ? 180000 : 45000);
+    const timeout = setTimeout(
+      () => {
+        child.kill();
+        reject(new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage));
+      },
+      recursive ? 180000 : 45000,
+    );
     child.once("error", () => {
       clearTimeout(timeout);
       reject(new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage));
@@ -40,19 +43,11 @@ const nativeScanner = (path: string, recursive = false): Promise<number> =>
       resolve(code ?? 2);
     });
   });
-export async function scanMedia(
-  path: string,
-  scanner: Scanner = nativeScanner,
-) {
+export async function scanMedia(path: string, scanner: Scanner = nativeScanner) {
   const code = await scanner(path);
   if (code === 1)
-    throw new DomainError(
-      "MALWARE_DETECTED",
-      400,
-      "Berkas ditolak oleh pemeriksaan keamanan.",
-    );
-  if (code !== 0)
-    throw new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage);
+    throw new DomainError("MALWARE_DETECTED", 400, "Berkas ditolak oleh pemeriksaan keamanan.");
+  if (code !== 0) throw new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage);
 }
 export async function scanMediaDirectory(path: string) {
   await scanMedia(path, (target) => nativeScanner(target, true));

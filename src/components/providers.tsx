@@ -41,9 +41,7 @@ export function Providers({
   const [message, setMessage] = useState("");
   useEffect(() => {
     try {
-      changeTheme(
-        localStorage.getItem("wapala.theme") === "dark" ? "dark" : "light",
-      );
+      changeTheme(localStorage.getItem("wapala.theme") === "dark" ? "dark" : "light");
     } catch {
       changeTheme("light");
     }
@@ -58,11 +56,7 @@ export function Providers({
     <ToastContext.Provider value={toast}>
       <SecurityNonceContext.Provider value={nonce}>
         <DataProvider state={initialState}>{children}</DataProvider>
-        <div
-          className={"toast" + (message ? " visible" : "")}
-          role="status"
-          aria-live="polite"
-        >
+        <div className={"toast" + (message ? " visible" : "")} role="status" aria-live="polite">
           {message}
         </div>
       </SecurityNonceContext.Provider>

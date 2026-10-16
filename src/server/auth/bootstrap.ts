@@ -1,5 +1,4 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
 import { getDb } from "../db";
 import { seedFoundation } from "../foundation-seed";
 import { DomainError } from "../errors";
@@ -7,77 +6,8 @@ import { newToken, digestToken, constantEqual } from "../security/tokens";
 import { hashPassword } from "../security/password";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
-
-// This runs on the server, never in a client bundle or during Next.js build.
-// The row lock is shared with CLI issuance and bootstrap consumption.
-async function ensureEnvironmentBootstrapToken() {
-  const token = process.env.INITIAL_SETUP_TOKEN;
-  if (token === undefined) return;
-  await seedFoundation();
-  await getDb().$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "BootstrapState" WHERE id=1 FOR UPDATE`;
-    const state = await tx.bootstrapState.findUniqueOrThrow({
-      where: { id: 1 },
-    });
-    if (
-      state.completedAt ||
-      (await tx.user.count({ where: { role: "SUPER_USER" } }))
-    )
-      return;
-    if (!/^[A-Za-z0-9_-]{43}$/.test(token))
-      throw new DomainError(
-        "SETUP_TOKEN_CONFIG_INVALID",
-        503,
-        "Konfigurasi token instalasi belum valid.",
-      );
-    const hash = digestToken(token);
-    // Repeated requests/redeploys must not extend a token's lifetime.
-    if (state.tokenHash && constantEqual(state.tokenHash, hash)) return;
-    if (state.tokenHash && state.expiresAt && state.expiresAt > new Date())
-      throw new DomainError(
-        "SETUP_TOKEN_CONFLICT",
-        503,
-        "Token instalasi aktif berbeda. Periksa konfigurasi server.",
-      );
-    if (state.environmentTokenHashes.includes(hash))
-      throw new DomainError(
-        "SETUP_TOKEN_REUSED",
-        503,
-        "Token instalasi sudah pernah digunakan. Siapkan token baru.",
-      );
-    await tx.bootstrapState.update({
-      where: { id: 1 },
-      data: {
-        tokenHash: hash,
-        expiresAt: new Date(Date.now() + 1_800_000),
-        environmentTokenHashes: [
-          ...new Set([
-            ...state.environmentTokenHashes,
-            ...(state.tokenHash ? [state.tokenHash] : []),
-            hash,
-          ]),
-        ],
-      },
-    });
-    await writeAudit(tx, {
-      actorType: "SERVER_OPERATOR",
-      action: "BOOTSTRAP_ENV_TOKEN_REGISTERED",
-      context: {
-        ipDigest: "server-operator",
-        userAgent: "environment-bootstrap",
-        requestId: randomUUID(),
-      },
-    });
-  });
-}
-
 export async function setupRequired() {
-  await ensureEnvironmentBootstrapToken();
-  const state = await getDb().bootstrapState.findUnique({ where: { id: 1 } });
-  return (
-    !state?.completedAt &&
-    !(await getDb().user.count({ where: { role: "SUPER_USER" } }))
-  );
+  return !(await getDb().bootstrapState.findUnique({ where: { id: 1 } }))?.completedAt;
 }
 export async function createBootstrapToken(ctx: RequestContext) {
   await seedFoundation();
@@ -88,10 +18,7 @@ export async function createBootstrapToken(ctx: RequestContext) {
     const state = await tx.bootstrapState.findUniqueOrThrow({
       where: { id: 1 },
     });
-    if (
-      state.completedAt ||
-      (await tx.user.count({ where: { role: "SUPER_USER" } }))
-    )
+    if (state.completedAt || (await tx.user.count({ where: { role: "SUPER_USER" } })))
       throw new DomainError("SETUP_CLOSED", 409);
     await tx.bootstrapState.update({
       where: { id: 1 },
@@ -105,13 +32,8 @@ export async function createBootstrapToken(ctx: RequestContext) {
   });
   return { token, expiresAt };
 }
-export async function bootstrap(
-  input: { token: string; password: string },
-  ctx: RequestContext,
-) {
-  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token))
-    throw new DomainError("SETUP_INVALID", 400);
-  await ensureEnvironmentBootstrapToken();
+export async function bootstrap(input: { token: string; password: string }, ctx: RequestContext) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token)) throw new DomainError("SETUP_INVALID", 400);
   const passwordHash = await hashPassword(input.password);
   await getDb().$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BootstrapState" WHERE id=1 FOR UPDATE`;

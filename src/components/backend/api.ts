@@ -20,9 +20,7 @@ export async function backendApi<T>(
     credentials: "same-origin",
     cache: "no-store",
     headers:
-      body === undefined
-        ? {}
-        : { "content-type": "application/json", "x-csrf-token": csrfToken },
+      body === undefined ? {} : { "content-type": "application/json", "x-csrf-token": csrfToken },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const data = await response.json();
@@ -40,11 +38,7 @@ export async function backendApi<T>(
     );
   return data as T;
 }
-export async function uploadMedia(
-  file: File,
-  purpose: string,
-  csrfToken: string,
-) {
+export async function uploadMedia(file: File, purpose: string, csrfToken: string) {
   const body = new FormData();
   body.set("file", file);
   body.set("purpose", purpose);

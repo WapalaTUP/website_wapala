@@ -20,9 +20,7 @@ export function PortalLogin() {
       .then(setContext)
       .catch((e) => {
         if (!abort.signal.aborted)
-          setError(
-            e instanceof Error ? e.message : "Layanan login belum siap.",
-          );
+          setError(e instanceof Error ? e.message : "Layanan login belum siap.");
       });
     return () => abort.abort();
   }, []);
@@ -37,24 +35,15 @@ export function PortalLogin() {
         const result = await authPost("recovery", { email }, context.csrfToken);
         setMessage(result.message || "Permintaan diterima.");
       } else if (context.setupRequired) {
-        if (password !== confirmation)
-          throw new Error("Konfirmasi password belum sesuai.");
-        const result = await authPost(
-          "bootstrap",
-          { token, password },
-          context.csrfToken,
-        );
+        if (password !== confirmation) throw new Error("Konfirmasi password belum sesuai.");
+        const result = await authPost("bootstrap", { token, password }, context.csrfToken);
         setPassword("");
         setConfirmation("");
         setToken("");
         setContext(await authContext());
         setMessage(result.message || "Akun dibuat. Silakan login.");
       } else {
-        const result = await authPost(
-          "login",
-          { email, password },
-          context.csrfToken,
-        );
+        const result = await authPost("login", { email, password }, context.csrfToken);
         window.location.assign(result.redirectTo || "/admin/foundation");
       }
     } catch (e) {
@@ -117,9 +106,7 @@ export function PortalLogin() {
               <Field
                 label="Password"
                 type="password"
-                autoComplete={
-                  context?.setupRequired ? "new-password" : "current-password"
-                }
+                autoComplete={context?.setupRequired ? "new-password" : "current-password"}
                 minLength={context?.setupRequired ? 12 : undefined}
                 required
                 value={password}
@@ -152,31 +139,29 @@ export function PortalLogin() {
             </button>
           </form>
           <div className="button-row">
-            {context &&
-              !context.setupRequired &&
-              context.emailRecoveryEnabled !== false && (
-                <button
-                  type="button"
-                  className="text-link auth-text-button"
-                  disabled={busy}
-                  onClick={() => {
-                    setRecovery(!recovery);
-                    setError("");
-                    setMessage("");
-                    setPassword("");
-                  }}
-                >
-                  {recovery ? "Kembali ke login" : "Lupa password?"}
-                </button>
-              )}
+            {context && !context.setupRequired && context.emailRecoveryEnabled !== false && (
+              <button
+                type="button"
+                className="text-link auth-text-button"
+                disabled={busy}
+                onClick={() => {
+                  setRecovery(!recovery);
+                  setError("");
+                  setMessage("");
+                  setPassword("");
+                }}
+              >
+                {recovery ? "Kembali ke login" : "Lupa password?"}
+              </button>
+            )}
             <Link className="text-link" href="/">
               Kembali ke website
             </Link>
           </div>
           {context?.emailRecoveryEnabled === false && (
             <Notice>
-              Email dinonaktifkan. Jika lupa password, hubungi pengelola. Super
-              User dipulihkan melalui SSH; akun lainnya direset oleh Super User.
+              Email dinonaktifkan. Jika lupa password, hubungi pengelola. Super User dipulihkan
+              melalui SSH; akun lainnya direset oleh Super User.
             </Notice>
           )}
         </div>

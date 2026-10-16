@@ -1,22 +1,11 @@
 "use client";
-import {
-  createContext,
-  createElement,
-  useContext,
-  type ReactNode,
-} from "react";
+import { createContext, createElement, useContext, type ReactNode } from "react";
 import type { DemoState, Role } from "./types";
 import { emptyState } from "./empty-state";
 
 const DataContext = createContext<DemoState | null>(null);
 const unavailableState = emptyState();
-export function DataProvider({
-  state,
-  children,
-}: {
-  state: DemoState;
-  children?: ReactNode;
-}) {
+export function DataProvider({ state, children }: { state: DemoState; children?: ReactNode }) {
   return createElement(DataContext.Provider, { value: state }, children);
 }
 // Compatibility for older callers: data comes only from the supplied server

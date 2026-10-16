@@ -6,13 +6,9 @@ import { Empty, Modal } from "./ui";
 export function Generations() {
   const generations = useDemo().generations || [];
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<(typeof generations)[number] | null>(
-    null,
-  );
+  const [selected, setSelected] = useState<(typeof generations)[number] | null>(null);
   const list = generations.filter((g) =>
-    (g.name + " " + g.number + " " + g.label)
-      .toLowerCase()
-      .includes(query.toLowerCase()),
+    (g.name + " " + g.number + " " + g.label).toLowerCase().includes(query.toLowerCase()),
   );
   return (
     <>
@@ -34,13 +30,15 @@ export function Generations() {
               onClick={() => setSelected(g)}
               aria-label={"Lihat foto " + g.name}
             >
-              {g.image && <Image
-                src={g.image}
-                alt={"Foto angkatan " + g.name}
-                width={620}
-                height={450}
-                sizes="(max-width: 760px) 45vw, (max-width: 1000px) 30vw, 23vw"
-              />}
+              {g.image && (
+                <Image
+                  src={g.image}
+                  alt={"Foto angkatan " + g.name}
+                  width={620}
+                  height={450}
+                  sizes="(max-width: 760px) 45vw, (max-width: 1000px) 30vw, 23vw"
+                />
+              )}
               <span className="generation-number">{g.number}</span>
               <span className="generation-caption">
                 <strong>{g.name}</strong>
@@ -50,10 +48,7 @@ export function Generations() {
           ))}
         </div>
       ) : (
-        <Empty
-          title="Angkatan tidak ditemukan"
-          description="Coba nama atau nomor angkatan lain."
-        />
+        <Empty title="Angkatan tidak ditemukan" description="Coba nama atau nomor angkatan lain." />
       )}
       <Modal
         open={!!selected}
@@ -62,14 +57,20 @@ export function Generations() {
       >
         {selected && (
           <figure className="generation-detail">
-            {selected.image && <Image
-              src={selected.image}
-              alt={"Foto " + selected.name}
-              width={1100}
-              height={850}
-              sizes="(max-width: 760px) 95vw, 720px"
-            />}
-            <figcaption>{selected.label}{selected.year ? " · " + selected.year : ""}{selected.description && <p>{selected.description}</p>}</figcaption>
+            {selected.image && (
+              <Image
+                src={selected.image}
+                alt={"Foto " + selected.name}
+                width={1100}
+                height={850}
+                sizes="(max-width: 760px) 95vw, 720px"
+              />
+            )}
+            <figcaption>
+              {selected.label}
+              {selected.year ? " · " + selected.year : ""}
+              {selected.description && <p>{selected.description}</p>}
+            </figcaption>
           </figure>
         )}
       </Modal>

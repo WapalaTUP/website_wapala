@@ -30,8 +30,6 @@ export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "recruitment:write");
     const { year, active } = await readJson(request, periodSchema);
-    return jsonResponse(
-      await setRecruitmentPeriod(principal, year, active, ctx),
-    );
+    return jsonResponse(await setRecruitmentPeriod(principal, year, active, ctx));
   });
 }

@@ -26,10 +26,7 @@ export async function enqueueEmail(
   const validated = envelopeSchema.parse(envelope);
   return tx.emailOutbox.create({
     data: {
-      payload: encryptPayload(
-        JSON.stringify(validated),
-        getConfig().securityKey,
-      ),
+      payload: encryptPayload(JSON.stringify(validated), getConfig().securityKey),
       expiresAt,
     },
   });

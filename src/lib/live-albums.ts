@@ -116,53 +116,41 @@ const photoOrders: Record<string, number[]> = {
     1790752188, 1790752187, 1790752185, 1790752183, 1790752181, 1790752179,
   ],
   "penanaman-dalam-rangka-peringatan-hut-wipala-ke-33": [
-    1784454002, 1784454002, 1784454002, 1784454002, 1784454002, 1784454002,
-    1784454002, 1784454002,
+    1784454002, 1784454002, 1784454002, 1784454002, 1784454002, 1784454002, 1784454002, 1784454002,
   ],
   "fun-run-and-climb-eigerian-purwokerto": [
     1784453432, 1784453432, 1784453432, 1784453432, 1784453432, 1784453432,
   ],
-  "latihan-rafting": [
-    1784452457, 1784452457, 1784452457, 1784452457, 1784452457,
-  ],
+  "latihan-rafting": [1784452457, 1784452457, 1784452457, 1784452457, 1784452457],
   "sinar-sinau-bareng-relawan": [
-    1784451825, 1784451825, 1784451825, 1784451825, 1784451825, 1784451825,
-    1784451825, 1784451825,
+    1784451825, 1784451825, 1784451825, 1784451825, 1784451825, 1784451825, 1784451825, 1784451825,
   ],
-  "rabu-produktif": [
-    1784450949, 1784450949, 1784450949, 1784450949, 1784450949,
-  ],
+  "rabu-produktif": [1784450949, 1784450949, 1784450949, 1784450949, 1784450949],
   "donor-darah": [1784448025, 1784448025, 1784448025, 1784448025, 1784448025],
   "pelantikan-alb-wapala": [1790687775, 1790687773, 1790687771, 1790687769],
   "pelantikan-anggota-luar-biasa": [1790687472, 1790687469],
-  "hut-wapala-xxi": [
-    1790685813, 1790685811, 1790685809, 1790685808, 1790685806, 1790685805,
-  ],
+  "hut-wapala-xxi": [1790685813, 1790685811, 1790685809, 1790685808, 1790685806, 1790685805],
   "rafting-wapala-x-mapala-silvagama": [
-    1784452986, 1784452986, 1784452986, 1784452986, 1784452986, 1784452986,
-    1784452986,
+    1784452986, 1784452986, 1784452986, 1784452986, 1784452986, 1784452986, 1784452986,
   ],
   "fun-climbing": [
-    1784450078, 1784450078, 1784450078, 1784450078, 1784450078, 1784450078,
-    1784450078, 1784450078,
+    1784450078, 1784450078, 1784450078, 1784450078, 1784450078, 1784450078, 1784450078, 1784450078,
   ],
 };
-export const liveAlbums = rows.map(
-  ([id, slug, title, count, category, location, description]) => {
-    const images = Array.from(
-      { length: count },
-      (_, i) => "/images/albums/" + slug + "-" + i + ".png",
-    );
-    return {
-      id,
-      title,
-      category,
-      location,
-      description,
-      image: images[0],
-      images,
-      photoOrders: photoOrders[slug],
-      source: "https://www.wapalatelkomuniversity.org/album",
-    };
-  },
-);
+export const liveAlbums = rows.map(([id, slug, title, count, category, location, description]) => {
+  const images = Array.from(
+    { length: count },
+    (_, i) => "/images/albums/" + slug + "-" + i + ".png",
+  );
+  return {
+    id,
+    title,
+    category,
+    location,
+    description,
+    image: images[0],
+    images,
+    photoOrders: photoOrders[slug],
+    source: "https://www.wapalatelkomuniversity.org/album",
+  };
+});

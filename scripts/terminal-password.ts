@@ -1,8 +1,6 @@
 export function assertInteractive(args: string[], tty: boolean) {
   if (args.length || !tty)
-    throw new Error(
-      "Gunakan terminal interaktif; password tidak boleh menjadi argumen.",
-    );
+    throw new Error("Gunakan terminal interaktif; password tidak boleh menjadi argumen.");
 }
 export function hiddenPassword(prompt: string): Promise<string> {
   assertInteractive([], !!process.stdin.isTTY && !!process.stdout.isTTY);
@@ -31,8 +29,7 @@ export function hiddenPassword(prompt: string): Promise<string> {
           finish();
           return;
         }
-        if (char === "\u007f" || char === "\b")
-          value = Array.from(value).slice(0, -1).join("");
+        if (char === "\u007f" || char === "\b") value = Array.from(value).slice(0, -1).join("");
         else if (char >= " ") value += char;
         if (Buffer.byteLength(value) > 1024) {
           finish(new Error("Password terlalu panjang."));

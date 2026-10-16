@@ -1,5 +1,4 @@
 node_modules/
-.vercel/
 .next/
 .next-http-test/
 out/
@@ -31,4 +30,3 @@ docs/release-package-report.md
 docs/superpowers/
 docs/figma-*
 tmp/
-.vercel

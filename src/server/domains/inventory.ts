@@ -10,11 +10,7 @@ import { reservedPeak, lockEquipment } from "./stock";
 import { assertMediaReferences } from "../media/storage";
 import { equipmentSchema } from "../../lib/operational-schema";
 export { equipmentSchema, conditionSchema } from "../../lib/operational-schema";
-function dto(
-  e: Awaited<
-    ReturnType<ReturnType<typeof getDb>["equipment"]["findMany"]>
-  >[number],
-) {
+function dto(e: Awaited<ReturnType<ReturnType<typeof getDb>["equipment"]["findMany"]>>[number]) {
   return {
     id: e.id,
     version: e.version,
@@ -37,11 +33,7 @@ function dto(
     archived: !!e.archivedAt,
   };
 }
-export async function saveEquipment(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function saveEquipment(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "inventory:write");
   const v = equipmentSchema.parse(input);
   try {
@@ -52,8 +44,7 @@ export async function saveEquipment(
         await lockEquipment(tx, [v.id]);
         const old = await tx.equipment.findUnique({ where: { id: v.id } });
         if (!old) throw new DomainError("NOT_FOUND", 404);
-        if (!v.version || old.version !== v.version)
-          throw new DomainError("CONFLICT", 409);
+        if (!v.version || old.version !== v.version) throw new DomainError("CONFLICT", 409);
         const reserved = await reservedPeak(tx, v.id);
         if (v.fit < reserved || (v.archived && reserved > 0))
           throw new DomainError(
@@ -91,11 +82,13 @@ export async function saveEquipment(
     throw e;
   }
 }
-export const equipmentAvailabilitySchema = z.object({
-  id: z.uuid(),
-  version: z.number().int().positive(),
-  available: z.boolean(),
-}).strict();
+export const equipmentAvailabilitySchema = z
+  .object({
+    id: z.uuid(),
+    version: z.number().int().positive(),
+    available: z.boolean(),
+  })
+  .strict();
 
 export async function setEquipmentAvailability(
   principal: Principal,
@@ -111,7 +104,11 @@ export async function setEquipmentAvailability(
     if (!old) throw new DomainError("NOT_FOUND", 404);
     if (old.version !== v.version) throw new DomainError("CONFLICT", 409);
     if (old.archivedAt)
-      throw new DomainError("CONFLICT", 409, "Alat yang diarsipkan tidak dapat diubah ketersediaannya.");
+      throw new DomainError(
+        "CONFLICT",
+        409,
+        "Alat yang diarsipkan tidak dapat diubah ketersediaannya.",
+      );
     const row = await tx.equipment.update({
       where: { id: v.id },
       data: { available: v.available, version: { increment: 1 } },
@@ -132,9 +129,7 @@ export async function listEquipment(principal: Principal) {
   requirePermission(principal, "inventory:write");
   return getDb().$transaction(async (tx) => {
     await assertFresh(tx, principal, "inventory:write");
-    return (
-      await tx.equipment.findMany({ orderBy: { code: "asc" }, take: 2000 })
-    ).map(dto);
+    return (await tx.equipment.findMany({ orderBy: { code: "asc" }, take: 2000 })).map(dto);
   });
 }
 export async function publicEquipment() {
@@ -155,11 +150,7 @@ export async function publicEquipment() {
 export const equipmentImportSchema = z
   .object({ rows: z.array(equipmentSchema).min(1).max(2000) })
   .strict();
-export async function importEquipment(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function importEquipment(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "inventory:write");
   const rows = equipmentImportSchema.parse({ rows: input }).rows;
   const seen = new Set<string>();
@@ -183,14 +174,12 @@ export async function importEquipment(
         "public",
       );
       await tx.equipment.createMany({
-        data: rows.map(
-          ({ id: _id, version: _version, archived: _archived, ...row }) => {
-            void _id;
-            void _version;
-            void _archived;
-            return { ...row, code: row.code.toUpperCase() };
-          },
-        ),
+        data: rows.map(({ id: _id, version: _version, archived: _archived, ...row }) => {
+          void _id;
+          void _version;
+          void _archived;
+          return { ...row, code: row.code.toUpperCase() };
+        }),
       });
       await writeAudit(tx, {
         actorType: "USER",
@@ -203,11 +192,7 @@ export async function importEquipment(
     });
   } catch (e) {
     if (e && typeof e === "object" && "code" in e && e.code === "P2002")
-      throw new DomainError(
-        "CONFLICT",
-        409,
-        "Kode sudah ada. Tidak ada baris yang diimpor.",
-      );
+      throw new DomainError("CONFLICT", 409, "Kode sudah ada. Tidak ada baris yang diimpor.");
     throw e;
   }
 }

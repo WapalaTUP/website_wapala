@@ -17,9 +17,7 @@ export async function invoicePdf(loan: Loan, state: DemoState) {
     imageData("/images/logo.png"),
     imageData("/images/tel-u.png"),
   ]);
-  const qr = await QR.toDataURL(
-    location.origin + "/peminjaman/status/" + loan.code,
-  );
+  const qr = await QR.toDataURL(location.origin + "/peminjaman/status/" + loan.code);
   builder
     .buildInvoiceDocument(loan, state, { logo, telLogo, qr })
     .save("Invoice-" + loan.code + "-A4.pdf");
@@ -33,10 +31,7 @@ export async function applicantPdf(a: Applicant) {
   doc.text(a.code + " / " + a.period, 18, 34);
   let y = 50;
   for (const [key, value] of Object.entries(a.fields)) {
-    const lines = doc.splitTextToSize(
-      key.replace(/_/g, " ") + ": " + value,
-      174,
-    );
+    const lines = doc.splitTextToSize(key.replace(/_/g, " ") + ": " + value, 174);
     if (y + lines.length * 6 > 278) {
       doc.addPage();
       y = 20;

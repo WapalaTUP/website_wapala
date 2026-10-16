@@ -13,11 +13,7 @@ export async function authContext(signal?: AbortSignal): Promise<AuthContext> {
   if (!response.ok) throw new Error(body.error || "Layanan login belum siap.");
   return body;
 }
-export async function authPost(
-  action: string,
-  input: unknown,
-  csrfToken: string,
-) {
+export async function authPost(action: string, input: unknown, csrfToken: string) {
   if (["bootstrap", "login", "recovery", "reset"].includes(action)) {
     // Tabs and idle login pages may carry a stale token. Refresh before any credential submission.
     csrfToken = (await authContext()).csrfToken;

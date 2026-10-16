@@ -70,7 +70,6 @@ model BootstrapState {
   tokenHash   String?
   expiresAt   DateTime?
   completedAt DateTime?
-  environmentTokenHashes String[] @default([])
 }
 
 model SiteSettings {

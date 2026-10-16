@@ -28,15 +28,7 @@ export const importLabels: Record<string, string> = {
 };
 export const requiredImportFields: Record<ImportKind, string[]> = {
   anggota: ["nama", "prodi", "angkatan", "jenis_kelamin", "nia", "status"],
-  inventaris: [
-    "code",
-    "name",
-    "category",
-    "total",
-    "fit",
-    "condition",
-    "location",
-  ],
+  inventaris: ["code", "name", "category", "total", "fit", "condition", "location"],
 };
 export function prepareBackendImport(
   kind: ImportKind,
@@ -46,11 +38,7 @@ export function prepareBackendImport(
   const errors: ImportIssue[] = [],
     rows: Record<string, string | number | boolean>[] = [];
   const fail = (row: number, field: string, message: string) => {
-    if (
-      !errors.some(
-        (e) => e.row === row && e.field === field && e.message === message,
-      )
-    )
+    if (!errors.some((e) => e.row === row && e.field === field && e.message === message))
       errors.push({ row, field, message });
   };
   const selected = Object.values(mapping).filter(Boolean);
@@ -59,11 +47,7 @@ export function prepareBackendImport(
   if (new Set(table.headers).size !== table.headers.length)
     fail(1, "header", "Nama kolom sumber harus unik.");
   if (new Set(selected).size !== selected.length)
-    fail(
-      1,
-      "mapping",
-      "Satu kolom sumber tidak boleh dipakai untuk dua field.",
-    );
+    fail(1, "mapping", "Satu kolom sumber tidak boleh dipakai untuk dua field.");
   for (const field of requiredImportFields[kind])
     if (!mapping[field] || !table.headers.includes(mapping[field]))
       fail(1, field, "Kolom wajib belum dipetakan.");
@@ -71,9 +55,7 @@ export function prepareBackendImport(
     Object.fromEntries(
       importFields[kind].map((field) => [
         field,
-        mapping[field]
-          ? String(values[table.headers.indexOf(mapping[field])] ?? "").trim()
-          : "",
+        mapping[field] ? String(values[table.headers.indexOf(mapping[field])] ?? "").trim() : "",
       ]),
     ),
   );
@@ -92,9 +74,7 @@ export function prepareBackendImport(
             maxQuantity: Math.max(1, Number(raw.fit) || 1),
           };
     const parsed =
-      kind === "anggota"
-        ? memberFields.safeParse(candidate)
-        : equipmentSchema.safeParse(candidate);
+      kind === "anggota" ? memberFields.safeParse(candidate) : equipmentSchema.safeParse(candidate);
     if (!parsed.success)
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0] || "baris");

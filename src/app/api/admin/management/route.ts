@@ -6,8 +6,6 @@ export const dynamic = "force-dynamic";
 export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "users:write");
-    return jsonResponse(
-      await rollover(principal, await readJson(request, rolloverSchema), ctx),
-    );
+    return jsonResponse(await rollover(principal, await readJson(request, rolloverSchema), ctx));
   });
 }

@@ -2,10 +2,7 @@ import "server-only";
 import ExcelJS from "exceljs";
 import { z } from "zod";
 import { eventAnswerLabel, type EventQuestion } from "../../lib/event-form";
-import {
-  eventDraftSchema,
-  type EventRegistrationDto,
-} from "../../lib/event-types";
+import { eventDraftSchema, type EventRegistrationDto } from "../../lib/event-types";
 import { getDb } from "../db";
 import { DomainError } from "../errors";
 import { requirePermission, type Principal } from "../auth/policy";
@@ -28,10 +25,7 @@ export async function exportEventWorkbook({
       if (q.kind !== "section" && !questions.has(q.id)) questions.set(q.id, q);
   assertEventExportBudget({
     rows: rows.length,
-    answerBytes: rows.reduce(
-      (total, r) => total + Buffer.byteLength(JSON.stringify(r.answers)),
-      0,
-    ),
+    answerBytes: rows.reduce((total, r) => total + Buffer.byteLength(JSON.stringify(r.answers)), 0),
     columns: questions.size + 3,
   });
   const parts = new Map([...questions.keys()].map((id) => [id, 1]));
@@ -44,8 +38,7 @@ export async function exportEventWorkbook({
         q.kind === "upload" && r.answers[q.id]
           ? "Berkas " + String(r.answers[q.id])
           : eventAnswerLabel(q, r.answers[q.id]);
-      const chunks =
-        typeof label === "number" ? [label] : excelTextParts(label);
+      const chunks = typeof label === "number" ? [label] : excelTextParts(label);
       values[q.id] = chunks;
       parts.set(q.id, Math.max(parts.get(q.id) ?? 1, chunks.length));
       displayBytes += Buffer.byteLength(String(label));
@@ -70,12 +63,7 @@ export async function exportEventWorkbook({
     { header: "Versi formulir", key: "version", width: 18 },
     ...[...questions.values()].flatMap((q) =>
       Array.from({ length: parts.get(q.id) ?? 1 }, (_, i) => ({
-        header:
-          q.title +
-          " [" +
-          q.id +
-          "]" +
-          (i ? " (lanjutan " + (i + 1) + ")" : ""),
+        header: q.title + " [" + q.id + "]" + (i ? " (lanjutan " + (i + 1) + ")" : ""),
         key: q.id + "#" + i,
         width: 32,
       })),
@@ -173,23 +161,14 @@ export function assertEventExportBudget({
   answerBytes: number;
   columns: number;
 }) {
-  if (
-    rows > 10000 ||
-    answerBytes > 100 * 1024 * 1024 ||
-    columns > 16384 ||
-    rows * columns > 200000
-  )
+  if (rows > 10000 || answerBytes > 100 * 1024 * 1024 || columns > 16384 || rows * columns > 200000)
     throw new DomainError(
       "EXPORT_LIMIT",
       413,
       "Ekspor melebihi batas baris, kolom atau memori. Persempit filter tanggal/versi; tidak ada data yang diekspor sebagian.",
     );
 }
-export async function loadEventExport(
-  p: Principal,
-  eventId: string,
-  input: EventResponseFilter,
-) {
+export async function loadEventExport(p: Principal, eventId: string, input: EventResponseFilter) {
   requirePermission(p, "events:write");
   z.uuid().parse(eventId);
   const f = responseFilterSchema.parse(input);
@@ -206,13 +185,9 @@ export async function loadEventExport(
           413,
           "Maksimal 10.000 respons per ekspor. Persempit filter.",
         );
-      const pattern = f.query
-        ? "%" + f.query.replace(/[\\%_]/g, "\\$&") + "%"
-        : null;
+      const pattern = f.query ? "%" + f.query.replace(/[\\%_]/g, "\\$&") + "%" : null;
       const from = f.from ? new Date(f.from + "T00:00:00+07:00") : null,
-        to = f.to
-          ? new Date(new Date(f.to + "T00:00:00+07:00").getTime() + 86400000)
-          : null;
+        to = f.to ? new Date(new Date(f.to + "T00:00:00+07:00").getTime() + 86400000) : null;
       const sizes = await tx.$queryRaw<
         Array<{ bytes: bigint }>
       >`SELECT COALESCE(SUM(octet_length(answers::text)),0)::bigint AS bytes FROM "EventRegistration" WHERE "eventId"=${eventId}::uuid AND (${f.revisionId || null}::uuid IS NULL OR "revisionId"=${f.revisionId || null}::uuid) AND (${from}::timestamp IS NULL OR "createdAt">=${from}::timestamp) AND (${to}::timestamp IS NULL OR "createdAt"<${to}::timestamp) AND (${pattern}::text IS NULL OR code ILIKE ${pattern} OR answers::text ILIKE ${pattern})`;
@@ -237,10 +212,7 @@ export async function loadEventExport(
         where: { id: { in: references.map((r) => r.revisionId) } },
       });
       const parsed = new Map(
-        revisions.map((r) => [
-          r.id,
-          { ...r, form: eventDraftSchema.parse(r.snapshot).form },
-        ]),
+        revisions.map((r) => [r.id, { ...r, form: eventDraftSchema.parse(r.snapshot).form }]),
       );
       const columns =
         new Set(

@@ -1,11 +1,5 @@
 "use client";
-import {
-  useEffect,
-  useId,
-  useRef,
-  type ReactNode,
-  type InputHTMLAttributes,
-} from "react";
+import { useEffect, useId, useRef, type ReactNode, type InputHTMLAttributes } from "react";
 import { X, UploadCloud, AlertCircle, Search } from "lucide-react";
 import { uploadError } from "@/lib/domain";
 export function Field({
@@ -59,12 +53,7 @@ export function Select({
         {label}
         {required && <span className="required"> *</span>}
       </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      >
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} required={required}>
         <option value="">Pilih {label.toLowerCase()}</option>
         {options.map((o) => (
           <option key={o}>{o}</option>
@@ -127,9 +116,7 @@ export function Upload({
       <div className="upload-box">
         <UploadCloud size={28} />
         <div>
-          <strong>
-            {names.length ? names.join(", ") : "Pilih berkas dari perangkat"}
-          </strong>
+          <strong>{names.length ? names.join(", ") : "Pilih berkas dari perangkat"}</strong>
           <p>
             {kind === "book"
               ? "PDF / EPUB · maksimal 50 MB"
@@ -183,10 +170,7 @@ export function Notice({
   tone?: "info" | "error" | "success";
 }) {
   return (
-    <div
-      className={"notice " + tone}
-      role={tone === "error" ? "alert" : undefined}
-    >
+    <div className={"notice " + tone} role={tone === "error" ? "alert" : undefined}>
       <AlertCircle size={20} />
       <div>{children}</div>
     </div>
@@ -220,10 +204,7 @@ export function Badge({ children }: { children: ReactNode }) {
           ? "danger"
           : s.includes("Menunggu") || s === "Diajukan"
             ? "warning"
-            : s === "Disetujui" ||
-                s === "Dikembalikan" ||
-                s === "Terverifikasi" ||
-                s === "Aktif"
+            : s === "Disetujui" || s === "Dikembalikan" || s === "Terverifikasi" || s === "Aktif"
               ? "success"
               : "neutral")
       }
@@ -259,11 +240,7 @@ export function Modal({
     >
       <div className="modal-header">
         <h2>{title}</h2>
-        <button
-          className="icon-btn"
-          onClick={onClose}
-          aria-label="Tutup dialog"
-        >
+        <button className="icon-btn" onClick={onClose} aria-label="Tutup dialog">
           <X />
         </button>
       </div>
@@ -286,11 +263,7 @@ export function Pagination({
   if (pages === 1) return null;
   return (
     <nav className="pagination" aria-label="Halaman">
-      <button
-        className="btn secondary"
-        disabled={page === 1}
-        onClick={() => onChange(page - 1)}
-      >
+      <button className="btn secondary" disabled={page === 1} onClick={() => onChange(page - 1)}>
         Sebelumnya
       </button>
       <span>

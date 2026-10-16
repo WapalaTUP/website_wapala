@@ -22,10 +22,7 @@ export function usePublicTransport() {
       active = false;
     };
   }, []);
-  async function post<T>(
-    action: string,
-    data: Record<string, unknown> | FormData,
-  ): Promise<T> {
+  async function post<T>(action: string, data: Record<string, unknown> | FormData): Promise<T> {
     if (inFlight.current) throw Error("Permintaan masih diproses.");
     inFlight.current = true;
     setBusy(true);
@@ -37,8 +34,7 @@ export function usePublicTransport() {
         credentials: "same-origin",
       });
       const freshContext = await contextResponse.json();
-      if (!contextResponse.ok)
-        throw Error(freshContext.error || "Layanan formulir belum siap.");
+      if (!contextResponse.ok) throw Error(freshContext.error || "Layanan formulir belum siap.");
       setContext(freshContext);
       const multipart = data instanceof FormData;
       const r = await fetch("/api/public/forms/" + action, {

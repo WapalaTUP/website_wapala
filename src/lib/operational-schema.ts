@@ -1,8 +1,9 @@
+import { mediaUrlSchema } from "./media-url";
 import { z } from "zod";
 const text = z.string().trim().max(300),
   optional = text.optional().default("");
 const media = z
-  .union([z.literal(""), z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/)])
+  .union([z.literal(""), mediaUrlSchema()])
   .optional()
   .default("");
 export const memberFields = z
@@ -19,13 +20,7 @@ export const memberFields = z
     foto: media,
   })
   .strict();
-export const conditionSchema = z.enum([
-  "Baik",
-  "Kotor",
-  "Rusak Ringan",
-  "Rusak Berat",
-  "Hilang",
-]);
+export const conditionSchema = z.enum(["Baik", "Kotor", "Rusak Ringan", "Rusak Berat", "Hilang"]);
 export const inventoryConditionSchema = z.enum([
   "Baik",
   "Kotor",

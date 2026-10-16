@@ -1,0 +1,21 @@
+[Unit]
+Description=WAPALA maintenance prune (throttle, session, reset token)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=wapala
+Group=wapala
+WorkingDirectory=/srv/wapala/current
+EnvironmentFile=/etc/wapala/production.env
+ExecStart=/usr/bin/npm --silent run maintenance:prune
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/wapala/current/.next/cache
+MemoryAccounting=true
+MemoryMax=400M
+TasksMax=64

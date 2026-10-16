@@ -78,12 +78,7 @@ export function BackendRecruitment({
             />
             <button
               className="btn secondary"
-              disabled={
-                busy ||
-                !Number.isInteger(newYear) ||
-                newYear < 2004 ||
-                newYear > 2200
-              }
+              disabled={busy || !Number.isInteger(newYear) || newYear < 2004 || newYear > 2200}
               onClick={() => void setPeriod(newYear, true)}
             >
               Buka periode tahunan
@@ -158,10 +153,7 @@ export function BackendRecruitment({
                   <td>{date(a.createdAt)}</td>
                   <td>{a.revisions}</td>
                   <td>
-                    <button
-                      className="btn secondary"
-                      onClick={() => setSelected(a)}
-                    >
+                    <button className="btn secondary" onClick={() => setSelected(a)}>
                       Lihat
                     </button>
                   </td>
@@ -183,11 +175,7 @@ export function BackendRecruitment({
       >
         {selected && (
           <>
-            <MediaPreview
-              key={selected.photo}
-              src={selected.photo}
-              label="Foto pendaftar"
-            />
+            <MediaPreview key={selected.photo} src={selected.photo} label="Foto pendaftar" />
             <dl>
               {Object.entries(selected.fields).map(([key, value]) => (
                 <div key={key}>

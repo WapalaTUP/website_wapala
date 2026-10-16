@@ -1,10 +1,6 @@
 import { route, authenticated, jsonResponse } from "@/server/http/auth-handler";
 import { readJson } from "@/server/http/body";
-import {
-  listEvents,
-  saveEvent,
-  eventSaveSchema,
-} from "@/server/domains/events";
+import { listEvents, saveEvent, eventSaveSchema } from "@/server/domains/events";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export function GET(request: Request) {

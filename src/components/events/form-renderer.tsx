@@ -73,14 +73,12 @@ function EventInput({
     [fileName, setFileName] = useState(""),
     [error, setError] = useState("");
   const selected = Array.isArray(value) ? value : [],
-    grid =
-      value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    grid = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const changeList = (list: string[], v: string, checked: boolean) =>
     checked ? [...list.filter((x) => x !== v), v] : list.filter((x) => x !== v);
   const described =
-    [q.help ? id + "-help" : "", issue || error ? id + "-error" : ""]
-      .filter(Boolean)
-      .join(" ") || undefined;
+    [q.help ? id + "-help" : "", issue || error ? id + "-error" : ""].filter(Boolean).join(" ") ||
+    undefined;
   const control = {
     "aria-label": q.title,
     id,
@@ -97,16 +95,10 @@ function EventInput({
             <input
               type={q.kind === "radio" ? "radio" : "checkbox"}
               name={id}
-              checked={
-                q.kind === "radio" ? value === o.id : selected.includes(o.id)
-              }
+              checked={q.kind === "radio" ? value === o.id : selected.includes(o.id)}
               disabled={disabled}
               onChange={(e) =>
-                change(
-                  q.kind === "radio"
-                    ? o.id
-                    : changeList(selected, o.id, e.target.checked),
-                )
+                change(q.kind === "radio" ? o.id : changeList(selected, o.id, e.target.checked))
               }
             />
             <span>{o.label}</span>
@@ -144,8 +136,7 @@ function EventInput({
                   ? typeof value === "string" && value.startsWith("other:")
                     ? value.slice(6)
                     : ""
-                  : (selected.find((v) => v.startsWith("other:"))?.slice(6) ??
-                    "")
+                  : (selected.find((v) => v.startsWith("other:"))?.slice(6) ?? "")
               }
               onChange={(e) =>
                 change(
@@ -205,8 +196,7 @@ function EventInput({
                       checked={
                         q.kind === "radioGrid"
                           ? grid[r.id] === o.id
-                          : Array.isArray(grid[r.id]) &&
-                            (grid[r.id] as string[]).includes(o.id)
+                          : Array.isArray(grid[r.id]) && (grid[r.id] as string[]).includes(o.id)
                       }
                       onChange={(e) =>
                         change({
@@ -215,9 +205,7 @@ function EventInput({
                             q.kind === "radioGrid"
                               ? o.id
                               : changeList(
-                                  Array.isArray(grid[r.id])
-                                    ? (grid[r.id] as string[])
-                                    : [],
+                                  Array.isArray(grid[r.id]) ? (grid[r.id] as string[]) : [],
                                   o.id,
                                   e.target.checked,
                                 ),
@@ -272,10 +260,7 @@ function EventInput({
         <p>
           {uploading
             ? "Memeriksa keamanan berkas…"
-            : fileName ||
-              (value
-                ? "Berkas tersimpan"
-                : "JPG, PNG, WebP atau PDF. Maksimal 5 MB.")}
+            : fileName || (value ? "Berkas tersimpan" : "JPG, PNG, WebP atau PDF. Maksimal 5 MB.")}
         </p>
         {value && (
           <button
@@ -331,14 +316,10 @@ function EventInput({
         min={q.kind === "date" ? q.validation.minDate : q.validation.min}
         max={q.kind === "date" ? q.validation.maxDate : q.validation.max}
         maxLength={q.validation.maxLength ?? 10000}
-        value={
-          typeof value === "string" || typeof value === "number" ? value : ""
-        }
+        value={typeof value === "string" || typeof value === "number" ? value : ""}
         onChange={(e) =>
           change(
-            q.kind === "number" && e.target.value !== ""
-              ? Number(e.target.value)
-              : e.target.value,
+            q.kind === "number" && e.target.value !== "" ? Number(e.target.value) : e.target.value,
           )
         }
       />

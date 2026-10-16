@@ -2,21 +2,13 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import { getConfig } from "../config";
-import { getDb } from "../db";
 import { DomainError } from "../errors";
 import { EventAnswerError } from "../domains/event-registrations";
-import { resolveSession } from "../auth/sessions";
+import { resolveSessionRecord } from "../auth/sessions";
 import { requirePermission, type Permission } from "../auth/policy";
-import {
-  assertOrigin,
-  csrfForSession,
-  validatePreAuthToken,
-} from "../security/csrf";
+import { assertOrigin, csrfForSession, validatePreAuthToken } from "../security/csrf";
 import { constantEqual, digestToken } from "../security/tokens";
-import {
-  requestContext,
-  type RequestContext,
-} from "../security/request-context";
+import { requestContext, type RequestContext } from "../security/request-context";
 export const cookieName = (kind: "session" | "preauth") =>
   (getConfig().production ? "__Host-" : "") + "wapala." + kind;
 export function readCookie(request: Request, name: string) {
@@ -27,11 +19,7 @@ export function readCookie(request: Request, name: string) {
     .find((v) => v.startsWith(name + "="))
     ?.slice(name.length + 1);
 }
-export function cookieHeader(
-  kind: "session" | "preauth",
-  value: string,
-  maxAge: number,
-) {
+export function cookieHeader(kind: "session" | "preauth", value: string, maxAge: number) {
   return `${cookieName(kind)}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${getConfig().production ? "; Secure" : ""}`;
 }
 export function jsonResponse(data: unknown, status = 200) {
@@ -44,10 +32,7 @@ export function jsonResponse(data: unknown, status = 200) {
     },
   });
 }
-export async function route(
-  request: Request,
-  fn: (ctx: RequestContext) => Promise<Response>,
-) {
+export async function route(request: Request, fn: (ctx: RequestContext) => Promise<Response>) {
   const requestId = randomUUID();
   try {
     return await fn({ ...requestContext(request), requestId });
@@ -63,10 +48,7 @@ export async function route(
         e.status,
       );
     if (e instanceof DomainError)
-      return jsonResponse(
-        { error: e.message, code: e.code, requestId },
-        e.status,
-      );
+      return jsonResponse({ error: e.message, code: e.code, requestId }, e.status);
     if (e instanceof ZodError)
       return jsonResponse(
         {
@@ -75,9 +57,7 @@ export async function route(
               [
                 ...new Set(
                   e.issues
-                    .map((issue) =>
-                      issue.path.filter((part) => part !== "fields").join("."),
-                    )
+                    .map((issue) => issue.path.filter((part) => part !== "fields").join("."))
                     .filter(Boolean),
                 ),
               ]
@@ -90,8 +70,7 @@ export async function route(
           ...(e.issues.some((issue) => issue.path[0] === "rows")
             ? {
                 issues: e.issues.slice(0, 100).map((issue) => ({
-                  row:
-                    typeof issue.path[1] === "number" ? issue.path[1] + 2 : 1,
+                  row: typeof issue.path[1] === "number" ? issue.path[1] + 2 : 1,
                   field: String(issue.path[2] || "file"),
                   message: issue.message,
                 })),
@@ -106,10 +85,7 @@ export async function route(
         requestId,
         code: "INTERNAL",
         message: e instanceof Error ? e.message : String(e),
-        stack:
-          e instanceof Error
-            ? e.stack?.split("\n").slice(0, 4).join(" | ")
-            : undefined,
+        stack: e instanceof Error ? e.stack?.split("\n").slice(0, 4).join(" | ") : undefined,
       }),
     );
     return jsonResponse(
@@ -131,19 +107,16 @@ export function assertPreAuth(request: Request) {
 }
 export async function authenticated(request: Request, permission?: Permission) {
   const token = readCookie(request, cookieName("session")) || "",
-    principal = await resolveSession(token);
-  if (!principal)
-    throw new DomainError("UNAUTHENTICATED", 401, "Silakan login kembali.");
+    record = await resolveSessionRecord(token);
+  if (!record) throw new DomainError("UNAUTHENTICATED", 401, "Silakan login kembali.");
+  const { principal, csrfDigest } = record;
   if (permission) requirePermission(principal, permission);
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     assertOrigin(request);
     const csrf = request.headers.get("x-csrf-token") || "";
-    const row = await getDb().session.findUniqueOrThrow({
-      where: { id: principal.sessionId },
-    });
     if (
       !constantEqual(csrf, csrfForSession(token)) ||
-      !constantEqual(row.csrfDigest, digestToken(csrf))
+      !constantEqual(csrfDigest, digestToken(csrf))
     )
       throw new DomainError("CSRF_DENIED", 403);
   }

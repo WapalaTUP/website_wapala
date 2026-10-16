@@ -1,398 +1,319 @@
-# Website WAPALA
+# Website WAPALA — Production Deploy (`host`)
 
-Website Wahana Pencinta Alam Telkom University Purwokerto, dibangun dengan
-Next.js 16, React 19, TypeScript, PostgreSQL, dan Prisma 7. Halaman pengelola
-ada di `/wapala`.
+[![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
+[![CI host](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml)
 
-Panduan ini untuk deployment dari
-[`WapalaTUP/website_wapala`](https://github.com/WapalaTUP/website_wapala) ke Vercel.
-Branch produksi adalah `main`. Tidak perlu memasang Nginx, Docker, PostgreSQL
-lokal, atau service systemd untuk menjalankan aplikasi di Vercel.
+Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif development: [wapala.my.id](https://wapala.my.id).
 
-## Sebelum deploy
+Satu alur untuk semua VPS: **clone branch `host` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
 
-Login dan inisialisasi Super User sudah mendukung token dari environment.
-Database tetap harus disiapkan dan dimigrasikan terlebih dahulu. Build Vercel
-belum menjalankan migrasi, membuat akun, atau mengimpor data secara otomatis.
+> 📖 **Walkthrough nyata end-to-end** (InterServer KVM Slice 1 + domain hostdata.id/DirectAdmin, termasuk setting nameserver, ClamAV, dan semua jebakan yang kami temui): [host/deploy-walkthrough.md](host/deploy-walkthrough.md)
 
-Ada bagian yang belum selesai untuk Vercel:
+## Fitur aplikasi (ringkas)
 
-- Media masih memakai filesystem privat dan executable ClamAV. Kode belum
-  membaca atau menulis file ke Vercel Blob. Membuat Blob store atau menambahkan
-  token Blob saja tidak menghubungkannya ke aplikasi.
-- Upload foto, logo, poster, QRIS, bukti transfer, dan dokumen belum dapat
-  dianggap berfungsi di Vercel. Media lama juga perlu dipindahkan beserta
-  adapter pembacaannya, bukan hanya disalin baris databasenya.
-- Worker email, pengecekan keterlambatan peminjaman, dan pembersihan media belum
-  mempunyai jadwal Vercel Cron atau worker terpisah.
+- Situs publik: profil/angkatan, divisi, berita, galeri, pembaca PDF/EPUB, kontak.
+- Peminjaman alat: katalog, pengajuan, invoice, persetujuan, verifikasi pengembalian.
+- Open Recruitment, Donasi (QRIS + verifikasi bukti), Event (formulir dinamis + ekspor Excel).
+- Admin: anggota, angkatan, inventaris, konten, pengguna/peran, arsip, audit.
 
-Deployment dapat dipakai untuk pengujian halaman, database, dan login. Jangan
-membuka seluruh layanan untuk pengguna umum sebelum storage, scanning, pekerjaan
-terjadwal yang diperlukan, dan pengujian alur selesai. Status **Ready** di Vercel
-hanya menyatakan deployment berhasil dibuat.
+| Lapisan | Teknologi |
+| --- | --- |
+| Aplikasi | Next.js 16 (standalone), React 19, TypeScript |
+| Data | PostgreSQL + Prisma 7 (adapter `pg`) |
+| Keamanan | Argon2, sesi HttpOnly, CSRF, throttling, media privat |
+| Media | Disk lokal `MEDIA_ROOT`, pemindaian ClamAV (opsional, fail-closed) |
+| Runtime | systemd + Nginx + TLS (Let's Encrypt) |
 
-## Yang perlu disiapkan
-
-1. Akun Vercel dengan akses ke repository GitHub WAPALA. Jika repository tidak
-   muncul saat import, beri GitHub App Vercel akses melalui pengaturan organisasi
-   `WapalaTUP`.
-2. PostgreSQL cloud khusus aplikasi ini, misalnya Neon. Gunakan database baru
-   atau database tujuan yang sudah disetujui. Jangan memakai koneksi database
-   VPS yang masih melayani website lama.
-3. Dua akun database: pemilik/migrator untuk perubahan struktur, dan runtime
-   untuk aplikasi. Runtime bukan superuser, pemilik tabel, atau anggota role
-   pemilik, dan tidak boleh membuat/menghapus tabel.
-4. Node.js 24 dan Git pada perangkat operator untuk dependensi, migrasi, dan
-   pemulihan akun. Perangkat ini tidak harus menjalankan website.
-5. Origin HTTPS tujuan, misalnya `https://nama-project.vercel.app`. Domain
-   sendiri bisa ditambahkan setelah deployment pertama.
-6. Secret baru untuk `SECURITY_KEY` dan `INITIAL_SETUP_TOKEN`. Jangan mengambil
-   password, secret, atau sesi dari deployment lain.
-
-Resource Vercel/Neon milik akun lain tidak ikut ketika repository disalin.
-Hubungkan resource pada project dan environment tujuan. Untuk pengaturan import,
-lihat [panduan Git Vercel](https://vercel.com/docs/git).
-
-## 1. Siapkan database
-
-### Koneksi
-
-Buat database khusus WAPALA. Contoh izin di bawah memakai schema `public` pada
-database khusus tersebut, bukan database bersama aplikasi lain.
-
-Gunakan endpoint PostgreSQL **direct/unpooled** untuk migrasi. Untuk runtime,
-gunakan koneksi direct terlebih dahulu: adapter saat ini mengatur `search_path`
-melalui opsi koneksi. Jangan mengganti ke transaction pooler sebelum perilaku
-tersebut diuji dengan provider yang dipakai. Pool aplikasi dibatasi lima koneksi
-per instance; beberapa instance Vercel tetap bisa membuka lebih banyak koneksi
-secara keseluruhan.
-
-Format URL runtime:
+## Arsitektur deployment
 
 ```text
-postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=verify-full
+  Git push (branch host)
+        │
+        ▼
+  GitHub Actions ── SSH (kunci deploy) ──▶ VPS: host/host-deploy.sh
+                                              │  1. git clone release baru
+                                              │  2. npm ci + next build   (heap dibatasi)
+                                              │  3. prisma migrate deploy (+ grant role runtime)
+                                              │  4. symlink /srv/wapala/current → release baru
+                                              │  5. systemctl restart wapala
+                                              │  6. health check /api/health
+                                              ▼
+                                     gagal ⟶ rollback otomatis ke release sebelumnya
 ```
 
-Ganti bagian contoh dengan nilai provider. Password dengan karakter khusus
-harus di-URL-encode. Validator aplikasi hanya menerima parameter `sslmode` dan
-`schema`; parameter tambahan seperti `channel_binding` atau `options` ditolak.
-Susun URL yang sesuai tanpa menurunkan verifikasi TLS. Jangan memakai
-`sslmode=disable` untuk koneksi cloud.
+Aplikasi berjalan sebagai user non-root `wapala`, hanya listen `127.0.0.1:3000`; Nginx meneruskan trafik HTTPS dari publik.
 
-### Migrasi pertama
+## Prasyarat
 
-Clone repository pada perangkat operator:
+| Kebutuhan | Nilai minimum | Catatan |
+| --- | --- | --- |
+| VPS | Ubuntu 22.04/24.04, **2 GB RAM**, disk ≥ 3 GB | 1 GB berisiko OOM saat build (lihat [Kapasitas](#kapasitas--build-hemat-memori)) |
+| Akses | SSH root atau sudo | Provisioning + deploy butuh systemd |
+| Domain | 1 domain (A record) | NAT VPS: daftarkan domain di panel provider |
+| Repository | GitHub repo ini | Private repo tetap bisa (atur `VPS_REPO_URL` + deploy key) |
+
+## Pilih mode VPS
+
+| | **A. Dedicated IP** | **B. NAT VPS** |
+| --- | --- | --- |
+| IP publik | Khusus untuk VPS ini | Dibagi antar pelanggan provider |
+| Port | 22, 80, 443 standar | Terbatas pada port yang diteruskan provider (mis. SSH `33333`, HTTP `33335`, HTTPS `33336`) |
+| DNS | `A record domain → IP VPS` | `A record domain → IP publik provider` **+** daftarkan domain di panel provider agar gateway tahu rute ke VPS Anda |
+| Sertifikat | Certbot HTTP-01 (port 80) | Certbot HTTP-01 hanya bila provider meneruskan publik `:80` → port HTTP internal; bila tidak, gunakan DNS-01 atau `WAPALA_SKIP_CERTBOT=1` |
+| Biaya relatif | Lebih mahal | **Lebih murah** |
+
+> NAT bukan "DNS forwarding". DNS hanya menerjemahkan nama → IP; rute port publik → port internal ditentukan panel provider (port forwarding). Di provider yang sama, pastikan HTTP publik (80) dan HTTPS publik (443 atau port khusus) diteruskan ke port internal yang benar.
+
+### Membaca panel provider (Domain Forwarding + DNS) → parameter provisioning
+
+Nilai di panel **berubah tergantung VPS** — selalu cek panel VPS yang akan dipakai, jangan asal pakai catatan lama. Pola penerjemahannya:
+
+| Baris di panel provider | Arti | Parameter provisioning |
+| --- | --- | --- |
+| `HTTP  domain:80  → IP_internal:33335` | Trafik HTTP publik masuk ke nginx internal `33335` | `WAPALA_NAT_HTTP_PORT=33335` |
+| `HTTPS domain:443 → IP_internal:33336` | Trafik HTTPS publik masuk ke nginx internal `33336` | `WAPALA_NAT_HTTPS_PORT=33336` |
+| Baris `HTTPS`, kolom **Source Port** | Port publik yang dipakai browser (`443` atau custom) | `WAPALA_NAT_PUBLIC_HTTPS_PORT=443` — isi hanya bila beda dari port internal; bila `443`, redirect otomatis bersih tanpa `:port` |
+| `TCP  IP_publik:33333 → IP_internal:22` | SSH dari luar | SSH manual: `ssh -p 33333 user@IP_publik`; (mode otomatis) secret `VPS_PORT=33333` |
+| DNS `A  domain → 185.x.x.x` | Domain sudah menunjuk IP publik provider | Syarat certbot — verifikasi `dig +short domain` |
+
+Contoh (**ilustrasi** — ganti dengan nilai panel VPS yang akan dipakai). Panel menampilkan:
+
+```text
+HTTP   mysite.com  80  → 10.x.x.x  33335
+HTTPS  mysite.com  443 → 10.x.x.x  33336
+TCP    185.x.x.x  33333 → 10.x.x.x  22
+DNS:   A  mysite.com → 185.x.x.x
+```
+
+Perintah provisioning-nya:
 
 ```sh
-git clone https://github.com/WapalaTUP/website_wapala.git
-cd website_wapala
-npm ci
-npm run db:generate
+sudo WAPALA_NAT_MODE=1 \
+     WAPALA_NAT_HTTP_PORT=33335 \
+     WAPALA_NAT_HTTPS_PORT=33336 \
+     WAPALA_NAT_PUBLIC_HTTPS_PORT=443 \
+     bash host/host-provision.sh mysite.com email@kamu.com
 ```
 
-Buat file privat `.env.migrate` pada root checkout:
+Checklist sebelum jalan: (1) A record menunjuk IP publik provider, (2) domain terdaftar di baris forwarding HTTP **dan** HTTPS, (3) port internal di parameter sama persis dengan kolom Destination Port, (4) ini panel VPS tujuan — bukan VPS production lama yang masih hidup.
 
-```dotenv
-NODE_ENV=production
-DATABASE_URL=ISI_URL_DIRECT_DENGAN_ROLE_MIGRATOR
-```
+---
 
-Gunakan URL sebenarnya hanya pada file lokal tersebut. Jangan commit,
-membagikannya, atau menempelkan URL ke perintah shell. Batasi akses file;
-di Linux/macOS gunakan `chmod 600 .env.migrate`.
+## Langkah 1 — Provisioning (sekali saja)
 
-Jalankan dari root checkout:
+SSH ke VPS, lalu clone branch `host` dan jalankan provisioning:
 
 ```sh
-node --env-file=.env.migrate node_modules/prisma/build/index.js migrate status
-node --env-file=.env.migrate node_modules/prisma/build/index.js migrate deploy
+apt-get update && apt-get install -y git
+git clone --branch host --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
+cd wapala-setup
 ```
 
-`migrate status` dapat keluar dengan status nonzero ketika ada migrasi yang
-belum diterapkan. Periksa laporannya sebelum melanjutkan. Seluruh migrasi harus
-terpasang, termasuk `202610160002_environment_bootstrap_token`.
-
-Prisma membaca `DATABASE_URL` untuk migrasi. Belum ada dukungan `DIRECT_URL`
-atau `MIGRATION_DATABASE_URL` pada konfigurasi repository ini. Pastikan terminal
-tidak membawa `DATABASE_URL` dari aplikasi lain: environment proses dapat
-mengalahkan isi file `--env-file`.
-
-Tidak perlu membuat akun lewat SQL atau menjalankan seed demo. Foundation
-instalasi dibuat ketika alur token environment pertama diakses. Jangan memakai
-`prisma db push`, `migrate reset`, atau menghapus tabel untuk instalasi produksi.
-
-### Izin runtime
-
-Buat akun runtime lewat fasilitas pengelolaan role provider, dengan password
-baru dan tanpa keanggotaan role pemilik. Contoh berikut menganggap namanya
-`wapala_app`. Jalankan sebagai pemilik database **setelah migrasi**, pada database
-khusus WAPALA:
-
-```sql
-REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO wapala_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO wapala_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO wapala_app;
-REVOKE ALL ON TABLE public."_prisma_migrations" FROM wapala_app;
-REVOKE UPDATE, DELETE ON TABLE public."AuditLog" FROM wapala_app;
-```
-
-Akun ini tidak boleh memiliki tabel, menerima hak `TRUNCATE`, atau memiliki hak
-DDL dari role lain. Audit juga dilindungi trigger append-only. Sesuaikan nama
-role/schema bila berbeda. Terapkan kembali izin setelah migrasi yang menambah
-tabel; pertahankan pembatasan `AuditLog`.
-
-Simpan URL runtime sebagai `DATABASE_URL` di Vercel. URL migrator tetap di
-perangkat operator atau sistem migrasi privat, bukan runtime aplikasi.
-
-## 2. Buat secret instalasi
-
-Ada dua nilai berbeda:
-
-- `SECURITY_KEY`: 32 byte acak dalam **base64**, untuk fungsi keamanan aplikasi.
-  Pertahankan nilainya selama instalasi berjalan.
-- `INITIAL_SETUP_TOKEN`: 32 byte acak dalam **base64url**, panjang 43 karakter.
-  Hanya untuk pembuatan Super User pertama.
-
-Dari root checkout, perintah berikut menulis masing-masing ke file lokal tanpa
-menampilkan nilainya. Perintah menolak menimpa file yang sudah ada. Dapat
-dijalankan di PowerShell maupun shell Linux/macOS dengan Node.js 24:
+**Opsi A — Dedicated IP:**
 
 ```sh
-node -e "const fs=require('node:fs'),c=require('node:crypto');fs.writeFileSync('.env.secret.key','SECURITY_KEY='+c.randomBytes(32).toString('base64')+'\n',{flag:'wx',mode:0o600})"
-node -e "const fs=require('node:fs'),c=require('node:crypto');fs.writeFileSync('.env.secret.token','INITIAL_SETUP_TOKEN='+c.randomBytes(32).toString('base64url')+'\n',{flag:'wx',mode:0o600})"
+sudo bash host/host-provision.sh contoh-domain.com admin@contoh-domain.com
 ```
 
-Buka file tersebut sendiri untuk menyalin nilai ke Vercel. Salin nilai setelah
-`=`, bukan seluruh baris. Simpan `SECURITY_KEY` juga di password manager/backup
-privat. Pada Windows, periksa izin akses file; mode Unix tidak menggantikan ACL
-Windows.
+**Opsi B — NAT VPS** (sesuaikan pasangan port dari panel provider):
 
-`.env.secret.token` tidak otomatis dibaca Vercel. File `.env*` privat, `.local`,
-dan `.vercel` tidak boleh ikut Git atau ZIP. Jangan menyimpan token instalasi di
-tabel database yang dapat dibaca, folder `public`, atau variabel berawalan
-`NEXT_PUBLIC_`.
+```sh
+sudo WAPALA_NAT_MODE=1 \
+     WAPALA_NAT_HTTP_PORT=33335 \
+     WAPALA_NAT_HTTPS_PORT=33336 \
+     bash host/host-provision.sh contoh-domain.com admin@contoh-domain.com
+```
 
-## 3. Import project ke Vercel
+Script melakukan semua hal berikut secara idempoten: paket sistem + Node.js 24, PostgreSQL, Nginx, Certbot, pembuatan user layanan `wapala`, database beserta **dua role** (owner untuk migrasi, runtime terbatas tanpa DDL), file env privat `0600`, unit systemd, Nginx HTTP → sertifikat TLS → Nginx HTTPS.
 
-Pilih **Add New → Project** di Vercel, lalu import `WapalaTUP/website_wapala`.
-Pilih akun/team pengelola website, bukan project lama milik akun lain.
+Opsi tambahan (environment sebelum perintah):
 
-| Pengaturan | Nilai |
+| Variabel | Fungsi |
 | --- | --- |
-| Production Branch | `main` |
-| Root Directory | Root repository (`.`), bukan `Wapala_git` atau `Vercel` |
-| Framework Preset | Next.js |
-| Node.js Version | `24.x` |
-| Install Command | `npm ci` |
-| Build Command | `npm run db:generate && npm run build` |
-| Output Directory | Default Next.js |
+| `WAPALA_PROVISION_CLAMAV=1` | Pasang ClamAV + wrapper scanner. **Tanpa ini, unggahan media ditolak (fail-closed).** |
+| `WAPALA_SKIP_CERTBOT=1` | Lewati penerbitan sertifikat (atur TLS/DNS-01 manual). |
+| `WAPALA_ENABLE_UFW=1` | Aktifkan firewall (SSH, 80/443 + port NAT). |
+| `WAPALA_DB_PASSWORD`, `WAPALA_APP_DB_PASSWORD` | Password database dibuat manual (bila kosong dibuat acak). |
 
-Install/build/framework sudah didefinisikan di `vercel.json`. Jangan mengganti
-build menjadi `npm run dev`, menjalankan `npm start` sebagai build, atau memilih
-folder `public` sebagai output. Lihat [pengaturan Node.js Vercel](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
-untuk pemilihan versi 24.x.
+Di akhir, script mencetak ringkasan berisi password database dan langkah berikutnya — **catat privat, jangan disebarkan**.
 
-Tambahkan environment berikut sebelum deploy. Untuk URL database, kunci, dan
-token, pilih tipe **Secret**.
+## Langkah 2 — DNS
 
-| Variabel | Isi |
-| --- | --- |
-| `APP_URL` | Origin HTTPS pengunjung tanpa path/query, misalnya `https://nama-project.vercel.app` |
-| `DATABASE_URL` | URL PostgreSQL cloud milik runtime, bukan migrator |
-| `SECURITY_KEY` | Nilai base64 dari langkah sebelumnya |
-| `INITIAL_SETUP_TOKEN` | Token base64url instalasi baru; hapus setelah setup berhasil |
-| `WAPALA_MODE` | `backend` |
-| `EMAIL_MODE` | `disabled` untuk operasi awal tanpa email |
-| `TRUST_PROXY` | `true` untuk akses langsung melalui ingress Vercel; lihat catatan berikut |
-| `NEXT_TELEMETRY_DISABLED` | `1`, opsional |
+- **Dedicated:** buat `A record` `@` (dan `www`) → IP publik VPS. Verifikasi: `dig +short contoh-domain.com`.
+- **NAT:** `A record` → IP publik provider **dan** daftarkan/forwarding domain di panel provider (Source Domain) sesuai pasangan port. Verifikasi juga dari luar: `curl -I http://contoh-domain.com`.
 
-Vercel menyiapkan `NODE_ENV=production` untuk deployment. Jangan memakai
-`EMAIL_MODE=sink`, `WAPALA_MODE=preview`, atau origin HTTP pada deployment,
-termasuk Preview; validator server menolaknya.
+DNS harus aktif **sebelum** provisioning jika ingin sertifikat diterbitkan otomatis.
 
-`TRUST_PROXY=true` membuat throttle membaca IP dari `x-forwarded-for`. Pada
-akses langsung melalui Vercel, header disediakan platform dan input luar
-ditimpa untuk mencegah spoofing. Jika menambah proxy di depan Vercel, periksa
-kembali rantai kepercayaannya. Dengan `false`, IP dianggap tidak diketahui dan
-pengguna dapat berbagi bucket throttle. Rujukan:
-[request headers Vercel](https://vercel.com/docs/headers/request-headers#x-forwarded-for).
-
-Gunakan URL project sebagai `APP_URL`. Jika URL akhirnya berbeda, perbarui
-nilainya dan redeploy **sebelum menguji formulir/login**. Jangan memakai URL
-deployment acak yang berbeda dari origin tersebut.
-
-Pilih environment **Production** untuk nilai produksi. Preview harus memakai
-database dan secret terpisah serta origin Preview yang sesuai. Jangan mencentang
-Production dan Preview bersamaan untuk URL database yang sama. Perubahan
-environment baru berlaku pada deployment baru. Lihat [pengaturan environment](https://vercel.com/docs/environment-variables).
-
-Tidak perlu menambahkan `PORT`, `HOSTNAME`, Nginx, atau IP internal VPS. Jangan
-menyalin `.env.production.example` mentah-mentah: itu masih template native/VPS.
-Setelah database dimigrasikan dan environment benar, jalankan **Deploy**.
-
-## 4. Buat akun Super User
-
-1. Buka `https://URL-PROJECT/wapala` pada origin yang sama dengan `APP_URL`.
-2. Masukkan `INITIAL_SETUP_TOKEN` yang disimpan dan pilih password baru,
-   minimal 12 karakter.
-3. Setelah berhasil, login sebagai `superuser@wapala.org` dengan password baru
-   tersebut. Tidak ada password bawaan.
-4. Hapus `INITIAL_SETUP_TOKEN` dari konfigurasi Vercel dan salinan file token
-   lokal. Simpan password admin di pengelola password organisasi.
-
-Token berlaku 30 menit sejak konteks login/bootstrap pertama diakses, bukan
-sejak build dimulai. Database menyimpan hash, bukan token asli. Request berulang
-dan redeploy tidak memperpanjang masa berlakunya.
-
-Setelah akun berhasil dibuat, token langsung hangus dalam transaksi yang sama.
-Secret lama pada deployment sebelumnya pun tidak membuka ulang setup. Mengganti
-token atau redeploy tidak mereset akun yang sudah ada.
-
-Jika kedaluwarsa sebelum setup selesai, buat token baru, ganti secret, lalu
-redeploy. Token lama tidak dapat diaktifkan lagi. Bila ada token aktif berbeda,
-aplikasi menolak penggantian sampai token aktif kedaluwarsa; periksa konfigurasi
-dan jangan menjalankan alur token CLI bersamaan. Jangan menghapus `BootstrapState`
-atau akun untuk mengulang instalasi.
-
-## 5. Periksa deployment
-
-Gunakan browser pada origin yang ditetapkan di `APP_URL`:
-
-- `/` terbuka tanpa error server.
-- `/api/health` mengembalikan HTTP 200 dan `status: "ok"`.
-- `/wapala` menampilkan setup pada instalasi baru, lalu login setelah setup.
-- Login admin berhasil; logout mencabut sesi.
-- API admin tanpa login menolak akses, bukan menampilkan data pengelola.
-- Formulir memeriksa input, consent, CSRF, dan benar-benar menyimpan data.
-- Hak setiap peran sesuai; akun biasa tidak dapat menjalankan reset Super User.
-
-Health endpoint hanya menjalankan `SELECT 1`. Hasil 200 bukan bukti seluruh
-migrasi, izin tabel, upload, atau alur bisnis sudah benar. Periksa runtime logs
-setelah halaman dibuka, bukan build logs saja. Jangan menyalin cookie, jawaban
-formulir, URL database, atau token ke laporan bug.
-
-## Media, album, dan data awal
-
-Repository berisi kode, bukan backup isi website. Clone/deploy tidak menyalin
-akun, anggota, inventaris, album, angkatan, atau berkas VPS. Paket publik
-album/angkatan yang disiapkan terpisah belum disertakan di repository ini.
-Data anggota dan inventaris tidak termasuk paket publik tersebut.
-
-Importer lama ada di `scripts/import-public-site.ts`. Ia memerlukan manifest,
-berkas sumber, filesystem privat, dan scanner native. Jangan menjalankannya
-sebagai build step Vercel atau menganggapnya sudah menjadi importer Blob.
-Pemindahan data dilakukan terpisah setelah storage Vercel selesai.
-
-Pekerjaan media yang masih dibutuhkan: adapter storage permanen, pembacaan file
-privat dengan izin yang sama, layanan scanning, dan upload yang sesuai dengan
-batas platform. `/tmp` bukan penyimpanan permanen. Jangan mengisi
-`MEDIA_ROOT=/tmp` atau membuat scanner palsu untuk meloloskan upload.
-
-Payload request/response Function biasa dibatasi 4,5 MB, sedangkan beberapa
-form aplikasi menerima file sampai 5 MB. Penyesuaian upload harus menangani
-batas platform tanpa melewati pemeriksaan keamanan. Rujukan:
-[batas Vercel Functions](https://vercel.com/docs/functions/limitations#request-body-size).
-
-## Email dan pemulihan akun
-
-Dengan `EMAIL_MODE=disabled`, aplikasi tidak mengirim notifikasi atau email
-pemulihan. Alamat pemulihan organisasi yang tersimpan tidak membuat email aktif.
-
-Untuk pemulihan Super User, gunakan terminal interaktif pada perangkat operator
-tepercaya. Buat `.env.operator` privat berisi environment runtime tujuan:
-`NODE_ENV=production`, `APP_URL`, `DATABASE_URL`, `SECURITY_KEY`,
-`WAPALA_MODE=backend`, `EMAIL_MODE=disabled`, dan `TRUST_PROXY`. Pastikan database
-cloud dapat dijangkau dari perangkat tersebut.
+## Langkah 3 — Environment privat
 
 ```sh
-node --env-file=.env.operator --conditions=react-server --import tsx scripts/recover-superuser.ts
+sudo nano /etc/wapala/production.env
 ```
 
-Script meminta password baru dua kali melalui prompt tersembunyi, membuka kunci
-akun, dan mencabut sesi lama. Jangan menaruh password pada argumen. Tidak perlu
-SSH ke Vercel: script dijalankan di perangkat operator dan mengakses database
-tujuan. Jangan memakai environment VPS atau database Preview yang keliru.
+File dibuat oleh provisioning dengan nilai aman bawaan. Yang perlu diperiksa:
 
-Akun lain dapat direset Super User melalui panel. Jika email ingin diaktifkan,
-siapkan SMTP nyata dan eksekusi worker outbox terlebih dahulu. Mengisi `SMTP_*`
-saja belum menyediakan worker terjadwal di Vercel.
-
-## Update, domain, dan rollback
-
-Pada project yang terhubung ke Git, push ke `main` memicu deployment Production.
-Branch lain menghasilkan Preview sesuai pengaturan project. `main` repository
-ini berbeda dari `main` repository deployment VPS lama; jangan mengganti remote
-repository lama untuk memperbarui Vercel.
-
-Untuk update dengan perubahan database:
-
-1. Backup database dan media permanen yang sudah tersedia.
-2. Tinjau migrasi, jalankan dengan role migrator pada database tujuan, lalu
-   pastikan kode yang sedang aktif masih kompatibel.
-3. Terapkan izin runtime untuk tabel baru, kemudian deploy kode yang sesuai.
-4. Periksa runtime dan alur yang berubah sebelum menerima traffic umum.
-
-Urutan itu untuk migrasi additive yang kompatibel dengan versi lama. Perubahan
-yang memutus kompatibilitas memerlukan jadwal pemeliharaan/rencana transisi
-sendiri. Jangan menjalankan migrasi produksi pada setiap Preview build.
-
-Tambahkan domain melalui Settings → Domains pada project tujuan, lalu ikuti
-record DNS yang diberikan Vercel. Ubah `APP_URL` ke origin canonical dan redeploy.
-Jangan memindahkan domain yang masih melayani VPS sebelum ada keputusan cutover.
-
-Rollback deployment mengembalikan kode, bukan database, data, atau media.
-Pastikan versi lama dapat membaca schema/data saat ini. Jangan mereset database
-sebagai cara rollback kode. Simpan backup database dan media di luar repository,
-dan uji pemulihannya.
-
-## Masalah yang sering muncul
-
-| Gejala | Yang diperiksa |
+| Variabel | Ketentuan |
 | --- | --- |
-| Repository tidak muncul di Vercel | Izin GitHub App pada organisasi/repository tujuan |
-| Prisma Client tidak ditemukan saat build | Root Directory dan Build Command; generate harus berjalan sebelum build |
-| `CONFIG_INVALID` | `APP_URL`, URL database, base64 `SECURITY_KEY`, dan mode backend/email |
-| Health 503 | Koneksi database, TLS, role, batas koneksi, dan ketersediaan database |
-| Health 200 tetapi halaman gagal | Migrasi/tabel dan izin runtime; health tidak membaca tabel aplikasi |
-| Login/form ditolak karena origin | Browser membuka origin berbeda dari `APP_URL`; ubah environment lalu redeploy |
-| `SETUP_TOKEN_CONFIG_INVALID` | Token harus 43 karakter base64url, tanpa nama variabel, spasi, atau newline |
-| `SETUP_TOKEN_CONFLICT` | Masih ada token aktif berbeda pada database tujuan |
-| `SETUP_TOKEN_REUSED` atau token kedaluwarsa | Buat token baru dan redeploy; jangan aktifkan kembali token lama |
-| Setup tidak muncul | Periksa status instalasi/keberadaan Super User; gunakan pemulihan, bukan reset tabel |
-| Upload gagal / `SCANNER_UNAVAILABLE` | Storage dan scanner belum terintegrasi; menambah token Blob bukan perbaikannya |
-| File hilang setelah redeploy | Storage permanen atau adapter pembacanya belum tersedia |
-| Upload 413 | Payload melewati batas Function; periksa alur upload, bukan hanya batas input form |
-| Email pemulihan tidak ada | Mode `disabled` tidak mengirim email; gunakan prosedur operator |
-| Banyak pengguna terkena throttle bersama | Periksa `TRUST_PROXY` dan sumber header IP pada ingress |
+| `APP_URL` | Origin HTTPS canonical, mis. `https://contoh-domain.com` |
+| `DATABASE_URL` | Role runtime `wapala_app` (tanpa DDL) — bawaan provisioning |
+| `MIGRATE_DATABASE_URL` | Role owner `wapala` untuk `db:migrate` — bawaan provisioning |
+| `SECURITY_KEY` | 32 byte base64 (sudah digenerate; backup privat, jangan rotasi sembarangan) |
+| `EMAIL_MODE` | `disabled` bila provider memblokir SMTP (notifikasi off, pemulihan via SSH). `smtp` + isi `SMTP_*` bila tersedia |
+| `MEDIA_SCANNER` | Aktif hanya bila ClamAV terpasang (`WAPALA_PROVISION_CLAMAV=1`) |
+| `PORT` | `3000` (internal; Nginx yang membuka port publik) |
 
-## Pemeriksaan kode
+Format file adalah assignment shell-compatible (`KEY=value`), dimuat systemd dan script deploy.
 
-Jalankan pada checkout/runner pengujian dengan database test terpisah, bukan
-environment produksi:
+## Langkah 4 — Opsional: deploy otomatis dari push
 
-Siapkan `APP_URL`, `DATABASE_URL`, `TEST_DATABASE_URL`, `SECURITY_KEY`,
-`WAPALA_MODE`, dan `EMAIL_MODE` khusus pengujian pada runner. Jangan memaksakan
-`NODE_ENV=production` ketika menjalankan tes integrasi. Untuk build, gunakan
-origin HTTPS dan `EMAIL_MODE=disabled`; `sink` ditolak pada mode produksi.
+Lewati langkah ini bila cukup dengan deploy manual (Langkah 5). Untuk mode "push → server ter-update sendiri", buat kunci SSH khusus deploy (di mesin lokal), tanpa passphrase agar otomatis:
 
 ```sh
-npm ci
-npm run db:generate
-npm test
-npm run test:backend
-npm run test:backend:integration
-npm run typecheck
-npm run lint
-npm run build
+ssh-keygen -t ed25519 -f wapala_deploy_key -C "wapala-deploy" -N ""
+ssh-copy-id -i wapala_deploy_key.pub root@IP_VPS        # atau manual ke ~/.ssh/authorized_keys
+ssh-keyscan -p PORT_SSH IP_VPS                          # output → VPS_KNOWN_HOSTS
 ```
 
-Tes integrasi memerlukan `TEST_DATABASE_URL` ke database khusus bernama akhiran
-`_test`; runner membuat dan membersihkan schema sementara. Jangan memakai
-database produksi atau menyalin environment produksi ke runner test.
-`npm run dev` hanya untuk development, bukan deployment Vercel.
+Tambahkan di **Settings → Secrets and variables → Actions**:
 
-Folder `deploy/`, workflow artifact Linux, dan dokumen Ubuntu/NAT yang masih ada
-merupakan perlengkapan deployment native. [README-VERCEL.md](README-VERCEL.md)
-berisi panduan ringkas untuk deploy melalui Git atau CLI pada akun/project
-pilihan pengelola. Persiapan database dan operasional tetap mengikuti README ini.
+| Secret | Wajib | Isi |
+| --- | --- | --- |
+| `VPS_HOST` | ✅ | IP/host VPS (dedicated) atau IP publik provider (NAT) |
+| `VPS_USER` | ✅ | `root` atau user sudo |
+| `VPS_SSH_KEY` | ✅ | Isi file kunci **privat** `wapala_deploy_key` |
+| `VPS_PORT` | NAT | Port SSH publik dari provider (dedicated: kosongkan = 22) |
+| `VPS_KNOWN_HOSTS` | ✅ | Output `ssh-keyscan` — wajib; tanpa ini deploy ditolak agar tidak rentan MITM |
+| `VPS_REPO_URL` | repo private | URL clone + kredensial/deploy key bila repo tidak publik |
+
+## Langkah 5 — Deploy
+
+Deploy pertama dan semua deploy berikutnya, dari folder clone di VPS:
+
+```sh
+sudo bash host/host-deploy.sh
+```
+
+Script otomatis: clone release baru dari repo (default `https://github.com/WapalaTUP/website_wapala.git`, bisa diganti `WAPALA_REPO_URL=...`) → `npm ci` + `next build` dengan heap terbatas → `prisma migrate deploy` → aktifkan via symlink atomik → restart service → health check → rollback bila gagal. Pantau progres langsung di terminal.
+
+Verifikasi setelah selesai:
+
+```sh
+curl -fsS https://contoh-domain.com/api/health
+```
+
+Bila memakai mode otomatis (Langkah 4), deploy juga terpicu tombol **Actions → Deploy host → Run workflow**; log tahapan yang sama tampil di tab Actions.
+
+## Langkah 6 — Bootstrap Super User
+
+```sh
+sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:bootstrap-token'
+```
+
+Token sekali pakai berlaku 30 menit — buka `https://contoh-domain.com/wapala` dan buat akun Super User. Tidak ada password bawaan; setup sudah selesai tidak perlu diulang.
+
+### Pemulihan akses (via SSH)
+
+Bila Super User lupa password **atau** terkunci login (6+ gagal → `requiresUnlock`), pulihkan lewat SSH — password diminta lewat prompt tersembunyi, bukan argumen:
+
+```sh
+sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:recover-superuser'
+```
+
+Perintah ini membuka lock (`lockUntil`, `requiresUnlock`), mencabut semua sesi aktif, dan menyiapkan penggantian password. Untuk **akun selain Super User**: reset password dan unlock dilakukan Super User lewat panel (modul Pengguna → aksi Reset/Unlock) — tidak perlu SSH. Karena `EMAIL_MODE=disabled`, jalur reset via email tidak tersedia.
+
+---
+
+## Operasional harian
+
+| Kebutuhan | Perintah |
+| --- | --- |
+| Deploy rilis baru | `sudo bash host/host-deploy.sh` (atau Run workflow bila mode otomatis aktif) |
+| Deploy manual dengan repo lain | `sudo WAPALA_REPO_URL=https://... bash host/host-deploy.sh` |
+| Log aplikasi | `journalctl -u wapala -f` |
+| Status service | `systemctl status wapala` |
+| Log maintenance | `journalctl -u wapala-maintenance.service -n 50` |
+| Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
+| Backup database+media | `sudo node scripts/release-backup.mjs backup /root/backup-$(date +%F)` |
+| Migration manual | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run db:migrate'` |
+| Prune manual (throttle/sesi) | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run maintenance:prune'` |
+
+Rollback **otomatis** terjadi bila health check gagal setelah deploy: symlink dikembalikan ke release sebelumnya dan service direstart. Database rollback bukan bagian dari symlink — gunakan backup.
+
+Tiga release terakhir disimpan di `/srv/wapala/releases`; yang lebih lama dihapus otomatis.
+
+### Worker terjadwal (opsional)
+
+Bila `EMAIL_MODE=smtp`, jalankan worker email via cron/systemd timer: `npm run email:worker`. Worker `loans:overdue` (denda/keterlambatan) dan `media:cleanup-events` serupa. Contoh crontab (sebagai root, memuat env privat):
+
+```cron
+17 1 * * * sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run loans:overdue'
+```
+
+Jangan menjadwalkan worker email pada mode `disabled`.
+
+## Kapasitas & build hemat memori
+
+VPS 2 GB menjalankan PostgreSQL + Next.js (+ ClamAV bila dipasang) sekaligus. `host/host-deploy.sh` sudah menerapkan batas bawaan:
+
+| Variabel | Default | Fungsi |
+| --- | --- | --- |
+| `WAPALA_HEAP_CI` | `512` | Heap MB saat `npm ci` |
+| `WAPALA_HEAP_BUILD` | `768` | Heap MB saat `next build` |
+| `WAPALA_MIN_DISK_MB` | `2048` | Tolak deploy bila disk kurang |
+| `WAPALA_KEEP_RELEASES` | `3` | Jumlah release yang disimpan |
+
+Selain itu build di-set serial (`UV_THREADPOOLSIZE=1`, `MALLOC_ARENA_MAX=2`, `npm_config_maxsockets=1`) dan runtime dibatasi systemd (`MemoryMax=900M`). Bila build tetap terbunuh (`Killed`/exit non-nol): kurangi beban lain saat deploy, atau naikkan sementara ke `WAPALA_HEAP_BUILD=1024` **hanya jika RAM cukup**. Bila runtime sering restart (OOM di `journalctl`), turunkan `NODE_OPTIONS` di env file atau pindahkan ClamAV/naikkan kapasitas.
+
+Build sukses ditandai `.next/BUILD_ID` dan `.next/standalone/server.js`; script menolak mengaktifkan rilis tanpa keduanya.
+
+## Keamanan & batasan
+
+- Aplikasi non-root (`wapala`), `ProtectSystem=strict` + sandbox systemd (kernel/devices/syscalls dibatasi), hanya loopback `:3000`; Nginx satu-satunya gerbang publik dengan TLS.
+- **Kode release milik `root`**; runtime hanya boleh menulis `.next/cache` dan media — kompromi aplikasi tidak bisa menimpa kode yang akan dieksekusi ulang.
+- **Build/migration berjalan sebagai user non-root `builder`**; install script dependensi tidak pernah dieksekusi sebagai root.
+- **Lockout login per (email, IP)**: 6× password salah → terkunci 24 jam untuk kombinasi itu saja; akun tidak bisa dikunci permanen oleh pihak ketiga. Unlock: panel admin (modul Pengguna) atau `auth:recover-superuser` via SSH.
+- Dua role database: runtime tanpa DDL/TRUNCATE; migrasi lewat role owner terpisah (`MIGRATE_DATABASE_URL`); password DB tidak pernah lewat argv proses.
+- Media privat di `MEDIA_ROOT` (mode `0700`), pemindaian malware **fail-closed** dan dijalankan **sebelum** decode; serving media lewat stream + ETag/304 (tanpa memuat berkas penuh ke RAM).
+- Env file dibaca deploy script baris-per-baris tanpa shell eval — nilai berisi `& $ ' ` aman.
+- Rate limit Nginx untuk `/api/auth` (30/menit) dan `/api/public` (120/menit) berlaku sebelum request menyentuh Node.
+- Timer `wapala-maintenance` (03:17 harian) membersihkan throttle, sesi kadaluarsa, dan token reset — tidak bergantung pada `EMAIL_MODE`.
+- HSTS aktif di produksi; `TRUST_PROXY=true` hanya aman karena Nginx loopback tepercaya.
+- Jangan menjalankan seed/demo di production; database diisi via panel + bootstrap.
+- Secret hanya di `/etc/wapala/production.env` (root, `0600`) dan GitHub Secrets — jangan pernah di-commit atau ke artifact.
+- CI ringan (`ci.yml`: typecheck + lint + build) jalan tiap push ke `host`; jalankan deploy setelah CI hijau.
+
+## Troubleshooting
+
+| Gejala | Periksa |
+| --- | --- |
+| CI merah sebelum deploy | Log workflow `CI host` — typecheck/lint/build gagal; perbaiki dulu sebelum deploy |
+| Actions merah di tahap SSH | Secrets `VPS_HOST/PORT/USER/SSH_KEY/KNOWN_HOSTS` (semua wajib), kunci terpasang di `authorized_keys` |
+| `Certbot gagal` saat provision | DNS/forwarding belum aktif, atau NAT tanpa forwarding publik `:80` → pakai `WAPALA_SKIP_CERTBOT=1` + DNS-01 |
+| Build `Killed` | RAM kurang — lihat [Kapasitas](#kapasitas--build-hemat-memori) |
+| Health check gagal lalu rollback | `journalctl -u wapala -n 100`; umumnya env/database salah. Ingat: migration sudah jalan (expand/contract) |
+| `423` saat login | Lock per (email, IP) aktif (6× salah, 24 jam) — tunggu, unlock via panel admin, atau `auth:recover-superuser` via SSH |
+| `429 MEDIA_BUSY` saat upload | Antrean slot upload penuh — coba beberapa saat; slot publik dan admin terpisah |
+| `503` saat unggah media | ClamAV tidak terpasang/mati — pasang via opsi provisioning atau periksa `clamav-daemon` |
+| `413` saat unggah buku | Pastikan ≤ 50 MB dan nginx `client_max_body_size 60m` aktif |
+| Halaman terbuka tapi aset 404 | Pastikan deploy melalui script (menyalin `.next/static` + `public` ke standalone) |
+
+## Struktur branch `host`
+
+```text
+.github/workflows/deploy-host.yml   # Opsional: Run workflow → SSH → host/host-deploy.sh
+.github/workflows/ci.yml            # Gate: typecheck + lint + build tiap push ke host
+host/
+  host-provision.sh                 # Provisioning sekali (paket, DB, env, systemd, Nginx, TLS)
+  host-deploy.sh                    # Deploy berulang (clone, build non-root, migrate, aktifkan, cek, rollback)
+  wapala-host.service               # Unit systemd aplikasi (sandbox ketat)
+  wapala-maintenance.service/.timer # Prune harian throttle/sesi/token
+  nginx-wapala.conf                 # Nginx dedicated IP (80/443)
+  nginx-wapala-nat.conf             # Nginx NAT VPS (port khusus provider)
+  clamdscan-wapala.sh               # Wrapper scanner ClamAV
+scripts/                            # Tool operasional: bootstrap, recovery, worker, backup, prune
+prisma/                             # Schema + migrations (tanpa seed)
+src/ public/                        # Source aplikasi (dibutuhkan build)
+README.md                           # Dokumen ini
+```
+
+Branch ini sengaja **hanya berisi kode deployment**: test, dokumen pengembangan, dan script dev berada di branch lain (`main`/`staging`), tidak di sini.

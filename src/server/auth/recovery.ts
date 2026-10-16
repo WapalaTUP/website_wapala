@@ -4,7 +4,7 @@ import { getConfig } from "../config";
 import { DomainError } from "../errors";
 import { hashPassword } from "../security/password";
 import { newToken, digestToken } from "../security/tokens";
-import { takeThrottle } from "../security/throttle";
+import { takeThrottle, loginLockPrefixFor } from "../security/throttle";
 import type { RequestContext } from "../security/request-context";
 import { enqueueEmail } from "../email/outbox";
 import { writeAudit } from "../audit";
@@ -41,9 +41,7 @@ export async function requestRecovery(email: string, ctx: RequestContext) {
       {
         to: current.recoveryEmail,
         subject: "Pemulihan akses WAPALA",
-        text:
-          "Tautan pemulihan berlaku 30 menit dan hanya sekali pakai:\n" +
-          link.toString(),
+        text: "Tautan pemulihan berlaku 30 menit dan hanya sekali pakai:\n" + link.toString(),
       },
       expiresAt,
     );
@@ -65,8 +63,7 @@ export async function completeRecovery(
       409,
       "Email dinonaktifkan. Hubungi pengelola untuk pemulihan akun melalui SSH.",
     );
-  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token))
-    throw new DomainError("RESET_INVALID", 400);
+  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token)) throw new DomainError("RESET_INVALID", 400);
   const record = await getDb().passwordResetToken.findUnique({
     where: { tokenHash: digestToken(input.token) },
   });
@@ -80,12 +77,7 @@ export async function completeRecovery(
       fresh = await tx.passwordResetToken.findUniqueOrThrow({
         where: { id: record.id },
       });
-    if (
-      !user.active ||
-      user.archivedAt ||
-      fresh.usedAt ||
-      fresh.expiresAt <= new Date()
-    )
+    if (!user.active || user.archivedAt || fresh.usedAt || fresh.expiresAt <= new Date())
       throw new DomainError("RESET_INVALID", 400);
     await tx.user.update({
       where: { id: user.id },
@@ -105,6 +97,9 @@ export async function completeRecovery(
     await tx.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
+    });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(user.email) } },
     });
     await writeAudit(tx, {
       actorType: "USER",
@@ -141,6 +136,9 @@ export async function recoverSuperuser(password: string, ctx: RequestContext) {
     await tx.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
+    });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(user.email) } },
     });
     await writeAudit(tx, {
       actorType: "SERVER_OPERATOR",

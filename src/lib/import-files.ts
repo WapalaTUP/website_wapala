@@ -1,16 +1,9 @@
-import {
-  parseCsv,
-  importFields,
-  type ImportTable,
-  type ImportKind,
-} from "./import-data";
+import { parseCsv, importFields, type ImportTable, type ImportKind } from "./import-data";
 export async function readImportFile(file: File): Promise<ImportTable> {
-  if (file.size > 10 * 1024 * 1024)
-    throw new Error("Ukuran file maksimal 10 MB.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Ukuran file maksimal 10 MB.");
   const ext = file.name.split(".").at(-1)?.toLowerCase();
   if (ext === "csv") return parseCsv(await file.text());
-  if (ext !== "xlsx")
-    throw new Error("Gunakan file CSV atau XLSX, tanpa makro.");
+  if (ext !== "xlsx") throw new Error("Gunakan file CSV atau XLSX, tanpa makro.");
   const { default: ExcelJS } = await import("exceljs");
   const book = new ExcelJS.Workbook();
   await book.xlsx.load(await file.arrayBuffer());
@@ -27,12 +20,9 @@ export async function readImportFile(file: File): Promise<ImportTable> {
       if (value && typeof value === "object") {
         if ("formula" in value || "sharedFormula" in value)
           throw new Error("Formula tidak diterima. Ubah ke nilai biasa.");
-        if ("richText" in value)
-          values.push(value.richText.map((v) => v.text).join(""));
-        else if (value instanceof Date)
-          values.push(value.toISOString().slice(0, 10));
-        else
-          throw new Error("Tipe sel tidak didukung. Gunakan teks atau angka.");
+        if ("richText" in value) values.push(value.richText.map((v) => v.text).join(""));
+        else if (value instanceof Date) values.push(value.toISOString().slice(0, 10));
+        else throw new Error("Tipe sel tidak didukung. Gunakan teks atau angka.");
       } else if (typeof value === "number") {
         const sections = cell.numFmt.split(";");
         const raw =
@@ -47,10 +37,7 @@ export async function readImportFile(file: File): Promise<ImportTable> {
         );
         if (/^-?0+$/.test(format) && Number.isInteger(value)) {
           const width = format.replace("-", "").length;
-          values.push(
-            (value < 0 ? "-" : "") +
-              String(Math.abs(value)).padStart(width, "0"),
-          );
+          values.push((value < 0 ? "-" : "") + String(Math.abs(value)).padStart(width, "0"));
         } else if (/0{2,}/.test(format) && !/^0\.0+$/.test(format)) {
           throw new Error(
             "Format angka berawalan nol tidak didukung. Ubah identitas menjadi teks sebelum impor.",
@@ -65,9 +52,7 @@ export async function readImportFile(file: File): Promise<ImportTable> {
 }
 export async function downloadImportTemplate(kind: ImportKind) {
   const content = "\ufeff" + importFields[kind].join(",") + "\r\n";
-  const url = URL.createObjectURL(
-    new Blob([content], { type: "text/csv;charset=utf-8" }),
-  );
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = "Template-" + kind + ".csv";

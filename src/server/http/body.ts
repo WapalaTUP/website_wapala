@@ -5,10 +5,7 @@ export async function readJson<T>(
   schema: ZodType<T>,
   maxBytes = 16384,
 ): Promise<T> {
-  if (
-    request.headers.get("content-type")?.split(";")[0].trim() !==
-    "application/json"
-  )
+  if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json")
     throw new DomainError("INVALID_CONTENT_TYPE", 415);
   const length = Number(request.headers.get("content-length") || 0);
   if (length > maxBytes) throw new DomainError("BODY_TOO_LARGE", 413);

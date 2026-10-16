@@ -31,9 +31,7 @@ export const eventKindLabels: Record<(typeof eventKinds)[number], string> = {
   checkboxGrid: "Kisi kotak centang",
   section: "Bagian",
 };
-const option = z
-  .object({ id: z.uuid(), label: z.string().trim().min(1).max(300) })
-  .strict();
+const option = z.object({ id: z.uuid(), label: z.string().trim().min(1).max(300) }).strict();
 const limits = z
   .object({
     min: z.number().finite().optional(),
@@ -57,10 +55,7 @@ export const eventQuestionSchema = z
     gridRows: z.array(option).max(200).default([]),
     other: z.boolean().default(false),
     validation: limits.default({}),
-    showWhen: z
-      .object({ questionId: z.uuid(), optionId: z.uuid() })
-      .strict()
-      .optional(),
+    showWhen: z.object({ questionId: z.uuid(), optionId: z.uuid() }).strict().optional(),
   })
   .strict();
 export const eventFormSchema = z
@@ -74,27 +69,18 @@ export const eventFormSchema = z
     const ids = new Set<string>();
     const prior = new Map<string, z.infer<typeof eventQuestionSchema>>();
     f.items.forEach((q, i) => {
-      const fail = (message: string) =>
-        c.addIssue({ code: "custom", path: ["items", i], message });
-      for (const id of [
-        q.id,
-        ...q.options.map((x) => x.id),
-        ...q.gridRows.map((x) => x.id),
-      ]) {
+      const fail = (message: string) => c.addIssue({ code: "custom", path: ["items", i], message });
+      for (const id of [q.id, ...q.options.map((x) => x.id), ...q.gridRows.map((x) => x.id)]) {
         if (ids.has(id)) fail("ID pertanyaan/pilihan harus unik.");
         ids.add(id);
       }
       if (
-        ["radio", "checkbox", "select", "radioGrid", "checkboxGrid"].includes(
-          q.kind,
-        ) &&
+        ["radio", "checkbox", "select", "radioGrid", "checkboxGrid"].includes(q.kind) &&
         !q.options.length
       )
         fail("Tambahkan minimal satu pilihan.");
-      if (q.kind.endsWith("Grid") && !q.gridRows.length)
-        fail("Tambahkan baris kisi.");
-      if (q.kind === "section" && q.required)
-        fail("Bagian bukan pertanyaan wajib.");
+      if (q.kind.endsWith("Grid") && !q.gridRows.length) fail("Tambahkan baris kisi.");
+      if (q.kind === "section" && q.required) fail("Bagian bukan pertanyaan wajib.");
       for (const [lo, hi] of [
         [q.validation.min, q.validation.max],
         [q.validation.minLength, q.validation.maxLength],
@@ -130,8 +116,7 @@ export const eventFormSchema = z
   });
 export type EventForm = z.infer<typeof eventFormSchema>;
 export type EventQuestion = EventForm["items"][number];
-export type EventAnswer =
-  string | number | string[] | Record<string, string | string[]>;
+export type EventAnswer = string | number | string[] | Record<string, string | string[]>;
 export type EventAnswers = Record<string, EventAnswer>;
 export type EventIssue = { questionId: string; message: string };
 export function visibleEventItems(form: EventForm, answers: EventAnswers) {
@@ -143,8 +128,7 @@ export function visibleEventItems(form: EventForm, answers: EventAnswers) {
     const shown =
       !rule ||
       (visible.has(rule.questionId) &&
-        (source === rule.optionId ||
-          (Array.isArray(source) && source.includes(rule.optionId))));
+        (source === rule.optionId || (Array.isArray(source) && source.includes(rule.optionId))));
     if (q.kind === "section") sectionVisible = shown;
     const result = sectionVisible && shown;
     if (result) visible.add(q.id);
@@ -163,12 +147,9 @@ export function validateEventAnswers(
       issues: [{ questionId: "", message: "Jawaban tidak valid." }],
     };
   const raw = input as Record<string, unknown>,
-    known = new Set(
-      form.items.filter((q) => q.kind !== "section").map((q) => q.id),
-    );
+    known = new Set(form.items.filter((q) => q.kind !== "section").map((q) => q.id));
   for (const id of Object.keys(raw))
-    if (!known.has(id))
-      issues.push({ questionId: id, message: "Pertanyaan tidak dikenal." });
+    if (!known.has(id)) issues.push({ questionId: id, message: "Pertanyaan tidak dikenal." });
   const visible = visibleEventItems(form, raw as EventAnswers);
   for (const q of visible) {
     if (q.kind === "section") continue;
@@ -228,20 +209,15 @@ export function validateEventAnswers(
         if (valid) {
           const grid = v as Record<string, unknown>;
           valid =
-            Object.keys(grid).every((id) =>
-              q.gridRows.some((r) => r.id === id),
-            ) &&
-            Object.values(grid).every((x) =>
-              q.kind === "radioGrid" ? choice(x) : choices(x),
-            ) &&
+            Object.keys(grid).every((id) => q.gridRows.some((r) => r.id === id)) &&
+            Object.values(grid).every((x) => (q.kind === "radioGrid" ? choice(x) : choices(x))) &&
             (!q.required ||
               q.gridRows.every(
                 (r) =>
                   grid[r.id] !== undefined &&
                   (q.kind === "radioGrid"
                     ? choice(grid[r.id])
-                    : choices(grid[r.id]) &&
-                      (grid[r.id] as string[]).length > 0),
+                    : choices(grid[r.id]) && (grid[r.id] as string[]).length > 0),
               ));
         }
         break;
@@ -258,41 +234,29 @@ export function validateEventAnswers(
             z.iso.date().safeParse(v).success &&
             (!l.minDate || (v as string) >= l.minDate) &&
             (!l.maxDate || (v as string) <= l.maxDate);
-        if (valid && q.kind === "time")
-          valid = /^([01]\d|2[0-3]):[0-5]\d$/.test(v as string);
+        if (valid && q.kind === "time") valid = /^([01]\d|2[0-3]):[0-5]\d$/.test(v as string);
         if (valid && q.kind === "upload") valid = z.uuid().safeParse(v).success;
     }
     if (!valid)
       issues.push({
         questionId: q.id,
-        message:
-          "Jawaban belum sesuai tipe, pilihan, atau batas yang ditentukan.",
+        message: "Jawaban belum sesuai tipe, pilihan, atau batas yang ditentukan.",
       });
     else answers[q.id] = v as EventAnswer;
   }
   return { answers, issues };
 }
-export function newEventQuestion(
-  kind: EventQuestion["kind"] = "shortText",
-): EventQuestion {
+export function newEventQuestion(kind: EventQuestion["kind"] = "shortText"): EventQuestion {
   return {
     id: crypto.randomUUID(),
     kind,
     title: kind === "section" ? "Bagian baru" : "Pertanyaan tanpa judul",
     help: "",
     required: false,
-    options: [
-      "radio",
-      "checkbox",
-      "select",
-      "radioGrid",
-      "checkboxGrid",
-    ].includes(kind)
+    options: ["radio", "checkbox", "select", "radioGrid", "checkboxGrid"].includes(kind)
       ? [{ id: crypto.randomUUID(), label: "Pilihan 1" }]
       : [],
-    gridRows: kind.endsWith("Grid")
-      ? [{ id: crypto.randomUUID(), label: "Baris 1" }]
-      : [],
+    gridRows: kind.endsWith("Grid") ? [{ id: crypto.randomUUID(), label: "Baris 1" }] : [],
     other: false,
     validation: kind === "scale" ? { min: 1, max: 5 } : {},
   };
@@ -319,8 +283,7 @@ export function eventAnswerLabel(
   if (value === undefined) return "";
   if (typeof value === "number") return value;
   const label = (v: string) =>
-    q.options.find((o) => o.id === v)?.label ||
-    (v.startsWith("other:") ? v.slice(6) : v);
+    q.options.find((o) => o.id === v)?.label || (v.startsWith("other:") ? v.slice(6) : v);
   if (Array.isArray(value)) return value.map(label).join("; ");
   if (typeof value === "object")
     return q.gridRows
@@ -336,17 +299,12 @@ export function eventAnswerLabel(
       .join("; ");
   return ["radio", "select"].includes(q.kind) ? label(value) : value;
 }
-export function rekeyChangedQuestions(
-  form: EventForm,
-  history: EventForm[],
-): EventForm {
+export function rekeyChangedQuestions(form: EventForm, history: EventForm[]): EventForm {
   const result = structuredClone(form),
     questionIds = new Map<string, string>(),
     optionIds = new Map<string, string>();
   for (const q of result.items) {
-    const previous = history
-      .flatMap((f) => f.items)
-      .filter((x) => x.id === q.id);
+    const previous = history.flatMap((f) => f.items).filter((x) => x.id === q.id);
     const changed = previous.some(
       (p) =>
         p.kind !== q.kind ||
@@ -367,8 +325,7 @@ export function rekeyChangedQuestions(
   for (const q of result.items)
     if (q.showWhen)
       q.showWhen = {
-        questionId:
-          questionIds.get(q.showWhen.questionId) ?? q.showWhen.questionId,
+        questionId: questionIds.get(q.showWhen.questionId) ?? q.showWhen.questionId,
         optionId: optionIds.get(q.showWhen.optionId) ?? q.showWhen.optionId,
       };
   return result;

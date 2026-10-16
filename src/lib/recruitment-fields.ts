@@ -26,21 +26,14 @@ const orLabels: Record<string, string> = Object.fromEntries([
   ["pengalaman_organisasi", "Pengalaman Organisasi"],
   ["riwayat_penyakit", "Riwayat Penyakit"],
 ]);
-export const orFieldLabel = (key: string) =>
-  orLabels[key] || key.replaceAll("_", " ");
-export function applicantExportRow(
-  a: Applicant,
-  index: number,
-): Record<string, string | number> {
+export const orFieldLabel = (key: string) => orLabels[key] || key.replaceAll("_", " ");
+export function applicantExportRow(a: Applicant, index: number): Record<string, string | number> {
   const f = a.fields;
   return {
     No: index + 1,
     "Nama Lengkap": f.nama || "",
     "Jenis Kelamin": f.jenis_kelamin || "",
-    "Tempat Tanggal Lahir": [
-      f.tempat_lahir,
-      f.tanggal_lahir ? date(f.tanggal_lahir) : "",
-    ]
+    "Tempat Tanggal Lahir": [f.tempat_lahir, f.tanggal_lahir ? date(f.tanggal_lahir) : ""]
       .filter(Boolean)
       .join(", "),
     NIM: f.nim || "",

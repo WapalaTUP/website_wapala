@@ -9,9 +9,7 @@ export function GET(request: Request) {
     return jsonResponse(
       await listAudit(principal, {
         cursor: url.searchParams.get("cursor") || undefined,
-        limit: url.searchParams.has("limit")
-          ? Number(url.searchParams.get("limit"))
-          : undefined,
+        limit: url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : undefined,
       }),
     );
   });

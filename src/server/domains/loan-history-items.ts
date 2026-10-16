@@ -11,9 +11,7 @@ const historicalItem = z.object({
   outCondition: z.string(),
   returnCondition: z.string(),
 });
-export const archivedLoanItems = z.array(
-  historicalItem.extend({ itemId: z.uuid() }).strict(),
-);
+export const archivedLoanItems = z.array(historicalItem.extend({ itemId: z.uuid() }).strict());
 type LiveItem = {
   id: string;
   equipmentId: string;
@@ -39,15 +37,11 @@ export function snapshotLoanItems(items: LiveItem[]) {
 }
 // The DTO remains unchanged: every history/invoice consumer sees the same item
 // fields whether its inventory master still exists or was permanently deleted.
-export function loanItemsForHistory(row: {
-  items: LiveItem[];
-  archivedItems?: unknown;
-}) {
-  return [
-    ...archivedLoanItems.parse(row.archivedItems ?? []),
-    ...snapshotLoanItems(row.items),
-  ].map(({ itemId: _itemId, ...item }) => {
-    void _itemId;
-    return item;
-  });
+export function loanItemsForHistory(row: { items: LiveItem[]; archivedItems?: unknown }) {
+  return [...archivedLoanItems.parse(row.archivedItems ?? []), ...snapshotLoanItems(row.items)].map(
+    ({ itemId: _itemId, ...item }) => {
+      void _itemId;
+      return item;
+    },
+  );
 }

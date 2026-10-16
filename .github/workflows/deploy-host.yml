@@ -1,0 +1,62 @@
+name: Deploy host
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-host
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: SSH deploy ke VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validasi secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret ${v} belum diset di Settings > Secrets and variables > Actions."
+              missing=1
+            fi
+          done
+          # Tanpa VPS_KNOWN_HOSTS verifikasi host server menjadi TOFU
+          # (rentan MITM) — wajib diisi dari `ssh-keyscan -p PORT HOST`.
+          exit "$missing"
+
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          REPO_URL: ${{ secrets.VPS_REPO_URL || format('https://github.com/{0}.git', github.repository) }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # %q meng-escape nilai dengan aman utk shell remote (branch bebas
+          # mengandung karakter spesial).
+          remote_cmd="$(printf 'WAPALA_REPO_URL=%q WAPALA_BRANCH=%q bash -s' "$REPO_URL" "$DEPLOY_BRANCH")"
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" "$remote_cmd" \
+            < host/host-deploy.sh

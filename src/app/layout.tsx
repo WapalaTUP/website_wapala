@@ -14,9 +14,7 @@ import { emptyState } from "@/lib/empty-state";
 import { headers } from "next/headers";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: "WAPALA Telkom University", template: "%s | WAPALA" },
   description:
     "Wahana Pencinta Alam Telkom University. Cerita perjalanan, kegiatan, dan ruang belajar bersama.",
@@ -26,11 +24,7 @@ export const metadata: Metadata = {
     title: "WAPALA Telkom University",
   },
 };
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get("x-nonce") || "";
   return (
     <html lang="id" suppressHydrationWarning>

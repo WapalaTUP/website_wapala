@@ -22,10 +22,7 @@ export function BookReader({ id }: { id: string }) {
   const stage = useRef<HTMLDivElement>(null);
   const [two, setTwo] = useState(false);
   const [stageWidth, setStageWidth] = useState(0);
-  const pages = useMemo(
-    () => visibleBookPages(page, doc?.numPages || 0, two),
-    [page, doc, two],
-  );
+  const pages = useMemo(() => visibleBookPages(page, doc?.numPages || 0, two), [page, doc, two]);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/books/" + encodeURIComponent(id), {
@@ -88,21 +85,15 @@ export function BookReader({ id }: { id: string }) {
           const list = [];
           for (const item of tree.slice(0, 30)) {
             const dest =
-              typeof item.dest === "string"
-                ? await loaded.getDestination(item.dest)
-                : item.dest;
+              typeof item.dest === "string" ? await loaded.getDestination(item.dest) : item.dest;
             let p = 1;
-            if (dest && typeof dest[0] === "object")
-              p = (await loaded.getPageIndex(dest[0])) + 1;
+            if (dest && typeof dest[0] === "object") p = (await loaded.getPageIndex(dest[0])) + 1;
             list.push({ title: item.title, page: p });
           }
           if (!stop) setOutline(list);
         }
       } catch {
-        if (!stop)
-          setError(
-            "Buku belum dapat dimuat. Periksa koneksi atau coba kembali.",
-          );
+        if (!stop) setError("Buku belum dapat dimuat. Periksa koneksi atau coba kembali.");
       }
     })();
     return () => {
@@ -134,10 +125,7 @@ export function BookReader({ id }: { id: string }) {
           tasks.push(task);
           await task.promise;
         } catch (e) {
-          if (
-            !cancelled &&
-            !(e instanceof Error && e.name === "RenderingCancelledException")
-          )
+          if (!cancelled && !(e instanceof Error && e.name === "RenderingCancelledException"))
             setError("Halaman belum dapat ditampilkan.");
         }
       }),
@@ -147,12 +135,7 @@ export function BookReader({ id }: { id: string }) {
       tasks.forEach((t) => t.cancel());
     };
   }, [doc, pages, zoom, two, stageWidth]);
-  if (loading)
-    return (
-      <div className="container section reader-loading">
-        Memuat bahan bacaan…
-      </div>
-    );
+  if (loading) return <div className="container section reader-loading">Memuat bahan bacaan…</div>;
   if (!book)
     return (
       <div className="container section">
@@ -167,8 +150,7 @@ export function BookReader({ id }: { id: string }) {
         />
       </div>
     );
-  if (book.mime === "application/epub+zip")
-    return <EpubReader title={book.title} url={book.url} />;
+  if (book.mime === "application/epub+zip") return <EpubReader title={book.title} url={book.url} />;
   return (
     <section className="book-reader">
       <div className="container">
@@ -178,9 +160,7 @@ export function BookReader({ id }: { id: string }) {
             <button
               className="icon-btn"
               disabled={page <= 1}
-              onClick={() =>
-                setPage(nextBookPage(page, doc?.numPages || 1, two, -1))
-              }
+              onClick={() => setPage(nextBookPage(page, doc?.numPages || 1, two, -1))}
               aria-label="Halaman sebelumnya"
             >
               <ChevronLeft />
@@ -194,12 +174,7 @@ export function BookReader({ id }: { id: string }) {
                 max={doc?.numPages || 1}
                 value={page}
                 onChange={(e) =>
-                  setPage(
-                    Math.max(
-                      1,
-                      Math.min(doc?.numPages || 1, Number(e.target.value) || 1),
-                    ),
-                  )
+                  setPage(Math.max(1, Math.min(doc?.numPages || 1, Number(e.target.value) || 1)))
                 }
               />
             </label>
@@ -207,9 +182,7 @@ export function BookReader({ id }: { id: string }) {
             <button
               className="icon-btn"
               disabled={!doc || (pages.at(-1) || 1) >= doc.numPages}
-              onClick={() =>
-                setPage(nextBookPage(page, doc?.numPages || 1, two, 1))
-              }
+              onClick={() => setPage(nextBookPage(page, doc?.numPages || 1, two, 1))}
               aria-label="Halaman berikutnya"
             >
               <ChevronRight />
@@ -236,9 +209,7 @@ export function BookReader({ id }: { id: string }) {
           <div className="reader-layout">
             <aside className="reader-toc">
               <h3>Daftar isi</h3>
-              <p className="reader-page-range">
-                {two ? "Dua halaman" : "Satu halaman"}
-              </p>
+              <p className="reader-page-range">{two ? "Dua halaman" : "Satu halaman"}</p>
               {outline.length ? (
                 outline.map((n, i) => (
                   <button key={i} onClick={() => setPage(n.page)}>
@@ -246,9 +217,7 @@ export function BookReader({ id }: { id: string }) {
                   </button>
                 ))
               ) : (
-                <p className="field-hint">
-                  Gunakan kontrol halaman untuk menelusuri buku ini.
-                </p>
+                <p className="field-hint">Gunakan kontrol halaman untuk menelusuri buku ini.</p>
               )}
             </aside>
             <div
@@ -267,13 +236,8 @@ export function BookReader({ id }: { id: string }) {
                 }
               }}
             >
-              {!doc && (
-                <div className="reader-loading">Memuat bahan bacaan…</div>
-              )}
-              <div
-                className={"book-spread" + (two ? " is-double" : "")}
-                aria-live="polite"
-              >
+              {!doc && <div className="reader-loading">Memuat bahan bacaan…</div>}
+              <div className={"book-spread" + (two ? " is-double" : "")} aria-live="polite">
                 {pages.map((number, index) => (
                   <figure className="book-sheet" key={number}>
                     <canvas

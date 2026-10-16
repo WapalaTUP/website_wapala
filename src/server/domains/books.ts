@@ -1,3 +1,4 @@
+import { parseMediaUrl } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import { createHash } from "node:crypto";
@@ -19,10 +20,7 @@ type BookMedia = {
   extension: string;
   size: number;
 };
-export function authorizePublishedBook(
-  record: BookRecord | null,
-  media: BookMedia | null,
-) {
+export function authorizePublishedBook(record: BookRecord | null, media: BookMedia | null) {
   const fields = z
     .object({
       judul: z.string(),
@@ -50,10 +48,7 @@ export function authorizePublishedBook(
   return { title: fields.data.judul, mime: media.mime };
 }
 type BookInfo = { title: string; mime: string; id: string; url: string };
-export function publishedBook(
-  id: string,
-  file: true,
-): Promise<BookInfo & { bytes: Buffer }>;
+export function publishedBook(id: string, file: true): Promise<BookInfo & { bytes: Buffer }>;
 export function publishedBook(id: string, file?: false): Promise<BookInfo>;
 export async function publishedBook(id: string, file = false) {
   z.uuid().parse(id);
@@ -63,25 +58,16 @@ export async function publishedBook(id: string, file = false) {
         where: { id, kind: "buku", published: true, archivedAt: null },
       });
       const fields = z.object({ file: z.string() }).safeParse(record?.fields);
-      const mediaId = fields.success
-        ? /^\/api\/media\/([a-f0-9-]{36})$/.exec(fields.data.file)?.[1]
-        : undefined;
-      const media = mediaId
-        ? await tx.media.findUnique({ where: { id: mediaId } })
-        : null;
+      const mediaId = fields.success ? parseMediaUrl(fields.data.file) : undefined;
+      const media = mediaId ? await tx.media.findUnique({ where: { id: mediaId } }) : null;
       const info = authorizePublishedBook(record, media);
       return { media: media!, info };
     },
     { isolationLevel: "RepeatableRead" },
   );
   if (!file) return { ...info, id, url: "/api/books/" + id + "/file" };
-  const path = mediaPath(
-    mediaRoot(),
-    media.id,
-    media.extension as "pdf" | "epub",
-  );
-  if ((await stat(path)).size !== media.size)
-    throw new DomainError("MEDIA_CORRUPT", 503);
+  const path = mediaPath(mediaRoot(), media.id, media.extension as "pdf" | "epub");
+  if ((await stat(path)).size !== media.size) throw new DomainError("MEDIA_CORRUPT", 503);
   const bytes = await readFile(path);
   if (
     bytes.length !== media.size ||

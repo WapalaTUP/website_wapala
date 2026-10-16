@@ -1,3 +1,4 @@
+import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
@@ -40,10 +41,7 @@ export const applicantSchema = z
   .object({
     year: periodSchema.shape.year,
     fields: applicantFields,
-    photo: z.union([
-      z.literal(""),
-      z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/),
-    ]),
+    photo: z.union([z.literal(""), mediaUrlSchema()]),
   })
   .strict();
 export async function setRecruitmentPeriod(
@@ -70,8 +68,7 @@ export async function setRecruitmentPeriod(
     await tx.siteSettings.update({
       where: { id: 1 },
       data: {
-        recruitmentActive:
-          (await tx.recruitmentPeriod.count({ where: { active: true } })) > 0,
+        recruitmentActive: (await tx.recruitmentPeriod.count({ where: { active: true } })) > 0,
       },
     });
     await writeAudit(tx, {
@@ -93,16 +90,18 @@ export async function listPeriods(principal: Principal) {
   requirePermission(principal, "recruitment:read");
   return getDb().$transaction(async (tx) => {
     await assertFresh(tx, principal, "recruitment:read");
-    return (
-      await tx.recruitmentPeriod.findMany({ orderBy: { year: "desc" } })
-    ).map((p) => ({
+    return (await tx.recruitmentPeriod.findMany({ orderBy: { year: "desc" } })).map((p) => ({
       year: p.year,
       active: p.active,
       label: `Periode ${p.year}`,
     }));
   });
 }
-export async function submitApplicant(input: unknown, ctx: RequestContext, transaction?: Prisma.TransactionClient) {
+export async function submitApplicant(
+  input: unknown,
+  ctx: RequestContext,
+  transaction?: Prisma.TransactionClient,
+) {
   const v = applicantSchema.parse(input);
   try {
     const execute = async (tx: Prisma.TransactionClient) => {
@@ -111,11 +110,7 @@ export async function submitApplicant(input: unknown, ctx: RequestContext, trans
         where: { year: v.year },
       });
       if (!period?.active)
-        throw new DomainError(
-          "PERIOD_CLOSED",
-          409,
-          "Pendaftaran periode ini ditutup.",
-        );
+        throw new DomainError("PERIOD_CLOSED", 409, "Pendaftaran periode ini ditutup.");
       const code = `OR${v.year}-${randomBytes(8).toString("hex").toUpperCase()}`;
       const row = await tx.applicant.create({
         data: {

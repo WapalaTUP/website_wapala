@@ -1,11 +1,6 @@
 import "server-only";
 import type { Prisma } from "../../generated/prisma/client";
-export const reservedStatuses = [
-  "approved",
-  "borrowed",
-  "awaiting_return",
-  "late",
-] as const;
+export const reservedStatuses = ["approved", "borrowed", "awaiting_return", "late"] as const;
 export async function reservedPeak(
   tx: Prisma.TransactionClient,
   equipmentId: string,
@@ -50,10 +45,7 @@ export async function reservedPeak(
   }
   return peak;
 }
-export async function lockEquipment(
-  tx: Prisma.TransactionClient,
-  ids: string[],
-) {
+export async function lockEquipment(tx: Prisma.TransactionClient, ids: string[]) {
   for (const id of [...new Set(ids)].sort())
     await tx.$queryRaw`SELECT id FROM "Equipment" WHERE id=${id}::uuid FOR UPDATE`;
 }

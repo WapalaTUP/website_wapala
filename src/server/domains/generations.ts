@@ -1,3 +1,4 @@
+import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -15,10 +16,7 @@ export const generationSchema = z
     label: z.string().trim().max(300),
     year: z.number().int().min(1900).max(2200).nullable(),
     description: z.string().trim().max(10000),
-    photo: z.union([
-      z.literal(""),
-      z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/),
-    ]),
+    photo: z.union([z.literal(""), mediaUrlSchema()]),
     archived: z.boolean().optional(),
   })
   .strict();
@@ -26,19 +24,8 @@ export async function listGenerations(p: Principal) {
   requirePermission(p, "generations:write");
   return getDb().$transaction(async (tx) => {
     await assertFresh(tx, p, "generations:write");
-    return (
-      await tx.generation.findMany({ orderBy: { number: "desc" }, take: 500 })
-    ).map(
-      ({
-        number,
-        version,
-        name,
-        label,
-        year,
-        description,
-        photo,
-        archivedAt,
-      }) => ({
+    return (await tx.generation.findMany({ orderBy: { number: "desc" }, take: 500 })).map(
+      ({ number, version, name, label, year, description, photo, archivedAt }) => ({
         number,
         version,
         name,
@@ -51,11 +38,7 @@ export async function listGenerations(p: Principal) {
     );
   });
 }
-export async function saveGeneration(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function saveGeneration(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "generations:write");
   const v = generationSchema.parse(input);
   try {
@@ -66,17 +49,8 @@ export async function saveGeneration(
         where: { number: v.number },
       });
       if ((old && old.version !== v.version) || (!old && v.version))
-        throw new DomainError(
-          "CONFLICT",
-          409,
-          "Angkatan sudah berubah. Muat ulang daftar.",
-        );
-      await assertMediaReferences(
-        tx,
-        [v.photo],
-        ["content", "generation-photo"],
-        "public",
-      );
+        throw new DomainError("CONFLICT", 409, "Angkatan sudah berubah. Muat ulang daftar.");
+      await assertMediaReferences(tx, [v.photo], ["content", "generation-photo"], "public");
       const { archived } = v;
       const data = {
         number: v.number,

@@ -25,7 +25,7 @@ export const eventUploadOwner = (
     getConfig().securityKey,
   );
 export async function cleanupEventUploads(root = mediaRoot()) {
-  return mediaSlot(() =>
+  return mediaSlot("admin", () =>
     getDb().$transaction(
       async (tx) => {
         const cutoff = new Date(Date.now() - 86400000);
@@ -58,18 +58,12 @@ export async function registerEventUpload(
   if (
     !event.accepting ||
     event.revisionId !== t.revisionId ||
-    !event.form.items.some(
-      (q) => q.id === input.questionId && q.kind === "upload",
-    )
+    !event.form.items.some((q) => q.id === input.questionId && q.kind === "upload")
   )
-    throw new DomainError(
-      "FORM_CHANGED",
-      409,
-      "Formulir tidak lagi menerima berkas ini.",
-    );
+    throw new DomainError("FORM_CHANGED", 409, "Formulir tidak lagi menerima berkas ini.");
   if (!input.bytes.length || input.bytes.length > 5 * 1024 * 1024)
     throw new DomainError("MEDIA_TOO_LARGE", 413, "Berkas maksimal 5 MB.");
-  return mediaSlot(async () => {
+  return mediaSlot("admin", async () => {
     const result =
       input.mime === "application/pdf"
         ? validateBook(input.bytes, input.mime)
@@ -98,12 +92,7 @@ export async function registerEventUpload(
           size: result.bytes.length,
           width: result.width,
           height: result.height,
-          ownerDigest: eventUploadOwner(
-            t.eventId,
-            t.revisionId,
-            input.questionId,
-            t.ownerDigest,
-          ),
+          ownerDigest: eventUploadOwner(t.eventId, t.revisionId, input.questionId, t.ownerDigest),
           scannedAt: new Date(),
         },
       });

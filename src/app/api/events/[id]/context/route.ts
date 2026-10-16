@@ -2,10 +2,7 @@ import { route, jsonResponse } from "@/server/http/auth-handler";
 import { publicEvent } from "@/server/domains/events";
 import { issueEventFormToken } from "@/server/security/event-form-token";
 import { takeThrottle } from "@/server/security/throttle";
-export function GET(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   return route(request, async (ctx) => {
     const { id } = await context.params;
     await takeThrottle("event-context:" + ctx.ipDigest, 200, 3600000);

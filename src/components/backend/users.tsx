@@ -56,10 +56,7 @@ export function BackendUsers({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function refresh() {
-    const data = await backendApi<{ users: User[] }>(
-      "/api/admin/users",
-      csrfToken,
-    );
+    const data = await backendApi<{ users: User[] }>("/api/admin/users", csrfToken);
     setUsers(data.users);
   }
   async function create() {
@@ -110,9 +107,7 @@ export function BackendUsers({
       setConfirm(null);
       await refresh();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Perubahan akun belum tersimpan.",
-      );
+      setError(e instanceof Error ? e.message : "Perubahan akun belum tersimpan.");
     } finally {
       setBusy(false);
     }
@@ -125,10 +120,7 @@ export function BackendUsers({
   return (
     <>
       <div className="admin-toolbar">
-        <p>
-          Akun dan izin berasal dari database. Password sementara wajib diganti
-          saat login.
-        </p>
+        <p>Akun dan izin berasal dari database. Password sementara wajib diganti saat login.</p>
         <button
           className="btn primary"
           onClick={() => {
@@ -141,12 +133,7 @@ export function BackendUsers({
       </div>
       <div className="button-row">
         {presets
-          .filter(
-            (p) =>
-              !users.some(
-                (u) => u.email.toLowerCase() === p.email.toLowerCase(),
-              ),
-          )
+          .filter((p) => !users.some((u) => u.email.toLowerCase() === p.email.toLowerCase()))
           .map((p) => (
             <button
               key={p.email}
@@ -189,26 +176,17 @@ export function BackendUsers({
                   <td>
                     <div className="button-row">
                       {user.role !== "SUPER_USER" && user.active && (
-                        <button
-                          className="btn secondary"
-                          onClick={() => choose(user, "reset")}
-                        >
+                        <button className="btn secondary" onClick={() => choose(user, "reset")}>
                           Reset password
                         </button>
                       )}
                       {user.id !== currentUserId && (
-                        <button
-                          className="text-link"
-                          onClick={() => choose(user, "toggle")}
-                        >
+                        <button className="text-link" onClick={() => choose(user, "toggle")}>
                           {user.active ? "Nonaktifkan" : "Aktifkan"}
                         </button>
                       )}
                       {user.requiresUnlock && (
-                        <button
-                          className="text-link"
-                          onClick={() => choose(user, "unlock")}
-                        >
+                        <button className="text-link" onClick={() => choose(user, "unlock")}>
                           Buka kunci
                         </button>
                       )}
@@ -225,10 +203,7 @@ export function BackendUsers({
           </table>
         </div>
       ) : (
-        <Empty
-          title="Belum ada akun"
-          description="Buat akun admin sesuai tanggung jawabnya."
-        />
+        <Empty title="Belum ada akun" description="Buat akun admin sesuai tanggung jawabnya." />
       )}
       <Modal
         open={!!draft}
@@ -262,9 +237,7 @@ export function BackendUsers({
                 Peran
                 <select
                   value={draft.role}
-                  onChange={(e) =>
-                    setDraft({ ...draft, role: e.target.value as Role })
-                  }
+                  onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}
                 >
                   {Object.entries(roles).map(([role, label]) => (
                     <option key={role} value={role}>
@@ -275,16 +248,12 @@ export function BackendUsers({
               </label>
               {draft.role === "ANGGOTA" && (
                 <div className="field">
-                  <label htmlFor="account-member">
-                    Profil anggota pemilik akun
-                  </label>
+                  <label htmlFor="account-member">Profil anggota pemilik akun</label>
                   <select
                     id="account-member"
                     required
                     value={draft.memberId || ""}
-                    onChange={(e) =>
-                      setDraft({ ...draft, memberId: e.target.value })
-                    }
+                    onChange={(e) => setDraft({ ...draft, memberId: e.target.value })}
                   >
                     <option value="">Pilih anggota</option>
                     {members
@@ -296,8 +265,7 @@ export function BackendUsers({
                       ))}
                   </select>
                   <p className="field-hint">
-                    Satu akun untuk satu profil. Anggota hanya dapat meminta
-                    koreksi profil ini.
+                    Satu akun untuk satu profil. Anggota hanya dapat meminta koreksi profil ini.
                   </p>
                 </div>
               )}
@@ -344,34 +312,22 @@ export function BackendUsers({
             </Notice>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">
-              <button
-                className="btn primary"
-                disabled={busy}
-                onClick={() => void change()}
-              >
+              <button className="btn primary" disabled={busy} onClick={() => void change()}>
                 {busy ? "Memproses…" : "Konfirmasi"}
               </button>
-              <button
-                className="btn secondary"
-                disabled={busy}
-                onClick={() => setConfirm(null)}
-              >
+              <button className="btn secondary" disabled={busy} onClick={() => setConfirm(null)}>
                 Batal
               </button>
             </div>
           </>
         )}
       </Modal>
-      <Modal
-        open={!!credential}
-        title="Password sementara"
-        onClose={() => setCredential(null)}
-      >
+      <Modal open={!!credential} title="Password sementara" onClose={() => setCredential(null)}>
         {credential && (
           <>
             <Notice>
-              Salin sekarang dan sampaikan melalui jalur privat. Setelah
-              ditutup, password ini tidak dapat dilihat kembali.
+              Salin sekarang dan sampaikan melalui jalur privat. Setelah ditutup, password ini tidak
+              dapat dilihat kembali.
             </Notice>
             <p>{credential.email}</p>
             <Field

@@ -1,10 +1,6 @@
 import { route, authenticated, jsonResponse } from "@/server/http/auth-handler";
 import { readJson } from "@/server/http/body";
-import {
-  listCorrections,
-  reviewCorrection,
-  reviewSchema,
-} from "@/server/domains/member-portal";
+import { listCorrections, reviewCorrection, reviewSchema } from "@/server/domains/member-portal";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export function GET(request: Request) {
@@ -22,11 +18,7 @@ export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "corrections:review");
     return jsonResponse(
-      await reviewCorrection(
-        principal,
-        await readJson(request, reviewSchema),
-        ctx,
-      ),
+      await reviewCorrection(principal, await readJson(request, reviewSchema), ctx),
     );
   });
 }

@@ -1,0 +1,44 @@
+[Unit]
+Description=WAPALA Next.js application (host deploy)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wapala
+Group=wapala
+WorkingDirectory=/srv/wapala/current
+EnvironmentFile=/etc/wapala/production.env
+ExecStart=/usr/bin/node .next/standalone/server.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+# --- Sandbox: kode release milik root; runtime hanya menulis cache & media.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# MemoryDenyWriteExecute sengaja TIDAK dipakai: V8 (JIT) butuh W^X fleksibel.
+ReadWritePaths=/var/lib/wapala/media /srv/wapala/current/.next/cache
+MemoryAccounting=true
+# Sesuaikan dengan RAM VPS; lihat README bagian kapasitas.
+MemoryMax=900M
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

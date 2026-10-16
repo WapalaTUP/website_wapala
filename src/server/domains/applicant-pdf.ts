@@ -76,10 +76,7 @@ export function applicantPdfTable(year: number, rows: ApplicantPdfRow[]) {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9);
       const label = orFieldLabel(key);
-      const allLines = pdf.splitTextToSize(
-        value || "-",
-        width - labelWidth - 6,
-      ) as string[];
+      const allLines = pdf.splitTextToSize(value || "-", width - labelWidth - 6) as string[];
       let offset = 0;
       while (offset < allLines.length) {
         if (y + 13 > 279) nextPage(row, true);

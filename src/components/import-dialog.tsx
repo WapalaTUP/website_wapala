@@ -49,17 +49,14 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
       </button>
       <Modal open={open} title={"Impor " + kind} onClose={close}>
         <Notice>
-          Preview lokal: gunakan file fiktif. Data yang diterapkan tersimpan
-          pada browser ini, bukan penyimpanan produksi yang aman. Jangan impor
-          dokumen pribadi untuk pengujian UI.
+          Preview lokal: gunakan file fiktif. Data yang diterapkan tersimpan pada browser ini, bukan
+          penyimpanan produksi yang aman. Jangan impor dokumen pribadi untuk pengujian UI.
         </Notice>
         <button
           type="button"
           className="text-link"
           onClick={() =>
-            void downloadImportTemplate(kind).catch(() =>
-              setError("Template gagal diunduh."),
-            )
+            void downloadImportTemplate(kind).catch(() => setError("Template gagal diunduh."))
           }
         >
           Unduh template CSV
@@ -87,18 +84,14 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
                     importFields[kind].map((key) => [
                       key,
                       next.headers.find(
-                        (h) =>
-                          normalizeImportHeader(h) ===
-                          normalizeImportHeader(key),
+                        (h) => normalizeImportHeader(h) === normalizeImportHeader(key),
                       ) || "",
                     ]),
                   ),
                 );
               } catch (err) {
                 if (token === request.current)
-                  setError(
-                    err instanceof Error ? err.message : "File tidak terbaca.",
-                  );
+                  setError(err instanceof Error ? err.message : "File tidak terbaca.");
               } finally {
                 if (token === request.current) setBusy(false);
               }
@@ -161,9 +154,7 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
             </p>
             {preview.errors.length ? (
               <Notice tone="error">
-                <strong>
-                  {preview.errors.length} error — penerapan diblokir.
-                </strong>
+                <strong>{preview.errors.length} error — penerapan diblokir.</strong>
                 <ul>
                   {preview.errors.slice(0, 20).map((e, i) => (
                     <li key={i}>
@@ -173,15 +164,14 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
                 </ul>
                 {preview.errors.length > 20 && (
                   <p>
-                    Perbaiki error di file sumber, lalu unggah kembali untuk
-                    memeriksa semua baris.
+                    Perbaiki error di file sumber, lalu unggah kembali untuk memeriksa semua baris.
                   </p>
                 )}
               </Notice>
             ) : (
               <Notice>
-                {preview.rows.length} baris valid. Data lama tidak ditimpa;
-                konflik akan diperiksa kembali saat penerapan.
+                {preview.rows.length} baris valid. Data lama tidak ditimpa; konflik akan diperiksa
+                kembali saat penerapan.
               </Notice>
             )}
             {!preview.errors.length && preview.rows.length > 0 && (
@@ -191,8 +181,8 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
                   checked={confirm}
                   onChange={(e) => setConfirm(e.target.checked)}
                 />
-                Saya telah memeriksa preview dan setuju menambah{" "}
-                {preview.rows.length} record contoh.
+                Saya telah memeriksa preview dan setuju menambah {preview.rows.length} record
+                contoh.
               </label>
             )}
             <div className="button-row">
@@ -213,9 +203,7 @@ export function ImportDialog({ kind, role }: { kind: ImportKind; role: Role }) {
                     close();
                   } catch (err) {
                     setConfirm(false);
-                    setError(
-                      err instanceof Error ? err.message : "Impor gagal.",
-                    );
+                    setError(err instanceof Error ? err.message : "Impor gagal.");
                   }
                 }}
               >

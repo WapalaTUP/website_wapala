@@ -1,6 +1,5 @@
 import { DomainError } from "../errors";
-export type Role =
-  "SUPER_USER" | "POH" | "MULTIMEDIA" | "INVENTARIS" | "ANGGOTA";
+export type Role = "SUPER_USER" | "POH" | "MULTIMEDIA" | "INVENTARIS" | "ANGGOTA";
 export type Permission =
   | "data:reset"
   | "generations:write"
@@ -66,13 +65,7 @@ const matrix: Record<Role, Permission[]> = {
   INVENTARIS: ["inventory:write", "loans:write", "recruitment:read"],
   ANGGOTA: ["members:directory", "members:correct"],
 };
-export function requirePermission(
-  principal: Principal,
-  permission: Permission,
-) {
-  if (
-    principal.mustChangePassword ||
-    !matrix[principal.role]?.includes(permission)
-  )
+export function requirePermission(principal: Principal, permission: Permission) {
+  if (principal.mustChangePassword || !matrix[principal.role]?.includes(permission))
     throw new DomainError("FORBIDDEN", 403, "Akses tidak diizinkan.");
 }

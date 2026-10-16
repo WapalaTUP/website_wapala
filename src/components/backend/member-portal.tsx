@@ -1,9 +1,6 @@
 "use client";
 import { useState } from "react";
-import type {
-  memberPortal,
-  listCorrections,
-} from "@/server/domains/member-portal";
+import type { memberPortal, listCorrections } from "@/server/domains/member-portal";
 import { Field, Notice, Empty, Modal, Textarea } from "../ui";
 import { backendApi } from "./api";
 type Portal = Awaited<ReturnType<typeof memberPortal>>;
@@ -39,8 +36,7 @@ export function BackendMemberPortal({
         Object.keys(labels)
           .filter(
             (k) =>
-              fields[k as keyof typeof labels] !==
-              data.profile!.fields[k as keyof typeof labels],
+              fields[k as keyof typeof labels] !== data.profile!.fields[k as keyof typeof labels],
           )
           .map((k) => [k, fields[k as keyof typeof labels]]),
       );
@@ -48,10 +44,7 @@ export function BackendMemberPortal({
         version: data.profile.version,
         changes,
       });
-      const latest = await backendApi<Portal>(
-        "/api/admin/member-portal",
-        csrfToken,
-      );
+      const latest = await backendApi<Portal>("/api/admin/member-portal", csrfToken);
       setData(latest);
       setFields(latest.profile?.fields);
       setEdit(false);
@@ -83,9 +76,7 @@ export function BackendMemberPortal({
             </button>
           </>
         ) : (
-          <Notice>
-            Akun belum ditautkan ke profil aktif. Hubungi Super User.
-          </Notice>
+          <Notice>Akun belum ditautkan ke profil aktif. Hubungi Super User.</Notice>
         )}
         {message && <Notice>{message}</Notice>}
         {data.requests.map((r) => (
@@ -151,8 +142,8 @@ export function BackendMemberPortal({
             }}
           >
             <Notice>
-              Perubahan ini akan ditinjau Super User, Multimedia, atau POH. NIA
-              dan status keanggotaan dikelola admin.
+              Perubahan ini akan ditinjau Super User, Multimedia, atau POH. NIA dan status
+              keanggotaan dikelola admin.
             </Notice>
             <div className="form-grid">
               {Object.entries(labels).map(([key, label]) =>
@@ -165,8 +156,7 @@ export function BackendMemberPortal({
                       onChange={(e) =>
                         setFields({
                           ...fields,
-                          jenis_kelamin: e.target.value as
-                            "Laki-laki" | "Perempuan",
+                          jenis_kelamin: e.target.value as "Laki-laki" | "Perempuan",
                         })
                       }
                     >
@@ -180,9 +170,7 @@ export function BackendMemberPortal({
                     label={label}
                     value={fields[key as keyof typeof labels]}
                     maxLength={key === "nim" ? 40 : 300}
-                    onChange={(e) =>
-                      setFields({ ...fields, [key]: e.target.value })
-                    }
+                    onChange={(e) => setFields({ ...fields, [key]: e.target.value })}
                   />
                 ),
               )}
@@ -246,8 +234,7 @@ export function BackendMemberCorrections({
   return (
     <>
       <p>
-        Permintaan menunggu ditampilkan dari yang paling lama. Riwayat keputusan
-        tetap disimpan.
+        Permintaan menunggu ditampilkan dari yang paling lama. Riwayat keputusan tetap disimpan.
       </p>
       {!rows.length ? (
         <Empty
@@ -345,22 +332,14 @@ export function BackendMemberCorrections({
                   {Object.entries(labels).map(([k, label]) => (
                     <tr key={k}>
                       <td>{label}</td>
-                      <td>
-                        {selected.current[k as keyof typeof labels] || "—"}
-                      </td>
-                      <td>
-                        {selected.proposed[k as keyof typeof labels] || "—"}
-                      </td>
+                      <td>{selected.current[k as keyof typeof labels] || "—"}</td>
+                      <td>{selected.proposed[k as keyof typeof labels] || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <Textarea
-              label="Catatan keputusan"
-              value={note}
-              onChange={setNote}
-            />
+            <Textarea label="Catatan keputusan" value={note} onChange={setNote} />
             {error && <Notice tone="error">{error}</Notice>}
             {selected.status === "pending" && (
               <div className="button-row">

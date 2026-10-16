@@ -413,12 +413,7 @@
     gap: 10px;
   }
   .gallery-hero .hero-shade {
-    background: linear-gradient(
-      #15251d 28%,
-      transparent 44%,
-      transparent 70%,
-      #15251d
-    );
+    background: linear-gradient(#15251d 28%, transparent 44%, transparent 70%, #15251d);
   }
   .gallery-hero .hero-content {
     padding-top: 28px;
@@ -1411,12 +1406,7 @@
   max-width: 690px;
 }
 .gallery-hero .hero-shade {
-  background: linear-gradient(
-    90deg,
-    #15251d 2%,
-    #15251dca 38%,
-    transparent 59%
-  );
+  background: linear-gradient(90deg, #15251d 2%, #15251dca 38%, transparent 59%);
 }
 @media (max-width: 1100px) {
   .hero-gallery-rail .hero-gallery-tile {
@@ -1463,12 +1453,7 @@
     min-height: 1010px;
   }
   .gallery-hero .hero-shade {
-    background: linear-gradient(
-      #15251d 26%,
-      transparent 40%,
-      transparent 76%,
-      #15251d
-    );
+    background: linear-gradient(#15251d 26%, transparent 40%, transparent 76%, #15251d);
   }
   .gallery-hero h1 {
     font-size: 52px;
@@ -1561,12 +1546,7 @@
   opacity: 0.65;
 }
 .recruitment-banner.recruitment-jumbotron:before {
-  background: linear-gradient(
-    90deg,
-    #24553c 18%,
-    #24553ce6 44%,
-    #112e2060 100%
-  );
+  background: linear-gradient(90deg, #24553c 18%, #24553ce6 44%, #112e2060 100%);
 }
 .recruitment-jumbotron > .container {
   position: relative;
@@ -1910,9 +1890,19 @@
   cursor: pointer;
   text-decoration: underline;
 }
-.auth-panel { max-width: 760px; }
-.auth-panel form { max-width: 560px; }
-.auth-text-button { border: 0; background: transparent; color: inherit; padding: 12px 0; text-align: left; }
+.auth-panel {
+  max-width: 760px;
+}
+.auth-panel form {
+  max-width: 560px;
+}
+.auth-text-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 12px 0;
+  text-align: left;
+}
 .settings-image-field .upload-box {
   min-height: 122px;
 }

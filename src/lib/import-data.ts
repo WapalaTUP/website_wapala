@@ -36,25 +36,8 @@ export const importFields: Record<ImportKind, string[]> = {
   ],
 };
 const required: Record<ImportKind, string[]> = {
-  anggota: [
-    "nama",
-    "nim",
-    "prodi",
-    "angkatan",
-    "jenis_kelamin",
-    "nia",
-    "status",
-    "kontak",
-  ],
-  inventaris: [
-    "code",
-    "name",
-    "category",
-    "total",
-    "fit",
-    "condition",
-    "location",
-  ],
+  anggota: ["nama", "nim", "prodi", "angkatan", "jenis_kelamin", "nia", "status", "kontak"],
+  inventaris: ["code", "name", "category", "total", "fit", "condition", "location"],
 };
 export function normalizeImportHeader(s: string) {
   return s
@@ -111,8 +94,7 @@ export function parseCsv(text: string): ImportTable {
       if (ch === "\r" && text[i + 1] === "\n") i++;
       pushRow();
     } else {
-      if (afterQuote && !/\s/.test(ch))
-        throw new Error("Format CSV setelah kutip tidak valid.");
+      if (afterQuote && !/\s/.test(ch)) throw new Error("Format CSV setelah kutip tidak valid.");
       if (!afterQuote) cell += ch;
     }
   }
@@ -151,33 +133,26 @@ export function validateImport(
   const identifier = kind === "anggota" ? "nia" : "code",
     ids = new Set<string>(),
     nims = new Set<string>();
-  for (const item of kind === "anggota"
-    ? state.records.anggota
-    : state.equipment) {
+  for (const item of kind === "anggota" ? state.records.anggota : state.equipment) {
     const fields = "fields" in item ? item.fields : item;
     ids.add(
       String(fields[identifier as keyof typeof fields] || "")
         .trim()
         .toLowerCase(),
     );
-    if ("fields" in item)
-      nims.add((item.fields.nim || "").trim().toLowerCase());
+    if ("fields" in item) nims.add((item.fields.nim || "").trim().toLowerCase());
   }
   table.rows.forEach((source, i) => {
     const row = Object.fromEntries(
       importFields[kind].map((key) => [
         key,
-        mapping[key]
-          ? String(source[table.headers.indexOf(mapping[key])] ?? "").trim()
-          : "",
+        mapping[key] ? String(source[table.headers.indexOf(mapping[key])] ?? "").trim() : "",
       ]),
     );
     result.rows.push(row);
-    for (const key of required[kind])
-      if (!row[key]) fail(i + 2, key, "Wajib diisi.");
+    for (const key of required[kind]) if (!row[key]) fail(i + 2, key, "Wajib diisi.");
     const id = row[identifier].toLowerCase();
-    if (id && ids.has(id))
-      fail(i + 2, identifier, "Identitas duplikat / sudah ada.");
+    if (id && ids.has(id)) fail(i + 2, identifier, "Identitas duplikat / sudah ada.");
     ids.add(id);
     if (kind === "anggota") {
       const nim = row.nim.toLowerCase();
@@ -185,43 +160,25 @@ export function validateImport(
       nims.add(nim);
       if (row.status && !["Aktif", "ALB", "AK"].includes(row.status))
         fail(i + 2, "status", "Gunakan Aktif, ALB, atau AK.");
-      if (
-        row.jenis_kelamin &&
-        !["Laki-laki", "Perempuan"].includes(row.jenis_kelamin)
-      )
+      if (row.jenis_kelamin && !["Laki-laki", "Perempuan"].includes(row.jenis_kelamin))
         fail(i + 2, "jenis_kelamin", "Gunakan Laki-laki atau Perempuan.");
     } else {
       for (const key of ["total", "fit"])
         if (!/^\d+$/.test(row[key]) || !Number.isSafeInteger(Number(row[key])))
           fail(i + 2, key, "Isi bilangan bulat nol atau lebih.");
-      if (Number(row.fit) > Number(row.total))
-        fail(i + 2, "fit", "Jumlah layak melebihi total.");
-      if (
-        row.condition &&
-        !conditions.includes(row.condition as Equipment["condition"])
-      )
+      if (Number(row.fit) > Number(row.total)) fail(i + 2, "fit", "Jumlah layak melebihi total.");
+      if (row.condition && !conditions.includes(row.condition as Equipment["condition"]))
         fail(i + 2, "condition", "Kondisi tidak dikenal.");
-      if (
-        row.yearEntered &&
-        (!/^\d{4}$/.test(row.yearEntered) || Number(row.yearEntered) < 1900)
-      )
+      if (row.yearEntered && (!/^\d{4}$/.test(row.yearEntered) || Number(row.yearEntered) < 1900))
         fail(i + 2, "yearEntered", "Isi tahun empat digit.");
     }
     for (const key of kind === "anggota" ? ["foto"] : ["photo"])
-      if (
-        row[key] &&
-        !/^https?:\/\//i.test(row[key]) &&
-        !row[key].startsWith("/images/")
-      )
+      if (row[key] && !/^https?:\/\//i.test(row[key]) && !row[key].startsWith("/images/"))
         fail(i + 2, key, "Gunakan URL http(s) atau aset /images/.");
   });
   return result;
 }
-export function applyImport(
-  state: DemoState,
-  kind: ImportKind,
-  preview: ImportPreview,
-) {
+export function applyImport(state: DemoState, kind: ImportKind, preview: ImportPreview) {
   if (preview.errors.length || !preview.rows.length)
     throw new Error("Perbaiki seluruh error sebelum impor.");
   const keys = importFields[kind],
@@ -229,17 +186,10 @@ export function applyImport(
       headers: keys,
       rows: preview.rows.map((r) => keys.map((k) => r[k] || "")),
     };
-  const current = validateImport(
-    kind,
-    table,
-    Object.fromEntries(keys.map((k) => [k, k])),
-    state,
-  );
-  if (current.errors.length)
-    throw new Error("Data berubah atau duplikat. Periksa preview lagi.");
+  const current = validateImport(kind, table, Object.fromEntries(keys.map((k) => [k, k])), state);
+  if (current.errors.length) throw new Error("Data berubah atau duplikat. Periksa preview lagi.");
   for (const row of current.rows) {
-    if (kind === "anggota")
-      state.records.anggota.push({ id: crypto.randomUUID(), fields: row });
+    if (kind === "anggota") state.records.anggota.push({ id: crypto.randomUUID(), fields: row });
     else
       state.equipment.push({
         id: crypto.randomUUID(),

@@ -19,10 +19,7 @@ export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "inventory:write");
     const input = await readJson(request, equipmentSchema);
-    return jsonResponse(
-      await saveEquipment(principal, input, ctx),
-      input.id ? 200 : 201,
-    );
+    return jsonResponse(await saveEquipment(principal, input, ctx), input.id ? 200 : 201);
   });
 }
 export function PATCH(request: Request) {

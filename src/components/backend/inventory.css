@@ -55,5 +55,7 @@
   color: var(--muted);
 }
 @media (prefers-reduced-motion: reduce) {
-  .inventory-availability-track > span { transition: none; }
+  .inventory-availability-track > span {
+    transition: none;
+  }
 }

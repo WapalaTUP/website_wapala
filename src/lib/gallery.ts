@@ -17,10 +17,7 @@ export interface PublicAlbum {
   highlight: boolean;
 }
 // One source for the public catalog and slideshow; archived albums never reappear in the hero.
-export function getPublicAlbums(
-  records: RecordRow[],
-  includePreview = true,
-): PublicAlbum[] {
+export function getPublicAlbums(records: RecordRow[], includePreview = true): PublicAlbum[] {
   const source: PublicAlbum[] = (includePreview ? albums : []).map((a) => ({
     ...a,
     images: a.images,
@@ -43,23 +40,29 @@ export function getPublicAlbums(
       try {
         const parsed: unknown = JSON.parse(f.gambar);
         if (Array.isArray(parsed))
-          registeredImages = parsed.filter(
-            (v): v is string => typeof v === "string" && !!v,
-          );
+          registeredImages = parsed.filter((v): v is string => typeof v === "string" && !!v);
       } catch {
         /* Older preview records may have no serialized image list. */
       }
     }
     const images = [
       ...new Set(
-        [
-          image,
-          ...(registeredImages.length ? registeredImages : base?.images || []),
-        ].filter(Boolean),
+        [image, ...(registeredImages.length ? registeredImages : base?.images || [])].filter(
+          Boolean,
+        ),
       ),
     ];
     const entry: PublicAlbum = {
-      photoCaptions: (() => { try { const value: unknown = JSON.parse(f.keterangan_foto || "[]"); return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []; } catch { return []; } })(),
+      photoCaptions: (() => {
+        try {
+          const value: unknown = JSON.parse(f.keterangan_foto || "[]");
+          return Array.isArray(value)
+            ? value.filter((v): v is string => typeof v === "string")
+            : [];
+        } catch {
+          return [];
+        }
+      })(),
       sourceYear: f.tahun_sumber || "",
       id: record.id,
       title: f.judul || base?.title || "Album kegiatan",
@@ -109,7 +112,9 @@ export function albumDate(
 ) {
   const value = album.activityDate || album.uploadedAt;
   if (!value || !Number.isFinite(Date.parse(value)))
-    return album.sourceYear ? "Tahun " + album.sourceYear + " · Tanggal belum tersedia" : "Tanggal belum tersedia";
+    return album.sourceYear
+      ? "Tahun " + album.sourceYear + " · Tanggal belum tersedia"
+      : "Tanggal belum tersedia";
   if (album.dateIsDemo) return "Tanggal contoh · " + date(value);
   return (album.activityDate ? "Kegiatan " : "Diunggah ") + date(value);
 }

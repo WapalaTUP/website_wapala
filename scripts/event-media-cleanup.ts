@@ -10,9 +10,7 @@ async function main() {
       }),
     );
   } catch {
-    console.error(
-      "Pembersihan upload Event gagal. Tidak menargetkan berkas peserta yang terikat.",
-    );
+    console.error("Pembersihan upload Event gagal. Tidak menargetkan berkas peserta yang terikat.");
     process.exitCode = 1;
   } finally {
     await getDb().$disconnect();

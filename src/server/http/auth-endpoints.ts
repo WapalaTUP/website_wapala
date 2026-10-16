@@ -7,11 +7,7 @@ import { setupRequired, bootstrap } from "../auth/bootstrap";
 import { login } from "../auth/login";
 import { changePassword, logout } from "../auth/sessions";
 import { requestRecovery, completeRecovery } from "../auth/recovery";
-import {
-  createPreAuthToken,
-  csrfForSession,
-  validatePreAuthToken,
-} from "../security/csrf";
+import { createPreAuthToken, csrfForSession, validatePreAuthToken } from "../security/csrf";
 import { takeThrottle } from "../security/throttle";
 import { readJson } from "./body";
 import {
@@ -42,10 +38,7 @@ export function authGet(request: Request, action: string) {
         emailRecoveryEnabled: getConfig().emailMode !== "disabled",
         csrfToken,
       });
-      response.headers.append(
-        "Set-Cookie",
-        cookieHeader("preauth", csrfToken, 900),
-      );
+      response.headers.append("Set-Cookie", cookieHeader("preauth", csrfToken, 900));
       return response;
     }
     if (action === "me") {
@@ -67,8 +60,7 @@ export function authGet(request: Request, action: string) {
 }
 export function authPost(request: Request, action: string) {
   return route(request, async (ctx) => {
-    if (["bootstrap", "login", "recovery", "reset"].includes(action))
-      assertPreAuth(request);
+    if (["bootstrap", "login", "recovery", "reset"].includes(action)) assertPreAuth(request);
     if (action === "bootstrap") {
       await takeThrottle("bootstrap:" + ctx.ipDigest, 5, 900000);
       const input = await readJson(
@@ -79,21 +71,13 @@ export function authPost(request: Request, action: string) {
       return jsonResponse({ message: "Super User dibuat. Silakan login." });
     }
     if (action === "login") {
-      const input = await readJson(
-          request,
-          z.object({ email, password }).strict(),
-        ),
+      const input = await readJson(request, z.object({ email, password }).strict()),
         result = await login(input, ctx);
       const response = jsonResponse({
         csrfToken: result.csrfToken,
-        redirectTo: result.principal.mustChangePassword
-          ? "/wapala/password"
-          : "/admin/foundation",
+        redirectTo: result.principal.mustChangePassword ? "/wapala/password" : "/admin/foundation",
       });
-      response.headers.append(
-        "Set-Cookie",
-        cookieHeader("session", result.token, 30 * 86400),
-      );
+      response.headers.append("Set-Cookie", cookieHeader("session", result.token, 30 * 86400));
       response.headers.append("Set-Cookie", cookieHeader("preauth", "", 0));
       return response;
     }
@@ -101,17 +85,14 @@ export function authPost(request: Request, action: string) {
       const input = await readJson(request, z.object({ email }).strict());
       await requestRecovery(input.email, ctx);
       return jsonResponse({
-        message:
-          "Jika akun dapat dipulihkan, petunjuk dikirim ke email pemulihannya.",
+        message: "Jika akun dapat dipulihkan, petunjuk dikirim ke email pemulihannya.",
       });
     }
     if (action === "reset") {
       await takeThrottle("reset:" + ctx.ipDigest, 5, 900000);
       const input = await readJson(
         request,
-        z
-          .object({ token: z.string().max(100), newPassword: password })
-          .strict(),
+        z.object({ token: z.string().max(100), newPassword: password }).strict(),
       );
       await completeRecovery(input, ctx);
       return jsonResponse({
@@ -127,9 +108,7 @@ export function authPost(request: Request, action: string) {
         await takeThrottle("password:" + principal.userId, 5, 900000);
         const input = await readJson(
           request,
-          z
-            .object({ currentPassword: password, newPassword: password })
-            .strict(),
+          z.object({ currentPassword: password, newPassword: password }).strict(),
         );
         await changePassword(principal, input, ctx);
       }

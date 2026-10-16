@@ -73,11 +73,7 @@ export function BackendRecords({
     [archive, setArchive] = useState<BackendRecord | null>(null);
   const rows = records.filter(
     (r) =>
-      !r.archived &&
-      Object.values(r.fields)
-        .join(" ")
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      !r.archived && Object.values(r.fields).join(" ").toLowerCase().includes(search.toLowerCase()),
   );
   async function refresh() {
     const data = await backendApi<{ records: BackendRecord[] }>(
@@ -86,9 +82,7 @@ export function BackendRecords({
     );
     setRecords(data.records);
   }
-  async function save(
-    value: Partial<BackendRecord> & { fields: BackendRecord["fields"] },
-  ) {
+  async function save(value: Partial<BackendRecord> & { fields: BackendRecord["fields"] }) {
     setBusy(true);
     setError("");
     try {
@@ -96,9 +90,7 @@ export function BackendRecords({
         kind === "konten"
           ? {
               ...value.fields,
-              slug: contentSlug(
-                String(value.fields.slug || value.fields.judul || ""),
-              ),
+              slug: contentSlug(String(value.fields.slug || value.fields.judul || "")),
             }
           : value.fields;
       await backendApi("/api/admin/records/" + kind, csrfToken, {
@@ -122,18 +114,10 @@ export function BackendRecords({
         )}
         {kind === "anggota" && (
           <>
-            <a
-              download
-              className="btn secondary"
-              href="/api/admin/export/members?format=xlsx"
-            >
+            <a download className="btn secondary" href="/api/admin/export/members?format=xlsx">
               Ekspor Excel
             </a>
-            <a
-              download
-              className="btn secondary"
-              href="/api/admin/export/members?format=pdf"
-            >
+            <a download className="btn secondary" href="/api/admin/export/members?format=pdf">
               Ekspor PDF
             </a>
           </>
@@ -150,10 +134,7 @@ export function BackendRecords({
             setError("");
             setDraft({
               fields: Object.fromEntries(
-                recordFields[kind].map(([key, , options]) => [
-                  key,
-                  options?.[0] || "",
-                ]),
+                recordFields[kind].map(([key, , options]) => [key, options?.[0] || ""]),
               ),
             });
           }}
@@ -168,11 +149,7 @@ export function BackendRecords({
                 : "konten"}
         </button>
         {kind === "anggota" && (
-          <BackendImport
-            kind="anggota"
-            csrfToken={csrfToken}
-            onImported={refresh}
-          />
+          <BackendImport kind="anggota" csrfToken={csrfToken} onImported={refresh} />
         )}
       </div>
       {error && !draft && !archive && <Notice tone="error">{error}</Notice>}
@@ -277,11 +254,7 @@ export function BackendRecords({
                     label={label}
                     type={key.startsWith("tanggal") ? "date" : "text"}
                     required={key === "judul"}
-                    placeholder={
-                      key === "slug"
-                        ? "Otomatis dari judul bila kosong"
-                        : undefined
-                    }
+                    placeholder={key === "slug" ? "Otomatis dari judul bila kosong" : undefined}
                     value={String(draft.fields[key] || "")}
                     onChange={(e) =>
                       setDraft({
@@ -303,13 +276,7 @@ export function BackendRecords({
               }
               kind={kind === "buku" ? "book" : "photo"}
               names={
-                draft.fields[
-                  kind === "anggota"
-                    ? "foto"
-                    : kind === "buku"
-                      ? "file"
-                      : "sampul"
-                ]
+                draft.fields[kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul"]
                   ? ["Berkas tersimpan"]
                   : []
               }
@@ -321,19 +288,10 @@ export function BackendRecords({
                 try {
                   const url = await uploadMedia(
                     files[0],
-                    kind === "anggota"
-                      ? "member-photo"
-                      : kind === "buku"
-                        ? "book"
-                        : "content",
+                    kind === "anggota" ? "member-photo" : kind === "buku" ? "book" : "content",
                     csrfToken,
                   );
-                  const key =
-                    kind === "anggota"
-                      ? "foto"
-                      : kind === "buku"
-                        ? "file"
-                        : "sampul";
+                  const key = kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul";
                   setDraft((current) =>
                     current
                       ? {
@@ -356,9 +314,7 @@ export function BackendRecords({
                   multiple
                   names={
                     Array.isArray(draft.fields.gambar)
-                      ? draft.fields.gambar.map(
-                          (_, index) => "Foto " + (index + 1),
-                        )
+                      ? draft.fields.gambar.map((_, index) => "Foto " + (index + 1))
                       : []
                   }
                   setError={setError}
@@ -368,11 +324,7 @@ export function BackendRecords({
                     setError("");
                     try {
                       for (const file of files) {
-                        const url = await uploadMedia(
-                          file,
-                          "content",
-                          csrfToken,
-                        );
+                        const url = await uploadMedia(file, "content", csrfToken);
                         setDraft((current) =>
                           current
                             ? {
@@ -391,17 +343,15 @@ export function BackendRecords({
                         );
                       }
                     } catch (e) {
-                      setError(
-                        e instanceof Error ? e.message : "Upload gagal.",
-                      );
+                      setError(e instanceof Error ? e.message : "Upload gagal.");
                     } finally {
                       setBusy(false);
                     }
                   }}
                 />
                 <Notice>
-                  Tanggal boleh kosong bila sumber tidak menyediakannya. Waktu
-                  impor tidak dianggap tanggal kegiatan.
+                  Tanggal boleh kosong bila sumber tidak menyediakannya. Waktu impor tidak dianggap
+                  tanggal kegiatan.
                 </Notice>
               </>
             )}
@@ -441,11 +391,7 @@ export function BackendRecords({
           >
             Arsipkan
           </button>
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={() => setArchive(null)}
-          >
+          <button className="btn secondary" disabled={busy} onClick={() => setArchive(null)}>
             Batal
           </button>
         </div>

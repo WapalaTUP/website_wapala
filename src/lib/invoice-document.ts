@@ -10,11 +10,7 @@ export interface InvoiceAssets {
   telLogoRatio?: number;
   qr?: string;
 }
-export function buildInvoiceDocument(
-  loan: Loan,
-  state: DemoState,
-  assets: InvoiceAssets,
-) {
+export function buildInvoiceDocument(loan: Loan, state: DemoState, assets: InvoiceAssets) {
   const doc = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" });
   const half = doc.internal.pageSize.getWidth() / 2;
   const margin = 8,
@@ -48,17 +44,13 @@ export function buildInvoiceDocument(
   const compactInfo = info.map((row) =>
     row.map((entry) => ({
       ...entry,
-      lines:
-        entry.lines.length > 2
-          ? [entry.lines[0], "(Lihat lampiran keterangan)"]
-          : entry.lines,
+      lines: entry.lines.length > 2 ? [entry.lines[0], "(Lihat lampiran keterangan)"] : entry.lines,
     })),
   );
   const infoEnd =
     62 +
     compactInfo.reduce(
-      (height, row) =>
-        height + Math.max(...row.map((v) => v.lines.length)) * 3.5 + 6,
+      (height, row) => height + Math.max(...row.map((v) => v.lines.length)) * 3.5 + 6,
       0,
     );
   const tableTop = infoEnd + 5;
@@ -66,14 +58,9 @@ export function buildInvoiceDocument(
   const rows = loan.items
     .filter((item) => item.approved > 0)
     .map((item, i) => {
-      const name =
-        state.equipment.find((e) => e.id === item.equipmentId)?.name ||
-        item.equipmentId;
+      const name = state.equipment.find((e) => e.id === item.equipmentId)?.name || item.equipmentId;
       const nameLines = doc.splitTextToSize(name, 76) as string[];
-      const conditionLines = doc.splitTextToSize(
-        item.outCondition,
-        23,
-      ) as string[];
+      const conditionLines = doc.splitTextToSize(item.outCondition, 23) as string[];
       return {
         number: i + 1,
         quantity: item.approved,
@@ -164,12 +151,9 @@ export function buildInvoiceDocument(
       });
       doc.setFont("helvetica", "normal");
       doc.setFontSize(5.7);
-      doc.text(
-        "Jl. D.I. Panjaitan No. 128 Purwokerto Gedung DSP TUP",
-        center,
-        20,
-        { align: "center" },
-      );
+      doc.text("Jl. D.I. Panjaitan No. 128 Purwokerto Gedung DSP TUP", center, 20, {
+        align: "center",
+      });
       doc.text("Email: wapalaittelkom@gmail.com", center, 24, {
         align: "center",
       });
@@ -185,17 +169,7 @@ export function buildInvoiceDocument(
       doc.text("Peminjaman alat", left, 41);
       doc.setFontSize(9);
       doc.text(loan.code, left, 48);
-      if (assets.qr)
-        doc.addImage(
-          assets.qr,
-          "PNG",
-          right - 22,
-          34,
-          22,
-          22,
-          "loan-qr",
-          "FAST",
-        );
+      if (assets.qr) doc.addImage(assets.qr, "PNG", right - 22, 34, 22, 22, "loan-qr", "FAST");
       let y = 62;
       for (const row of compactInfo) {
         row.forEach((entry, col) => {
@@ -253,12 +227,9 @@ export function buildInvoiceDocument(
       doc.setFontSize(6.2);
       doc.setTextColor(86, 105, 95);
       doc.text("Dokumen peminjaman resmi", left, 202);
-      doc.text(
-        loan.code + " / " + (pageIndex + 1) + " dari " + pages.length,
-        right,
-        202,
-        { align: "right" },
-      );
+      doc.text(loan.code + " / " + (pageIndex + 1) + " dari " + pages.length, right, 202, {
+        align: "right",
+      });
     }
     doc.setDrawColor(170, 180, 172);
     doc.setLineWidth(0.2);
