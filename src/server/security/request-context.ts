@@ -7,6 +7,7 @@ export interface RequestContext {
   userAgent: string;
   requestId: string;
 }
+let warnedUnknownIp = false;
 export function requestContext(
   request: Request,
   config: ServerConfig = getConfig(),
@@ -15,6 +16,17 @@ export function requestContext(
     ? request.headers.get("x-forwarded-for")?.split(",")[0].trim()
     : undefined;
   const ip = candidate && isIP(candidate) ? candidate : "unknown";
+  if (ip === "unknown" && !warnedUnknownIp) {
+    warnedUnknownIp = true;
+    // Semua klien tanpa IP valid berbagi satu bucket throttle; ini wajar
+    // untuk satu kasus, tetapi berisiko bila proxy berubah konfigurasi.
+    console.warn(
+      JSON.stringify({
+        event: "ip_unresolved",
+        detail: "XFF tidak ada/tidak valid; bucket throttle bersama dipakai.",
+      }),
+    );
+  }
   return {
     ipDigest: hmacToken("ip:" + ip, config.securityKey),
     userAgent: (request.headers.get("user-agent") || "")

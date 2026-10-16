@@ -7,6 +7,7 @@ import { hashPassword } from "../security/password";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
 import { assertFresh } from "./sessions";
+import { loginLockPrefixFor } from "../security/throttle";
 import { requirePermission, type Principal, type Role } from "./policy";
 const roleSchema = z.enum([
   "SUPER_USER",
@@ -209,6 +210,10 @@ export async function updateAdmin(
       },
       select: userSelect,
     });
+    if (fields.unlock)
+      await tx.securityThrottle.deleteMany({
+        where: { key: { startsWith: loginLockPrefixFor(target.email) } },
+      });
     if (revoke)
       await tx.session.updateMany({
         where: { userId: id, revokedAt: null },
@@ -252,6 +257,9 @@ export async function resetAdminPassword(
         lockUntil: null,
         failedLoginCount: 0,
       },
+    });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(user.email) } },
     });
     await tx.session.updateMany({
       where: { userId: id, revokedAt: null },

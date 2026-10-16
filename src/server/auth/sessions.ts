@@ -6,12 +6,29 @@ import { digestToken } from "../security/tokens";
 import { hashPassword, verifyPassword } from "../security/password";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
+import { loginLockPrefixFor } from "../security/throttle";
 import { requirePermission, type Permission, type Principal } from "./policy";
-export async function resolveSession(token: string): Promise<Principal | null> {
+const sessionWithUser = {
+  id: true,
+  userId: true,
+  revokedAt: true,
+  expiresAt: true,
+  credentialVersion: true,
+  user: {
+    select: {
+      active: true,
+      archivedAt: true,
+      credentialVersion: true,
+      role: true,
+      mustChangePassword: true,
+    },
+  },
+} as const;
+export async function resolveSessionRecord(token: string) {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const session = await getDb().session.findUnique({
     where: { tokenHash: digestToken(token) },
-    include: { user: true },
+    select: { ...sessionWithUser, csrfDigest: true },
   });
   if (
     !session ||
@@ -23,11 +40,18 @@ export async function resolveSession(token: string): Promise<Principal | null> {
   )
     return null;
   return {
-    userId: session.userId,
-    sessionId: session.id,
-    role: session.user.role,
-    mustChangePassword: session.user.mustChangePassword,
+    principal: {
+      userId: session.userId,
+      sessionId: session.id,
+      role: session.user.role,
+      mustChangePassword: session.user.mustChangePassword,
+    },
+    csrfDigest: session.csrfDigest,
   };
+}
+export async function resolveSession(token: string): Promise<Principal | null> {
+  const record = await resolveSessionRecord(token);
+  return record?.principal ?? null;
 }
 export async function assertFresh(
   tx: Prisma.TransactionClient,
@@ -38,6 +62,35 @@ export async function assertFresh(
   const session = await tx.session.findUnique({
     where: { id: principal.sessionId },
     include: { user: true },
+  });
+  if (
+    !session ||
+    session.userId !== principal.userId ||
+    session.revokedAt ||
+    session.expiresAt <= new Date() ||
+    !session.user.active ||
+    session.user.archivedAt ||
+    session.credentialVersion !== session.user.credentialVersion ||
+    session.user.role !== principal.role
+  )
+    throw new DomainError("UNAUTHENTICATED", 401);
+  const fresh = {
+    ...principal,
+    mustChangePassword: session.user.mustChangePassword,
+  };
+  if (permission) requirePermission(fresh, permission);
+  return session.user;
+}
+// Varian tanpa baris-lock untuk jalur baca murni (mis. serving media):
+// tidak menahan "User" FOR UPDATE sehingga tidak mengantre di pool DB.
+export async function assertFreshRead(
+  tx: Prisma.TransactionClient,
+  principal: Principal,
+  permission?: Permission,
+) {
+  const session = await tx.session.findUnique({
+    where: { id: principal.sessionId },
+    select: sessionWithUser,
   });
   if (
     !session ||
@@ -73,8 +126,7 @@ export async function logout(token: string, ctx: RequestContext) {
       context: ctx,
     });
   });
-}
-export async function changePassword(
+}export async function changePassword(
   principal: Principal,
   input: { currentPassword: string; newPassword: string },
   ctx: RequestContext,
@@ -117,6 +169,9 @@ export async function changePassword(
     await tx.passwordResetToken.updateMany({
       where: { userId: principal.userId, usedAt: null },
       data: { usedAt: new Date() },
+    });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(old.email) } },
     });
     await writeAudit(tx, {
       actorType: "USER",

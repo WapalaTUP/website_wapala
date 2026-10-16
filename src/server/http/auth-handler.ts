@@ -2,10 +2,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import { getConfig } from "../config";
-import { getDb } from "../db";
 import { DomainError } from "../errors";
 import { EventAnswerError } from "../domains/event-registrations";
-import { resolveSession } from "../auth/sessions";
+import { resolveSessionRecord } from "../auth/sessions";
 import { requirePermission, type Permission } from "../auth/policy";
 import {
   assertOrigin,
@@ -131,19 +130,17 @@ export function assertPreAuth(request: Request) {
 }
 export async function authenticated(request: Request, permission?: Permission) {
   const token = readCookie(request, cookieName("session")) || "",
-    principal = await resolveSession(token);
-  if (!principal)
+    record = await resolveSessionRecord(token);
+  if (!record)
     throw new DomainError("UNAUTHENTICATED", 401, "Silakan login kembali.");
+  const { principal, csrfDigest } = record;
   if (permission) requirePermission(principal, permission);
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     assertOrigin(request);
     const csrf = request.headers.get("x-csrf-token") || "";
-    const row = await getDb().session.findUniqueOrThrow({
-      where: { id: principal.sessionId },
-    });
     if (
       !constantEqual(csrf, csrfForSession(token)) ||
-      !constantEqual(row.csrfDigest, digestToken(csrf))
+      !constantEqual(csrfDigest, digestToken(csrf))
     )
       throw new DomainError("CSRF_DENIED", 403);
   }

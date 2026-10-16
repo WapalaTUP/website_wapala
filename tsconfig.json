@@ -38,6 +38,10 @@
     ".next-http-test/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "Vercel",
+    "output",
+    "tmp",
+    ".local"
   ]
 }

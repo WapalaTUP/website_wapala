@@ -4,7 +4,7 @@ import { getConfig } from "../config";
 import { DomainError } from "../errors";
 import { hashPassword } from "../security/password";
 import { newToken, digestToken } from "../security/tokens";
-import { takeThrottle } from "../security/throttle";
+import { takeThrottle, loginLockPrefixFor } from "../security/throttle";
 import type { RequestContext } from "../security/request-context";
 import { enqueueEmail } from "../email/outbox";
 import { writeAudit } from "../audit";
@@ -106,6 +106,9 @@ export async function completeRecovery(
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
     });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(user.email) } },
+    });
     await writeAudit(tx, {
       actorType: "USER",
       actorId: user.id,
@@ -141,6 +144,9 @@ export async function recoverSuperuser(password: string, ctx: RequestContext) {
     await tx.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
+    });
+    await tx.securityThrottle.deleteMany({
+      where: { key: { startsWith: loginLockPrefixFor(user.email) } },
     });
     await writeAudit(tx, {
       actorType: "SERVER_OPERATOR",

@@ -4,9 +4,11 @@ import { DomainError } from "../errors";
 import { verifyPassword, dummyHash } from "../security/password";
 import { newToken, digestToken } from "../security/tokens";
 import { csrfForSession } from "../security/csrf";
-import { takeThrottle } from "../security/throttle";
+import { takeThrottle, isLoginLocked, recordLoginFailure, clearLoginLock } from "../security/throttle";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
+const LOCK_AFTER_FAILURES = 6,
+  LOCK_WINDOW_MS = 86400000;
 export async function login(
   input: { email: string; password: string },
   ctx: RequestContext,
@@ -14,6 +16,15 @@ export async function login(
   const email = input.email.trim().toLowerCase();
   await takeThrottle("login-ip:" + ctx.ipDigest, 20, 900000);
   await takeThrottle("login-email:" + email, 10, 900000);
+  // Lock hanya berlaku untuk kombinasi (email, IP) ini; akun tetap
+  // bisa login dari jaringan lain dan pemilik akun tidak bisa
+  // dikunci secara permanen oleh pihak ketiga.
+  if (await isLoginLocked(email, ctx.ipDigest, LOCK_AFTER_FAILURES, LOCK_WINDOW_MS))
+    throw new DomainError(
+      "LOGIN_LOCKED",
+      423,
+      "Terlalu banyak percobaan gagal untuk akun ini dari jaringan Anda. Coba lagi nanti atau hubungi pengelola.",
+    );
   const snapshot = await getDb().user.findUnique({ where: { email } });
   const valid = await verifyPassword(
     snapshot?.passwordHash || (await dummyHash()),
@@ -22,6 +33,7 @@ export async function login(
   const token = newToken(),
     csrfToken = csrfForSession(token),
     expiresAt = new Date(Date.now() + 30 * 86400000);
+  let wrongPassword = false;
   const result = await getDb().$transaction(async (tx) => {
     if (!snapshot) {
       await writeAudit(tx, {
@@ -45,18 +57,7 @@ export async function login(
       user.archivedAt ||
       user.passwordHash !== snapshot.passwordHash
     ) {
-      if (!valid && !locked && user.active && !user.archivedAt) {
-        const count = user.failedLoginCount + 1;
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            failedLoginCount: count,
-            lockUntil:
-              count === 3 ? new Date(Date.now() + 900000) : user.lockUntil,
-            requiresUnlock: count >= 6,
-          },
-        });
-      }
+      wrongPassword = !valid && !locked && user.active && !user.archivedAt;
       await writeAudit(tx, {
         actorType: "ANONYMOUS",
         action: "LOGIN_REJECTED",
@@ -91,11 +92,20 @@ export async function login(
       mustChangePassword: user.mustChangePassword,
     };
   });
-  if (!result)
+  if (!result) {
+    if (wrongPassword)
+      await recordLoginFailure(
+        email,
+        ctx.ipDigest,
+        LOCK_AFTER_FAILURES,
+        LOCK_WINDOW_MS,
+      );
     throw new DomainError(
       "LOGIN_FAILED",
       401,
       "Email atau password tidak sesuai, atau akses belum tersedia.",
     );
+  }
+  await clearLoginLock(email, ctx.ipDigest);
   return { token, csrfToken, principal: result, expiresAt };
 }
