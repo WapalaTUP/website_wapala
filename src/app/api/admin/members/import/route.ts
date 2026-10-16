@@ -6,11 +6,7 @@ export const dynamic = "force-dynamic";
 export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "members:write");
-    const { rows } = await readJson(
-      request,
-      memberImportSchema,
-      2 * 1024 * 1024,
-    );
+    const { rows } = await readJson(request, memberImportSchema, 2 * 1024 * 1024);
     return jsonResponse(await importMembers(principal, rows, ctx), 201);
   });
 }

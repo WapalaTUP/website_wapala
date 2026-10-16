@@ -21,12 +21,7 @@ export function BackendGenerations({
     [error, setError] = useState("");
   async function refresh() {
     setRows(
-      (
-        await backendApi<{ generations: Row[] }>(
-          "/api/admin/generations",
-          csrfToken,
-        )
-      ).generations,
+      (await backendApi<{ generations: Row[] }>("/api/admin/generations", csrfToken)).generations,
     );
   }
   async function save(value: Draft) {
@@ -47,11 +42,7 @@ export function BackendGenerations({
   return (
     <>
       <div className="admin-toolbar">
-        <Field
-          label="Cari angkatan"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <Field label="Cari angkatan" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button
           className="btn primary"
           onClick={() => {
@@ -74,9 +65,7 @@ export function BackendGenerations({
       <div className="generation-grid">
         {rows
           .filter((r) =>
-            (r.name + " " + r.number + " " + r.label)
-              .toLowerCase()
-              .includes(query.toLowerCase()),
+            (r.name + " " + r.number + " " + r.label).toLowerCase().includes(query.toLowerCase()),
           )
           .map((row) => (
             <article className="panel" key={row.number}>
@@ -155,9 +144,7 @@ export function BackendGenerations({
                 required
                 disabled={!!draft.version}
                 value={draft.number}
-                onChange={(e) =>
-                  setDraft({ ...draft, number: Number(e.target.value) })
-                }
+                onChange={(e) => setDraft({ ...draft, number: Number(e.target.value) })}
               />
               <Field
                 label="Nama angkatan"
@@ -200,11 +187,7 @@ export function BackendGenerations({
                 setBusy(true);
                 setError("");
                 try {
-                  const photo = await uploadMedia(
-                    files[0],
-                    "generation-photo",
-                    csrfToken,
-                  );
+                  const photo = await uploadMedia(files[0], "generation-photo", csrfToken);
                   setDraft((old) => (old ? { ...old, photo } : old));
                 } catch (e) {
                   setError(e instanceof Error ? e.message : "Upload gagal.");
@@ -251,25 +234,19 @@ export function BackendGenerations({
         {archive && (
           <>
             <p>
-              {archive.name}. Data dan foto tetap disimpan; angkatan yang
-              diarsipkan tidak tampil di website publik.
+              {archive.name}. Data dan foto tetap disimpan; angkatan yang diarsipkan tidak tampil di
+              website publik.
             </p>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">
               <button
                 className="btn primary"
                 disabled={busy}
-                onClick={() =>
-                  void save({ ...archive, archived: !archive.archived })
-                }
+                onClick={() => void save({ ...archive, archived: !archive.archived })}
               >
                 {archive.archived ? "Pulihkan" : "Arsipkan"}
               </button>
-              <button
-                className="btn secondary"
-                disabled={busy}
-                onClick={() => setArchive(null)}
-              >
+              <button className="btn secondary" disabled={busy} onClick={() => setArchive(null)}>
                 Batal
               </button>
             </div>

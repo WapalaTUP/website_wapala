@@ -126,7 +126,8 @@ export async function logout(token: string, ctx: RequestContext) {
       context: ctx,
     });
   });
-}export async function changePassword(
+}
+export async function changePassword(
   principal: Principal,
   input: { currentPassword: string; newPassword: string },
   ctx: RequestContext,
@@ -135,11 +136,7 @@ export async function logout(token: string, ctx: RequestContext) {
     where: { id: principal.userId },
   });
   if (!(await verifyPassword(old.passwordHash, input.currentPassword)))
-    throw new DomainError(
-      "PASSWORD_INVALID",
-      400,
-      "Password saat ini tidak sesuai.",
-    );
+    throw new DomainError("PASSWORD_INVALID", 400, "Password saat ini tidak sesuai.");
   if (input.currentPassword === input.newPassword)
     throw new DomainError(
       "PASSWORD_UNCHANGED",
@@ -149,8 +146,7 @@ export async function logout(token: string, ctx: RequestContext) {
   const passwordHash = await hashPassword(input.newPassword);
   await getDb().$transaction(async (tx) => {
     const current = await assertFresh(tx, principal);
-    if (current.passwordHash !== old.passwordHash)
-      throw new DomainError("UNAUTHENTICATED", 401);
+    if (current.passwordHash !== old.passwordHash) throw new DomainError("UNAUTHENTICATED", 401);
     await tx.user.update({
       where: { id: principal.userId },
       data: {

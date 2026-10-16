@@ -1,3 +1,4 @@
+import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import { getDb } from "./db";
@@ -18,9 +19,7 @@ export const brandingKeys = [
   "jumbotronUrl",
   "logoMeaningImageUrl",
 ] as const;
-const brandingMedia = z
-  .union([z.literal(""), z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/)])
-  .optional();
+const brandingMedia = z.union([z.literal(""), mediaUrlSchema()]).optional();
 const publicLink = z
   .union([
     z.literal(""),
@@ -88,9 +87,7 @@ export async function updateSettings(
       where: { id: 1 },
     });
     const previous =
-      before.config &&
-      typeof before.config === "object" &&
-      !Array.isArray(before.config)
+      before.config && typeof before.config === "object" && !Array.isArray(before.config)
         ? before.config
         : {};
     const row = await tx.siteSettings.update({
@@ -107,10 +104,7 @@ export async function updateSettings(
     return row;
   });
 }
-export async function listAudit(
-  principal: Principal,
-  input: { cursor?: string; limit?: number },
-) {
+export async function listAudit(principal: Principal, input: { cursor?: string; limit?: number }) {
   requirePermission(principal, "audit:read");
   const validated = z
     .object({

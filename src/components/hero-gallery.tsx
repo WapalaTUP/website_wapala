@@ -2,13 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  Pause,
-  Play,
-} from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { useDemo } from "@/lib/store";
 import { Modal } from "./ui";
 import {
@@ -21,15 +15,10 @@ import {
 export function HeroGallery() {
   const state = useDemo();
   const source = useMemo(
-    () =>
-      getHeroGalleryPhotos(
-        getPublicAlbums(state.records.galeri, !state.backend),
-      ),
+    () => getHeroGalleryPhotos(getPublicAlbums(state.records.galeri, !state.backend)),
     [state.records.galeri, state.backend],
   );
-  const [fullPhoto, setFullPhoto] = useState<(typeof source)[number] | null>(
-    null,
-  );
+  const [fullPhoto, setFullPhoto] = useState<(typeof source)[number] | null>(null);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [explicitPlay, setExplicitPlay] = useState(false);
@@ -40,10 +29,9 @@ export function HeroGallery() {
   const [onScreen, setOnScreen] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setOnScreen(entry.isIntersecting),
-      { threshold: 0.05 },
-    );
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting), {
+      threshold: 0.05,
+    });
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
@@ -62,14 +50,11 @@ export function HeroGallery() {
   }, []);
   const photo = source[index % (source.length || 1)];
   const current = photo?.album;
-  const previews = Array.from(
-    { length: Math.min(5, source.length) },
-    (_, offset) => ({
-      ...source[(index + offset) % source.length],
-      index: (index + offset) % source.length,
-      active: offset === 0,
-    }),
-  );
+  const previews = Array.from({ length: Math.min(5, source.length) }, (_, offset) => ({
+    ...source[(index + offset) % source.length],
+    index: (index + offset) % source.length,
+    active: offset === 0,
+  }));
   const playing = canAutoplaySlideshow({
     paused,
     hovered,
@@ -81,10 +66,7 @@ export function HeroGallery() {
   });
   useEffect(() => {
     if (!playing || source.length < 2) return;
-    const timer = setInterval(
-      () => setIndex((i) => (i + 1) % source.length),
-      5000,
-    );
+    const timer = setInterval(() => setIndex((i) => (i + 1) % source.length), 5000);
     return () => clearInterval(timer);
   }, [playing, source.length]);
   const move = (direction: number) => {
@@ -114,10 +96,7 @@ export function HeroGallery() {
         {previews.map((p, slot) => (
           <button
             key={slot}
-            className={
-              "hero-photo-cell hero-gallery-tile" +
-              (p.active ? " is-active" : "")
-            }
+            className={"hero-photo-cell hero-gallery-tile" + (p.active ? " is-active" : "")}
             aria-label={
               p.active
                 ? "Lihat foto penuh: " + p.album.title
@@ -149,9 +128,7 @@ export function HeroGallery() {
                   : "(max-width: 760px) 20vw, 5vw"
               }
             />
-            <span className="hero-tile-marker">
-              {p.active ? "Lihat foto" : p.index + 1}
-            </span>
+            <span className="hero-tile-marker">{p.active ? "Lihat foto" : p.index + 1}</span>
           </button>
         ))}
       </div>
@@ -183,11 +160,7 @@ export function HeroGallery() {
         </div>
       </div>
       <div className="container hero-album-panel">
-        <div
-          className="hero-album-copy"
-          aria-live={playing ? "off" : "polite"}
-          aria-atomic="true"
-        >
+        <div className="hero-album-copy" aria-live={playing ? "off" : "polite"} aria-atomic="true">
           {current ? (
             <>
               <span className="hero-highlight-label">
@@ -198,11 +171,7 @@ export function HeroGallery() {
                 <ArrowUpRight size={18} />
               </Link>
               <p>{current.description}</p>
-              <time
-                dateTime={
-                  current.activityDate || current.uploadedAt || undefined
-                }
-              >
+              <time dateTime={current.activityDate || current.uploadedAt || undefined}>
                 {albumDate(current)}
               </time>
             </>
@@ -215,11 +184,7 @@ export function HeroGallery() {
             <span>
               {(index % source.length) + 1} / {source.length} foto
             </span>
-            <button
-              className="hero-control"
-              aria-label="Album sebelumnya"
-              onClick={() => move(-1)}
-            >
+            <button className="hero-control" aria-label="Album sebelumnya" onClick={() => move(-1)}>
               <ChevronLeft size={20} />
             </button>
             <button
@@ -239,11 +204,7 @@ export function HeroGallery() {
             >
               {paused ? <Play size={16} /> : <Pause size={16} />}
             </button>
-            <button
-              className="hero-control"
-              aria-label="Album berikutnya"
-              onClick={() => move(1)}
-            >
+            <button className="hero-control" aria-label="Album berikutnya" onClick={() => move(1)}>
               <ChevronRight size={20} />
             </button>
           </div>

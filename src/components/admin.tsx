@@ -21,21 +21,8 @@ import {
   LogOut,
   Bell,
 } from "lucide-react";
-import type {
-  DemoState,
-  Equipment,
-  Loan,
-  Module,
-  RecordRow,
-  Role,
-} from "@/lib/types";
-import {
-  canAccess,
-  canEdit,
-  canTransition,
-  latePenalty,
-  permissions,
-} from "@/lib/domain";
+import type { DemoState, Equipment, Loan, Module, RecordRow, Role } from "@/lib/types";
+import { canAccess, canEdit, canTransition, latePenalty, permissions } from "@/lib/domain";
 import { albums, books, conditions, date, money, photos } from "@/lib/content";
 import { useDemo, updateStore, resetStore } from "@/lib/store";
 import { roles, setRole, useRole } from "@/lib/admin-role";
@@ -47,20 +34,8 @@ import { ManagementReset } from "./management-reset";
 import { exportRows, invoicePdf, applicantPdf } from "@/lib/exports";
 import { Logo, ThemeButton } from "./shell";
 import { useToast } from "./providers";
-import {
-  Badge,
-  Empty,
-  Field,
-  Modal,
-  Notice,
-  Pagination,
-  Select,
-  Textarea,
-} from "./ui";
-const moduleInfo: Record<
-  Module,
-  { title: string; description: string; icon: typeof Users }
-> = {
+import { Badge, Empty, Field, Modal, Notice, Pagination, Select, Textarea } from "./ui";
+const moduleInfo: Record<Module, { title: string; description: string; icon: typeof Users }> = {
   kepengurusan: {
     title: "Reset periode kepengurusan",
     description: "Serah terima arsip peminjaman dan permintaan akses admin.",
@@ -68,8 +43,7 @@ const moduleInfo: Record<
   },
   anggota: {
     title: "Anggota",
-    description:
-      "Data internal anggota. Semua baris pada preview adalah contoh fiktif.",
+    description: "Data internal anggota. Semua baris pada preview adalah contoh fiktif.",
     icon: Users,
   },
   konten: {
@@ -104,8 +78,7 @@ const moduleInfo: Record<
   },
   donasi: {
     title: "Kampanye & donasi",
-    description:
-      "Kelola kampanye, buka atau tutup donasi, dan verifikasi konfirmasi transfer.",
+    description: "Kelola kampanye, buka atau tutup donasi, dan verifikasi konfirmasi transfer.",
     icon: Heart,
   },
   pengguna: {
@@ -159,9 +132,7 @@ export function Login() {
             onSubmit={(e) => {
               e.preventDefault();
               if (email !== "demo@wapala.id" || password !== "wapala-demo") {
-                setError(
-                  "Gunakan email demo@wapala.id dan password wapala-demo.",
-                );
+                setError("Gunakan email demo@wapala.id dan password wapala-demo.");
                 return;
               }
               setRole(role);
@@ -192,8 +163,8 @@ export function Login() {
             <button className="btn primary">Masuk</button>
           </form>
           <Notice>
-            Preview saja. Password: <strong>wapala-demo</strong>. Autentikasi
-            dan izin server akan diterapkan pada tahap backend.
+            Preview saja. Password: <strong>wapala-demo</strong>. Autentikasi dan izin server akan
+            diterapkan pada tahap backend.
           </Notice>
           <Link className="text-link" href="/" style={{ marginTop: 20 }}>
             Kembali ke website
@@ -277,9 +248,7 @@ export function Admin({ moduleName }: { moduleName: string }) {
             >
               <Menu />
             </button>
-            <span className="breadcrumb">
-              Portal organisasi / {info?.title || "Modul"}
-            </span>
+            <span className="breadcrumb">Portal organisasi / {info?.title || "Modul"}</span>
           </div>
           <div>
             <select
@@ -358,8 +327,8 @@ export function Admin({ moduleName }: { moduleName: string }) {
                 <Records module={activeModule} role={role} />
               )}
               <p className="role-notice">
-                Izin pada versi ini mengatur UI preview. Validasi izin di server
-                merupakan bagian dari tahap backend.
+                Izin pada versi ini mengatur UI preview. Validasi izin di server merupakan bagian
+                dari tahap backend.
               </p>
             </>
           ) : (
@@ -386,9 +355,7 @@ export function Admin({ moduleName }: { moduleName: string }) {
           {state.donations
             .filter((d) => d.status === "Menunggu")
             .map((d) => (
-              <Notice key={d.id}>
-                Konfirmasi donasi {money(d.amount)} menunggu pemeriksaan.
-              </Notice>
+              <Notice key={d.id}>Konfirmasi donasi {money(d.amount)} menunggu pemeriksaan.</Notice>
             ))}
         </div>
       </Modal>
@@ -507,11 +474,7 @@ function Records({ module, role }: { module: Module; role: Role }) {
   const defs = definitions[module] || [];
   const rows = rowsFor(module, state).filter(
     (r) =>
-      !r.archived &&
-      Object.values(r.fields)
-        .join(" ")
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      !r.archived && Object.values(r.fields).join(" ").toLowerCase().includes(search.toLowerCase()),
   );
   const columns = defs.slice(0, 4);
   async function exportData(format: "xlsx" | "pdf") {
@@ -597,18 +560,14 @@ function Records({ module, role }: { module: Module; role: Role }) {
                     <div className="table-actions">
                       <button
                         className="icon-btn"
-                        aria-label={
-                          "Edit " + (row.fields.nama || row.fields.judul)
-                        }
+                        aria-label={"Edit " + (row.fields.nama || row.fields.judul)}
                         onClick={() => setDraft(structuredClone(row))}
                       >
                         <Pencil size={15} />
                       </button>
                       <button
                         className="icon-btn"
-                        aria-label={
-                          "Arsipkan " + (row.fields.nama || row.fields.judul)
-                        }
+                        aria-label={"Arsipkan " + (row.fields.nama || row.fields.judul)}
                         onClick={() => setArchive(row)}
                       >
                         <Archive size={15} />
@@ -621,10 +580,7 @@ function Records({ module, role }: { module: Module; role: Role }) {
           </table>
         </div>
       ) : (
-        <Empty
-          title="Belum ada record"
-          description="Tambah data atau ubah pencarian."
-        />
+        <Empty title="Belum ada record" description="Tambah data atau ubah pencarian." />
       )}
       <Pagination page={page} total={rows.length} onChange={setPage} />
       <Modal
@@ -636,9 +592,7 @@ function Records({ module, role }: { module: Module; role: Role }) {
           <form className="form-main" onSubmit={save}>
             <div className="form-grid">
               {defs.map((def) =>
-                def.key === "isi" ||
-                def.key === "deskripsi" ||
-                def.key === "ringkasan" ? (
+                def.key === "isi" || def.key === "deskripsi" || def.key === "ringkasan" ? (
                   <div key={def.key} className="full">
                     <Textarea
                       label={def.label}
@@ -684,28 +638,20 @@ function Records({ module, role }: { module: Module; role: Role }) {
             </div>
             {module === "pengguna" && (
               <Notice>
-                Akun contoh dibuat untuk review izin. Password awal, pergantian
-                wajib, dan pemulihan akun diterapkan pada backend.
+                Akun contoh dibuat untuk review izin. Password awal, pergantian wajib, dan pemulihan
+                akun diterapkan pada backend.
               </Notice>
             )}
             <div className="button-row">
               <button className="btn primary">Simpan perubahan</button>
-              <button
-                className="btn secondary"
-                type="button"
-                onClick={() => setDraft(null)}
-              >
+              <button className="btn secondary" type="button" onClick={() => setDraft(null)}>
                 Batalkan
               </button>
             </div>
           </form>
         )}
       </Modal>
-      <Modal
-        open={!!archive}
-        title="Arsipkan record?"
-        onClose={() => setArchive(null)}
-      >
+      <Modal open={!!archive} title="Arsipkan record?" onClose={() => setArchive(null)}>
         <p>Record dapat dipulihkan oleh Super User dari modul arsip.</p>
         <div className="button-row">
           <button
@@ -817,14 +763,9 @@ function Inventory({ role }: { role: Role }) {
         </table>
       </div>
       <p className="role-notice">
-        Pengunjung melihat tersedia/tidak tersedia. Angka stok hanya ditampilkan
-        di admin.
+        Pengunjung melihat tersedia/tidak tersedia. Angka stok hanya ditampilkan di admin.
       </p>
-      <Modal
-        open={!!draft}
-        title="Detail inventaris"
-        onClose={() => setDraft(null)}
-      >
+      <Modal open={!!draft} title="Detail inventaris" onClose={() => setDraft(null)}>
         {draft && (
           <form
             className="form-main"
@@ -834,11 +775,7 @@ function Inventory({ role }: { role: Role }) {
                 toast("Jumlah layak tidak boleh melebihi jumlah total.");
                 return;
               }
-              if (
-                state.equipment.some(
-                  (eq) => eq.id !== draft.id && eq.code === draft.code,
-                )
-              ) {
+              if (state.equipment.some((eq) => eq.id !== draft.id && eq.code === draft.code)) {
                 toast("Kode inventaris sudah digunakan.");
                 return;
               }
@@ -872,20 +809,12 @@ function Inventory({ role }: { role: Role }) {
                   label={label}
                   required={["code", "name", "brand", "location"].includes(key)}
                   value={String(draft[key as keyof Equipment] ?? "")}
-                  onChange={(e) =>
-                    setDraft({ ...draft, [key]: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
                 />
               ))}
               <Select
                 label="Kategori"
-                options={[
-                  "Gunung Hutan",
-                  "Rock Climbing",
-                  "Caving",
-                  "Rafting",
-                  "Lainnya",
-                ]}
+                options={["Gunung Hutan", "Rock Climbing", "Caving", "Rafting", "Lainnya"]}
                 value={draft.category}
                 onChange={(v) => setDraft({ ...draft, category: v })}
               />
@@ -893,9 +822,7 @@ function Inventory({ role }: { role: Role }) {
                 label="Kondisi"
                 options={[...conditions]}
                 value={draft.condition}
-                onChange={(v) =>
-                  setDraft({ ...draft, condition: v as Equipment["condition"] })
-                }
+                onChange={(v) => setDraft({ ...draft, condition: v as Equipment["condition"] })}
               />
               {[
                 ["total", "Jumlah total"],
@@ -910,9 +837,7 @@ function Inventory({ role }: { role: Role }) {
                   min={key === "total" || key === "fit" ? 0 : 1}
                   required
                   value={Number(draft[key as keyof Equipment])}
-                  onChange={(e) =>
-                    setDraft({ ...draft, [key]: Number(e.target.value) })
-                  }
+                  onChange={(e) => setDraft({ ...draft, [key]: Number(e.target.value) })}
                 />
               ))}
             </div>
@@ -925,19 +850,13 @@ function Inventory({ role }: { role: Role }) {
               <input
                 type="checkbox"
                 checked={draft.available}
-                onChange={(e) =>
-                  setDraft({ ...draft, available: e.target.checked })
-                }
+                onChange={(e) => setDraft({ ...draft, available: e.target.checked })}
               />
               Tampilkan sebagai tersedia untuk publik
             </label>
             <div className="button-row">
               <button className="btn primary">Simpan alat</button>
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => setDraft(null)}
-              >
+              <button type="button" className="btn secondary" onClick={() => setDraft(null)}>
                 Batalkan
               </button>
             </div>
@@ -957,9 +876,7 @@ function Loans({ role }: { role: Role }) {
     (l) =>
       !l.archived &&
       (filter === "Semua status" || l.status === filter) &&
-      (l.code + " " + l.institution)
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      (l.code + " " + l.institution).toLowerCase().includes(search.toLowerCase()),
   );
   const loan = state.loans.find((l) => l.id === selected);
   return (
@@ -1003,9 +920,7 @@ function Loans({ role }: { role: Role }) {
               })),
               "xlsx",
             )
-              .then(() =>
-                updateStore(() => {}, "Ekspor peminjaman", "peminjaman", role),
-              )
+              .then(() => updateStore(() => {}, "Ekspor peminjaman", "peminjaman", role))
               .catch(() => toast("Gagal membuat ekspor."));
           }}
         >
@@ -1040,10 +955,7 @@ function Loans({ role }: { role: Role }) {
                     <Badge>{l.status}</Badge>
                   </td>
                   <td>
-                    <button
-                      className="btn secondary"
-                      onClick={() => setSelected(l.id)}
-                    >
+                    <button className="btn secondary" onClick={() => setSelected(l.id)}>
                       Tinjau
                     </button>
                   </td>
@@ -1075,15 +987,7 @@ function Loans({ role }: { role: Role }) {
     </>
   );
 }
-function LoanReview({
-  loan,
-  role,
-  close,
-}: {
-  loan: Loan;
-  role: Role;
-  close: () => void;
-}) {
+function LoanReview({ loan, role, close }: { loan: Loan; role: Role; close: () => void }) {
   const state = useDemo();
   const toast = useToast();
   const [draft, setDraft] = useState({
@@ -1094,9 +998,7 @@ function LoanReview({
     })),
   });
   const [error, setError] = useState("");
-  const returns = ["Menunggu Verifikasi Pengembalian", "Terlambat"].includes(
-    loan.status,
-  );
+  const returns = ["Menunggu Verifikasi Pengembalian", "Terlambat"].includes(loan.status);
   function save(status: Loan["status"]) {
     setError("");
     if (status === "Ditolak" && !draft.notes.trim()) {
@@ -1123,25 +1025,18 @@ function LoanReview({
             (l) =>
               l.id !== loan.id &&
               !l.archived &&
-              [
-                "Disetujui",
-                "Dipinjam",
-                "Terlambat",
-                "Menunggu Verifikasi Pengembalian",
-              ].includes(l.status) &&
+              ["Disetujui", "Dipinjam", "Terlambat", "Menunggu Verifikasi Pengembalian"].includes(
+                l.status,
+              ) &&
               l.start <= loan.end &&
               l.end >= loan.start,
           )
           .reduce(
-            (sum, l) =>
-              sum +
-              (l.items.find((i) => i.equipmentId === eq.id)?.approved || 0),
+            (sum, l) => sum + (l.items.find((i) => i.equipmentId === eq.id)?.approved || 0),
             0,
           );
         if (item.approved > eq.fit - reserved) {
-          setError(
-            "Jumlah " + eq.name + " melebihi stok layak pada jadwal tersebut.",
-          );
+          setError("Jumlah " + eq.name + " melebihi stok layak pada jadwal tersebut.");
           return;
         }
       }
@@ -1156,9 +1051,7 @@ function LoanReview({
           ...draft,
           status,
           collateralStatus:
-            status === "Dikembalikan"
-              ? ("Dikembalikan" as const)
-              : draft.collateralStatus,
+            status === "Dikembalikan" ? ("Dikembalikan" as const) : draft.collateralStatus,
           history: [
             ...loan.history,
             {
@@ -1209,9 +1102,7 @@ function LoanReview({
           <tbody>
             {draft.items.map((i, index) => (
               <tr key={i.equipmentId}>
-                <td>
-                  {state.equipment.find((e) => e.id === i.equipmentId)?.name}
-                </td>
+                <td>{state.equipment.find((e) => e.id === i.equipmentId)?.name}</td>
                 <td>{i.requested}</td>
                 <td>
                   {returns ? (
@@ -1225,8 +1116,7 @@ function LoanReview({
                             n === index
                               ? {
                                   ...j,
-                                  returnCondition: e.target
-                                    .value as Equipment["condition"],
+                                  returnCondition: e.target.value as Equipment["condition"],
                                 }
                               : j,
                           ),
@@ -1249,9 +1139,7 @@ function LoanReview({
                         setDraft({
                           ...draft,
                           items: draft.items.map((j, n) =>
-                            n === index
-                              ? { ...j, approved: Number(e.target.value) }
-                              : j,
+                            n === index ? { ...j, approved: Number(e.target.value) } : j,
                           ),
                         })
                       }
@@ -1297,9 +1185,7 @@ function LoanReview({
         <>
           <Notice>
             Denda keterlambatan hari ini:{" "}
-            {money(
-              latePenalty(loan.end, new Date().toISOString().slice(0, 10)),
-            )}
+            {money(latePenalty(loan.end, new Date().toISOString().slice(0, 10)))}
           </Notice>
           <div className="form-grid">
             <Field
@@ -1307,9 +1193,7 @@ function LoanReview({
               type="number"
               min={0}
               value={draft.penalty}
-              onChange={(e) =>
-                setDraft({ ...draft, penalty: Number(e.target.value) })
-              }
+              onChange={(e) => setDraft({ ...draft, penalty: Number(e.target.value) })}
             />
             <Select
               label="Status denda"
@@ -1348,11 +1232,7 @@ function LoanReview({
         {!["Diajukan", "Ditolak"].includes(loan.status) && (
           <button
             className="btn secondary"
-            onClick={() =>
-              invoicePdf(loan, state).catch(() =>
-                toast("Gagal membuat invoice."),
-              )
-            }
+            onClick={() => invoicePdf(loan, state).catch(() => toast("Gagal membuat invoice."))}
           >
             Unduh invoice
           </button>
@@ -1376,9 +1256,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
   const [newPeriod, setNewPeriod] = useState("");
   const [selected, setSelected] = useState("");
   const edit = canEdit(role, "or");
-  const rows = state.applicants.filter(
-    (a) => !a.archived && a.period === period,
-  );
+  const rows = state.applicants.filter((a) => !a.archived && a.period === period);
   const a = rows.find((a) => a.id === selected);
   return (
     <>
@@ -1393,20 +1271,15 @@ function RecruitmentAdmin({ role }: { role: Role }) {
                 onClick={() =>
                   updateStore(
                     (d) => {
-                      d.settings.recruitmentActive =
-                        !d.settings.recruitmentActive;
+                      d.settings.recruitmentActive = !d.settings.recruitmentActive;
                     },
-                    state.settings.recruitmentActive
-                      ? "Menutup OR"
-                      : "Melanjutkan periode OR",
+                    state.settings.recruitmentActive ? "Menutup OR" : "Melanjutkan periode OR",
                     state.settings.period,
                     role,
                   )
                 }
               >
-                {state.settings.recruitmentActive
-                  ? "Tutup periode"
-                  : "Lanjutkan periode"}
+                {state.settings.recruitmentActive ? "Tutup periode" : "Lanjutkan periode"}
               </button>
             </div>
             <div className="recruitment-new-year">
@@ -1430,9 +1303,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
                     return;
                   }
                   if (state.settings.periods.includes(label)) {
-                    toast(
-                      "Periode tahun tersebut sudah ada. Pilih dari filter periode.",
-                    );
+                    toast("Periode tahun tersebut sudah ada. Pilih dari filter periode.");
                     return;
                   }
                   updateStore(
@@ -1469,9 +1340,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
           className="btn secondary"
           onClick={() =>
             exportRows("Pendaftar OR", rows.map(applicantExportRow), "xlsx")
-              .then(() =>
-                updateStore(() => {}, "Ekspor OR Excel", period, role),
-              )
+              .then(() => updateStore(() => {}, "Ekspor OR Excel", period, role))
               .catch(() => toast("Ekspor gagal."))
           }
         >
@@ -1512,10 +1381,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
                   <td>{date(a.createdAt)}</td>
                   <td>{a.revisions}</td>
                   <td>
-                    <button
-                      className="btn secondary"
-                      onClick={() => setSelected(a.id)}
-                    >
+                    <button className="btn secondary" onClick={() => setSelected(a.id)}>
                       Lihat
                     </button>
                   </td>
@@ -1530,11 +1396,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
           description="Pilih periode lain atau coba formulir OR publik."
         />
       )}
-      <Modal
-        open={!!a}
-        title={"Pendaftar " + (a?.code || "")}
-        onClose={() => setSelected("")}
-      >
+      <Modal open={!!a} title={"Pendaftar " + (a?.code || "")} onClose={() => setSelected("")}>
         {a && (
           <>
             <dl className="summary-list">
@@ -1548,9 +1410,7 @@ function RecruitmentAdmin({ role }: { role: Role }) {
             <p className="role-notice">Pas foto: {a.photoName}</p>
             <button
               className="btn primary"
-              onClick={() =>
-                applicantPdf(a).catch(() => toast("Gagal membuat formulir."))
-              }
+              onClick={() => applicantPdf(a).catch(() => toast("Gagal membuat formulir."))}
             >
               Unduh formulir PDF
             </button>
@@ -1606,13 +1466,7 @@ function SettingsAdmin({ role }: { role: Role }) {
             <Field
               key={key}
               label={label}
-              type={
-                key === "email"
-                  ? "email"
-                  : key === "campaignEnd"
-                    ? "date"
-                    : "text"
-              }
+              type={key === "email" ? "email" : key === "campaignEnd" ? "date" : "text"}
               value={String(s[key as keyof typeof s])}
               onChange={(e) => setS({ ...s, [key]: e.target.value })}
             />
@@ -1623,9 +1477,7 @@ function SettingsAdmin({ role }: { role: Role }) {
           <input
             type="checkbox"
             checked={s.recruitmentActive}
-            onChange={(e) =>
-              setS({ ...s, recruitmentActive: e.target.checked })
-            }
+            onChange={(e) => setS({ ...s, recruitmentActive: e.target.checked })}
           />
         </label>
         <div className="button-row">
@@ -1643,14 +1495,8 @@ function SettingsAdmin({ role }: { role: Role }) {
           Reset data contoh
         </button>
       </div>
-      <Modal
-        open={confirm}
-        title="Reset data contoh?"
-        onClose={() => setConfirm(false)}
-      >
-        <p>
-          Semua perubahan pada browser ini akan diganti dengan data contoh awal.
-        </p>
+      <Modal open={confirm} title="Reset data contoh?" onClose={() => setConfirm(false)}>
+        <p>Semua perubahan pada browser ini akan diganti dengan data contoh awal.</p>
         <div className="button-row">
           <button
             className="btn primary"
@@ -1710,9 +1556,8 @@ function Archives({ role }: { role: Role }) {
                         onClick={() =>
                           updateStore(
                             (d) => {
-                              d.records[item.module].find(
-                                (r) => r.id === item.id,
-                              )!.archived = false;
+                              d.records[item.module].find((r) => r.id === item.id)!.archived =
+                                false;
                             },
                             "Memulihkan record",
                             item.id,
@@ -1745,11 +1590,7 @@ function Archives({ role }: { role: Role }) {
           description="Record yang diarsipkan akan ditampilkan di sini."
         />
       )}
-      <Modal
-        open={!!selected}
-        title="Hapus permanen?"
-        onClose={() => setSelected(null)}
-      >
+      <Modal open={!!selected} title="Hapus permanen?" onClose={() => setSelected(null)}>
         <form
           className="form-main"
           onSubmit={(e) => {
@@ -1770,22 +1611,12 @@ function Archives({ role }: { role: Role }) {
           }}
         >
           <Notice tone="error">
-            Record tidak bisa dipulihkan setelah penghapusan permanen. Isi
-            alasan untuk audit.
+            Record tidak bisa dipulihkan setelah penghapusan permanen. Isi alasan untuk audit.
           </Notice>
-          <Textarea
-            label="Alasan penghapusan"
-            required
-            value={reason}
-            onChange={setReason}
-          />
+          <Textarea label="Alasan penghapusan" required value={reason} onChange={setReason} />
           <div className="button-row">
             <button className="btn primary">Hapus permanen</button>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => setSelected(null)}
-            >
+            <button type="button" className="btn secondary" onClick={() => setSelected(null)}>
               Batalkan
             </button>
           </div>

@@ -97,9 +97,7 @@ export function EventPages({ id }: { id?: string }) {
         />
         <div className="container section event-public-list">
           {state.events?.length ? (
-            state.events.map((event) => (
-              <EventCard event={event} key={event.id} />
-            ))
+            state.events.map((event) => <EventCard event={event} key={event.id} />)
           ) : (
             <Empty
               title="Belum ada event yang dipublikasikan"
@@ -124,11 +122,7 @@ export function EventPages({ id }: { id?: string }) {
     </div>
   );
 }
-function EventDetail({
-  initial,
-}: {
-  initial: { event: EventPublicDto; token: string };
-}) {
+function EventDetail({ initial }: { initial: { event: EventPublicDto; token: string } }) {
   const [context, setContext] = useState(initial),
     [answers, setAnswers] = useState<EventAnswers>({}),
     [issues, setIssues] = useState<EventIssue[]>([]),
@@ -174,9 +168,7 @@ function EventDetail({
       attempt.current = null;
       setError(
         "Formulir terbaru dimuat. Tinjau jawaban sebelum mengirim kembali." +
-          (retained.clearedUploads
-            ? " Pilih ulang berkas upload untuk sesi formulir baru."
-            : ""),
+          (retained.clearedUploads ? " Pilih ulang berkas upload untuk sesi formulir baru." : ""),
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Formulir belum dapat dimuat.");
@@ -209,9 +201,7 @@ function EventDetail({
       };
     try {
       const response = await fetch(
-        "/api/events/" +
-          event.id +
-          (reconciling ? "/reconcile" : "/registrations"),
+        "/api/events/" + event.id + (reconciling ? "/reconcile" : "/registrations"),
         {
           method: "POST",
           headers: {
@@ -251,9 +241,7 @@ function EventDetail({
     } catch (e) {
       if (attempt.current) setUncertain(true);
       setError(
-        e instanceof Error
-          ? e.message
-          : "Koneksi terputus. Coba kirim ulang permintaan yang sama.",
+        e instanceof Error ? e.message : "Koneksi terputus. Coba kirim ulang permintaan yang sama.",
       );
     } finally {
       setBusy(false);
@@ -311,9 +299,7 @@ function EventDetail({
           <p>Simpan kode ini sebagai referensi untuk menghubungi pengelola.</p>
         </Notice>
       ) : !event.accepting ? (
-        <Notice>
-          Pendaftaran belum dibuka, telah ditutup, atau kuota penuh.
-        </Notice>
+        <Notice>Pendaftaran belum dibuka, telah ditutup, atau kuota penuh.</Notice>
       ) : (
         <form
           className="event-signup"
@@ -331,17 +317,12 @@ function EventDetail({
           {error && <Notice tone="error">{error}</Notice>}
           {uncertain && (
             <Notice>
-              Koneksi belum memastikan hasil. Kirim ulang memakai permintaan
-              yang sama; jangan membuka formulir baru.
+              Koneksi belum memastikan hasil. Kirim ulang memakai permintaan yang sama; jangan
+              membuka formulir baru.
             </Notice>
           )}
           {changed && (
-            <button
-              className="btn secondary"
-              type="button"
-              disabled={busy}
-              onClick={refreshForm}
-            >
+            <button className="btn secondary" type="button" disabled={busy} onClick={refreshForm}>
               Muat formulir terbaru, pertahankan jawaban yang sesuai
             </button>
           )}
@@ -391,10 +372,9 @@ function EventDetail({
                 disabled={busy || changed}
                 onClick={() => {
                   const ids = new Set(groups[current].map((q) => q.id));
-                  const errors = validateEventAnswers(
-                    event.form,
-                    answers,
-                  ).issues.filter((x) => ids.has(x.questionId));
+                  const errors = validateEventAnswers(event.form, answers).issues.filter((x) =>
+                    ids.has(x.questionId),
+                  );
                   setIssues(errors);
                   if (!errors.length) setPage(current + 1);
                 }}
@@ -402,10 +382,7 @@ function EventDetail({
                 Berikutnya
               </button>
             ) : (
-              <button
-                className="btn primary"
-                disabled={busy || changed}
-              >
+              <button className="btn primary" disabled={busy || changed}>
                 {busy
                   ? "Mengirim…"
                   : reconciling

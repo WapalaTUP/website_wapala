@@ -3,12 +3,7 @@ import Image from "next/image";
 import { useState } from "react";
 import type { Campaign, Role } from "@/lib/types";
 import { useDemo, updateStore } from "@/lib/store";
-import {
-  blankCampaign,
-  campaignTotal,
-  getBankAccounts,
-  validateCampaign,
-} from "@/lib/campaigns";
+import { blankCampaign, campaignTotal, getBankAccounts, validateCampaign } from "@/lib/campaigns";
 import { canEdit } from "@/lib/domain";
 import { money, date } from "@/lib/content";
 import { Badge, Empty, Field, Modal, Notice, Textarea, Upload } from "./ui";
@@ -31,11 +26,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
     [selected, setSelected] = useState(""),
     [reason, setReason] = useState("");
   const donation = state.donations.find((d) => d.id === selected);
-  const run = (
-    recipe: Parameters<typeof updateStore>[0],
-    action: string,
-    target: string,
-  ) => {
+  const run = (recipe: Parameters<typeof updateStore>[0], action: string, target: string) => {
     try {
       updateStore(recipe, action, target, role);
       return true;
@@ -64,10 +55,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
   return (
     <>
       <div className="admin-toolbar campaign-toolbar">
-        <p>
-          Setiap kampanye memiliki tujuan, metode transfer, dan verifikasi
-          sendiri.
-        </p>
+        <p>Setiap kampanye memiliki tujuan, metode transfer, dan verifikasi sendiri.</p>
         {edit && (
           <button
             className="btn primary"
@@ -111,10 +99,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
                 <div
                   style={{
                     width:
-                      Math.min(
-                        100,
-                        (campaignTotal(state.donations, c.id) / c.target) * 100,
-                      ) + "%",
+                      Math.min(100, (campaignTotal(state.donations, c.id) / c.target) * 100) + "%",
                   }}
                 />
               </div>
@@ -135,20 +120,15 @@ export function CampaignAdmin({ role }: { role: Role }) {
                       onClick={() =>
                         run(
                           (d) => {
-                            const item = d.campaigns.find(
-                              (v) => v.id === c.id,
-                            )!;
-                            item.status =
-                              c.status === "active" ? "closed" : "active";
+                            const item = d.campaigns.find((v) => v.id === c.id)!;
+                            item.status = c.status === "active" ? "closed" : "active";
                           },
                           "Mengubah status kampanye",
                           c.id,
                         )
                       }
                     >
-                      {c.status === "active"
-                        ? "Tutup kampanye"
-                        : "Aktifkan kampanye"}
+                      {c.status === "active" ? "Tutup kampanye" : "Aktifkan kampanye"}
                     </button>
                   </>
                 )}
@@ -163,11 +143,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
       <div className="admin-toolbar">
         <div className="field">
           <label htmlFor="campaign-filter">Kampanye konfirmasi</label>
-          <select
-            id="campaign-filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
+          <select id="campaign-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="all">Semua kampanye</option>
             {state.campaigns.map((c) => (
               <option value={c.id} key={c.id}>
@@ -215,8 +191,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
                   <td>
                     {d.name}
                     <small className="table-subtext">
-                      {state.campaigns.find((c) => c.id === d.campaignId)
-                        ?.title || "Kampanye lama"}
+                      {state.campaigns.find((c) => c.id === d.campaignId)?.title || "Kampanye lama"}
                     </small>
                   </td>
                   <td>{money(d.amount)}</td>
@@ -255,9 +230,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
       <Modal
         open={!!draft}
         title={
-          state.campaigns.some((c) => c.id === draft?.id)
-            ? "Edit kampanye"
-            : "Tambah kampanye"
+          state.campaigns.some((c) => c.id === draft?.id) ? "Edit kampanye" : "Tambah kampanye"
         }
         onClose={() => {
           if (!busy) setDraft(null);
@@ -305,16 +278,12 @@ export function CampaignAdmin({ role }: { role: Role }) {
                 min={1}
                 required
                 value={draft.target}
-                onChange={(e) =>
-                  setDraft({ ...draft, target: Number(e.target.value) })
-                }
+                onChange={(e) => setDraft({ ...draft, target: Number(e.target.value) })}
               />
               <Field
                 label="Kolaborator"
                 value={draft.collaborator}
-                onChange={(e) =>
-                  setDraft({ ...draft, collaborator: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, collaborator: e.target.value })}
               />
               <Field
                 label="Tanggal mulai"
@@ -331,9 +300,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
             </div>
             <section className="campaign-bank-editor">
               <h3>Bank dan rekening</h3>
-              <p>
-                Tambahkan rekening tujuan beserta nama pemilik atau penerimanya.
-              </p>
+              <p>Tambahkan rekening tujuan beserta nama pemilik atau penerimanya.</p>
               {getBankAccounts(draft).map((account, index) => (
                 <fieldset className="campaign-bank-row" key={account.id}>
                   <legend>Rekening {index + 1}</legend>
@@ -356,11 +323,8 @@ export function CampaignAdmin({ role }: { role: Role }) {
                             current
                               ? {
                                   ...current,
-                                  bankAccounts: getBankAccounts(current).map(
-                                    (row) =>
-                                      row.id === account.id
-                                        ? { ...row, [key]: value }
-                                        : row,
+                                  bankAccounts: getBankAccounts(current).map((row) =>
+                                    row.id === account.id ? { ...row, [key]: value } : row,
                                   ),
                                 }
                               : current,
@@ -457,8 +421,8 @@ export function CampaignAdmin({ role }: { role: Role }) {
               </div>
             ))}
             <Notice>
-              Preview lokal. Gunakan aset contoh; belum menerima pembayaran
-              nyata. Foto QRIS tidak dibuat otomatis.
+              Preview lokal. Gunakan aset contoh; belum menerima pembayaran nyata. Foto QRIS tidak
+              dibuat otomatis.
             </Notice>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">
@@ -477,31 +441,19 @@ export function CampaignAdmin({ role }: { role: Role }) {
           </form>
         )}
       </Modal>
-      <Modal
-        open={!!donation}
-        title="Tinjau konfirmasi"
-        onClose={() => setSelected("")}
-      >
+      <Modal open={!!donation} title="Tinjau konfirmasi" onClose={() => setSelected("")}>
         {donation && (
           <>
             <h3>
               {donation.name} / {money(donation.amount)}
             </h3>
-            <p>
-              {state.campaigns.find((c) => c.id === donation.campaignId)?.title}
-            </p>
+            <p>{state.campaigns.find((c) => c.id === donation.campaignId)?.title}</p>
             <p>
               {donation.method} · {date(donation.at)}
             </p>
-            {donation.bankAccountLabel && (
-              <p>Rekening tujuan: {donation.bankAccountLabel}</p>
-            )}
+            {donation.bankAccountLabel && <p>Rekening tujuan: {donation.bankAccountLabel}</p>}
             <Notice>Bukti contoh: {donation.proof}</Notice>
-            <Textarea
-              label="Catatan / alasan penolakan"
-              value={reason}
-              onChange={setReason}
-            />
+            <Textarea label="Catatan / alasan penolakan" value={reason} onChange={setReason} />
             {error && <Notice tone="error">{error}</Notice>}
             {edit && (
               <div className="button-row">
@@ -517,9 +469,7 @@ export function CampaignAdmin({ role }: { role: Role }) {
                       if (
                         run(
                           (d) => {
-                            const row = d.donations.find(
-                              (v) => v.id === donation.id,
-                            )!;
+                            const row = d.donations.find((v) => v.id === donation.id)!;
                             row.status = status;
                             row.note = reason;
                           },

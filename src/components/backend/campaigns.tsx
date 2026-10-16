@@ -79,10 +79,7 @@ export function BackendCampaigns({
   return (
     <>
       <div className="admin-toolbar campaign-toolbar">
-        <p>
-          Setiap kampanye memiliki penerima, rekening, dan konfirmasi
-          tersendiri.
-        </p>
+        <p>Setiap kampanye memiliki penerima, rekening, dan konfirmasi tersendiri.</p>
         <button
           className="btn primary"
           onClick={() => {
@@ -154,9 +151,7 @@ export function BackendCampaigns({
                     })
                   }
                 >
-                  {c.status === "active"
-                    ? "Tutup kampanye"
-                    : "Aktifkan kampanye"}
+                  {c.status === "active" ? "Tutup kampanye" : "Aktifkan kampanye"}
                 </button>
                 <button className="text-link" onClick={() => setFilter(c.id)}>
                   Lihat konfirmasi
@@ -256,16 +251,12 @@ export function BackendCampaigns({
                 min={1}
                 value={draft.target}
                 required
-                onChange={(e) =>
-                  setDraft({ ...draft, target: Number(e.target.value) })
-                }
+                onChange={(e) => setDraft({ ...draft, target: Number(e.target.value) })}
               />
               <Field
                 label="Kolaborator"
                 value={draft.collaborator}
-                onChange={(e) =>
-                  setDraft({ ...draft, collaborator: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, collaborator: e.target.value })}
               />
               <Field
                 label="Tanggal mulai"
@@ -302,9 +293,7 @@ export function BackendCampaigns({
                           setDraft({
                             ...draft,
                             bankAccounts: draft.bankAccounts.map((b) =>
-                              b.id === bank.id
-                                ? { ...b, [key]: e.target.value }
-                                : b,
+                              b.id === bank.id ? { ...b, [key]: e.target.value } : b,
                             ),
                           })
                         }
@@ -317,9 +306,7 @@ export function BackendCampaigns({
                     onClick={() =>
                       setDraft({
                         ...draft,
-                        bankAccounts: draft.bankAccounts.filter(
-                          (b) => b.id !== bank.id,
-                        ),
+                        bankAccounts: draft.bankAccounts.filter((b) => b.id !== bank.id),
                       })
                     }
                   >
@@ -365,18 +352,10 @@ export function BackendCampaigns({
                     setBusy(true);
                     setError("");
                     try {
-                      const url = await uploadMedia(
-                        files[0],
-                        "campaign",
-                        csrfToken,
-                      );
-                      setDraft((current) =>
-                        current ? { ...current, [key]: url } : current,
-                      );
+                      const url = await uploadMedia(files[0], "campaign", csrfToken);
+                      setDraft((current) => (current ? { ...current, [key]: url } : current));
                     } catch (e) {
-                      setError(
-                        e instanceof Error ? e.message : "Upload gagal.",
-                      );
+                      setError(e instanceof Error ? e.message : "Upload gagal.");
                     } finally {
                       setBusy(false);
                     }
@@ -413,18 +392,16 @@ export function BackendCampaigns({
                   })
                 }
               >
-                {(["draft", "active", "closed", "archived"] as const).map(
-                  (s) => (
-                    <option value={s} key={s}>
-                      {labels[s]}
-                    </option>
-                  ),
-                )}
+                {(["draft", "active", "closed", "archived"] as const).map((s) => (
+                  <option value={s} key={s}>
+                    {labels[s]}
+                  </option>
+                ))}
               </select>
             </label>
             <Notice>
-              QRIS dan rekening diisi sesuai tujuan kampanye. Konfirmasi
-              transfer diperiksa admin, bukan pembayaran otomatis.
+              QRIS dan rekening diisi sesuai tujuan kampanye. Konfirmasi transfer diperiksa admin,
+              bukan pembayaran otomatis.
             </Notice>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">
@@ -458,19 +435,11 @@ export function BackendCampaigns({
             <p>{campaigns.find((c) => c.id === review.campaignId)?.title}</p>
             <p>{review.bankAccountLabel || "QRIS"}</p>
             {review.proof ? (
-              <MediaPreview
-                key={review.proof}
-                src={review.proof}
-                label="Bukti transfer"
-              />
+              <MediaPreview key={review.proof} src={review.proof} label="Bukti transfer" />
             ) : (
               <Notice>Bukti belum tersedia.</Notice>
             )}
-            <Textarea
-              label="Catatan / alasan penolakan"
-              value={note}
-              onChange={setNote}
-            />
+            <Textarea label="Catatan / alasan penolakan" value={note} onChange={setNote} />
             {error && <Notice tone="error">{error}</Notice>}
             {review.status === "waiting" && (
               <div className="button-row">
@@ -483,17 +452,14 @@ export function BackendCampaigns({
                       setBusy(true);
                       setError("");
                       try {
-                        await backendApi(
-                          "/api/admin/donations/" + review.id,
-                          csrfToken,
-                          { status, note },
-                        );
+                        await backendApi("/api/admin/donations/" + review.id, csrfToken, {
+                          status,
+                          note,
+                        });
                         await refresh();
                         setReview(null);
                       } catch (e) {
-                        setError(
-                          e instanceof Error ? e.message : "Verifikasi gagal.",
-                        );
+                        setError(e instanceof Error ? e.message : "Verifikasi gagal.");
                       } finally {
                         setBusy(false);
                       }

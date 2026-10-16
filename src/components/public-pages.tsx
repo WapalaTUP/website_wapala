@@ -1,15 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  ArrowUpRight,
-  MapPin,
-  Mail,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  BookOpen,
-} from "lucide-react";
+import { ArrowUpRight, MapPin, Mail, ChevronLeft, ChevronRight, X, BookOpen } from "lucide-react";
 import { useDemo } from "@/lib/store";
 import { divisions, history, missions, vision, date } from "@/lib/content";
 import { Empty, Pagination } from "./ui";
@@ -22,25 +14,14 @@ import { getPublicAlbums, albumDate } from "@/lib/gallery";
 import { PageIntro } from "./page-intro";
 import { EventPages } from "./events/event-pages";
 const LoanForm = dynamic(() => import("./forms").then((m) => m.LoanForm));
-const LoanTracking = dynamic(() =>
-  import("./forms").then((m) => m.LoanTracking),
-);
+const LoanTracking = dynamic(() => import("./forms").then((m) => m.LoanTracking));
 const Invoice = dynamic(() => import("./forms").then((m) => m.Invoice));
 const Recruitment = dynamic(() => import("./forms").then((m) => m.Recruitment));
-const CampaignPages = dynamic(() =>
-  import("./campaign-pages").then((m) => m.CampaignPages),
-);
-const BookReader = dynamic(
-  () => import("./book-reader").then((m) => m.BookReader),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="container section reader-loading">
-        Memuat viewer buku…
-      </div>
-    ),
-  },
-);
+const CampaignPages = dynamic(() => import("./campaign-pages").then((m) => m.CampaignPages));
+const BookReader = dynamic(() => import("./book-reader").then((m) => m.BookReader), {
+  ssr: false,
+  loading: () => <div className="container section reader-loading">Memuat viewer buku…</div>,
+});
 function divisionImage(settings: Settings, index: number) {
   return (
     [
@@ -48,18 +29,12 @@ function divisionImage(settings: Settings, index: number) {
       settings.divisionImageUrl2,
       settings.divisionImageUrl3,
       settings.divisionImageUrl4,
-    ][index] || settings.divisionImageUrl || ""
+    ][index] ||
+    settings.divisionImageUrl ||
+    ""
   );
 }
-function SectionHead({
-  title,
-  href,
-  label,
-}: {
-  title: string;
-  href?: string;
-  label?: string;
-}) {
+function SectionHead({ title, href, label }: { title: string; href?: string; label?: string }) {
   return (
     <div className="section-heading">
       <h2>{title}</h2>
@@ -72,24 +47,12 @@ function SectionHead({
     </div>
   );
 }
-export function Editorial({
-  post,
-  large = false,
-}: {
-  post: RecordRow;
-  large?: boolean;
-}) {
+export function Editorial({ post, large = false }: { post: RecordRow; large?: boolean }) {
   const p = post.fields;
   return (
     <article className={"editorial-card" + (large ? " featured" : "")}>
       <Link className="editorial-image" href={"/berita/" + p.slug}>
-        <img
-          src={p.sampul}
-          alt={p.judul}
-          width={600}
-          height={450}
-          loading="lazy"
-        />
+        <img src={p.sampul} alt={p.judul} width={600} height={450} loading="lazy" />
       </Link>
       <div className="editorial-meta">
         <span>{p.kategori}</span>
@@ -105,14 +68,10 @@ export function Editorial({
 function Home() {
   const { settings: s, records } = useDemo();
   const posts = records.konten.filter(
-    (p) =>
-      !p.archived && p.fields.status === "Publik" && p.fields.tipe === "Berita",
+    (p) => !p.archived && p.fields.status === "Publik" && p.fields.tipe === "Berita",
   );
   const announcement = records.konten.find(
-    (p) =>
-      !p.archived &&
-      p.fields.status === "Publik" &&
-      p.fields.tipe === "Announcement",
+    (p) => !p.archived && p.fields.status === "Publik" && p.fields.tipe === "Announcement",
   );
   return (
     <>
@@ -125,8 +84,8 @@ function Home() {
             Banyak perjalanan.
           </h2>
           <p className="lead">
-            Sejak 28 September 2004, WAPALA menjadi ruang bagi mahasiswa untuk
-            belajar, berpetualang, dan menjaga alam bersama.
+            Sejak 28 September 2004, WAPALA menjadi ruang bagi mahasiswa untuk belajar,
+            berpetualang, dan menjaga alam bersama.
           </p>
           <Link className="text-link" href="/profil">
             Cerita tentang kami
@@ -145,59 +104,44 @@ function Home() {
       </section>
       <section className="muted-section">
         <div className="container section">
-          <SectionHead
-            title="Belajar langsung dari alam."
-            href="/divisi"
-            label="Kenali divisi"
-          />
+          <SectionHead title="Belajar langsung dari alam." href="/divisi" label="Kenali divisi" />
           <div className="division-grid division-strip" data-scroll-divisions>
             {divisions.map((d, index) => {
               const image = divisionImage(s, index);
               return (
-              <Link
-                href={"/divisi/" + d.slug}
-                key={d.slug}
-                className="division-card"
-              >
-                <div
-                  className={"division-photo" + (image ? " has-image" : "")}
-                  style={
-                    image
-                      ? {
-                          backgroundImage: `url("${image}")`,
-                          backgroundPosition: d.position,
-                        }
-                      : { backgroundPosition: d.position }
-                  }
-                  role="img"
-                  aria-label={"Dokumentasi divisi " + d.name}
-                />
-                <div className="division-strip-copy">
-                  <h3>{d.name}</h3>
-                  <p>{d.description}</p>
-                </div>
-              </Link>
+                <Link href={"/divisi/" + d.slug} key={d.slug} className="division-card">
+                  <div
+                    className={"division-photo" + (image ? " has-image" : "")}
+                    style={
+                      image
+                        ? {
+                            backgroundImage: `url("${image}")`,
+                            backgroundPosition: d.position,
+                          }
+                        : { backgroundPosition: d.position }
+                    }
+                    role="img"
+                    aria-label={"Dokumentasi divisi " + d.name}
+                  />
+                  <div className="division-strip-copy">
+                    <h3>{d.name}</h3>
+                    <p>{d.description}</p>
+                  </div>
+                </Link>
               );
             })}
           </div>
         </div>
       </section>
       <section className="container section">
-        <SectionHead
-          title="Cerita dari perjalanan kami."
-          href="/berita"
-          label="Semua berita"
-        />
+        <SectionHead title="Cerita dari perjalanan kami." href="/berita" label="Semua berita" />
         <div className="journal-grid">
           {posts.slice(0, 3).map((post, i) => (
             <Editorial key={post.id} post={post} large={i === 0} />
           ))}
         </div>
         {announcement && (
-          <Link
-            className="announcement-strip"
-            href={"/announcement/" + announcement.fields.slug}
-          >
+          <Link className="announcement-strip" href={"/announcement/" + announcement.fields.slug}>
             <span>Pengumuman</span>
             <strong>{announcement.fields.judul}</strong>
             <ArrowUpRight />
@@ -232,9 +176,7 @@ function Home() {
             <br />
             langkah berikutnya.
           </h2>
-          <p>
-            Pendidikan, peralatan, dan ikatan yang mendukung perjalanan kita.
-          </p>
+          <p>Pendidikan, peralatan, dan ikatan yang mendukung perjalanan kita.</p>
         </div>
         <div className="service-list">
           <Link href="/peminjaman">
@@ -291,16 +233,11 @@ function Profile() {
         description="Wahana Pencinta Alam Telkom University. Ruang untuk belajar, tumbuh, dan melangkah bersama."
       />
       <nav className="container section-subnav" aria-label="Bagian profil">
-        {["Sejarah", "Visi & misi", "Divisi", "Arti logo", "Angkatan"].map(
-          (v, i) => (
-            <a
-              key={v}
-              href={"#" + ["sejarah", "visi", "divisi", "logo", "angkatan"][i]}
-            >
-              {v}
-            </a>
-          ),
-        )}
+        {["Sejarah", "Visi & misi", "Divisi", "Arti logo", "Angkatan"].map((v, i) => (
+          <a key={v} href={"#" + ["sejarah", "visi", "divisi", "logo", "angkatan"][i]}>
+            {v}
+          </a>
+        ))}
       </nav>
       <section className="container section profile-history" id="sejarah">
         <img
@@ -312,9 +249,8 @@ function Profile() {
         <div>
           <h2>Bermula pada 2004.</h2>
           <p>
-            WAPALA dibentuk pada 28 September 2004 dengan nama WAPALA Akatel.
-            Nama organisasi berkembang bersama perubahan institusi; ikatan dan
-            semangatnya terus dibawa.
+            WAPALA dibentuk pada 28 September 2004 dengan nama WAPALA Akatel. Nama organisasi
+            berkembang bersama perubahan institusi; ikatan dan semangatnya terus dibawa.
           </p>
           <ol className="history-list">
             {settings.profileHistory ? (
@@ -352,36 +288,28 @@ function Profile() {
         </div>
       </section>
       <section className="container section" id="divisi">
-        <SectionHead
-          title="Alam adalah ruang belajar kita."
-          href="/divisi"
-          label="Lihat divisi"
-        />
+        <SectionHead title="Alam adalah ruang belajar kita." href="/divisi" label="Lihat divisi" />
         <div className="division-grid">
           {divisions.map((d, index) => {
             const image = divisionImage(settings, index);
             return (
-            <Link
-              href={"/divisi/" + d.slug}
-              className="division-card"
-              key={d.slug}
-            >
-              <div
-                className={"division-photo" + (image ? " has-image" : "")}
-                style={
-                  image
-                    ? {
-                        backgroundImage: `url("${image}")`,
-                        backgroundPosition: d.position,
-                      }
-                    : { backgroundPosition: d.position }
-                }
-                role="img"
-                aria-label={d.name}
-              />
-              <h3>{d.name}</h3>
-              <p>{d.detail}</p>
-            </Link>
+              <Link href={"/divisi/" + d.slug} className="division-card" key={d.slug}>
+                <div
+                  className={"division-photo" + (image ? " has-image" : "")}
+                  style={
+                    image
+                      ? {
+                          backgroundImage: `url("${image}")`,
+                          backgroundPosition: d.position,
+                        }
+                      : { backgroundPosition: d.position }
+                  }
+                  role="img"
+                  aria-label={d.name}
+                />
+                <h3>{d.name}</h3>
+                <p>{d.detail}</p>
+              </Link>
             );
           })}
         </div>
@@ -450,19 +378,11 @@ function Divisions({ slug }: { slug?: string }) {
     </>
   );
 }
-function News({
-  slug,
-  announcement = false,
-}: {
-  slug?: string;
-  announcement?: boolean;
-}) {
+function News({ slug, announcement = false }: { slug?: string; announcement?: boolean }) {
   const { records } = useDemo();
   const [filter, setFilter] = useState(announcement ? "Announcement" : "Semua");
   const [page, setPage] = useState(1);
-  const posts = records.konten.filter(
-    (p) => !p.archived && p.fields.status === "Publik",
-  );
+  const posts = records.konten.filter((p) => !p.archived && p.fields.status === "Publik");
   if (slug) {
     const post = posts.find((p) => p.fields.slug === slug);
     if (!post)
@@ -520,9 +440,7 @@ function News({
       </article>
     );
   }
-  const filtered = posts.filter(
-    (p) => filter === "Semua" || p.fields.tipe === filter,
-  );
+  const filtered = posts.filter((p) => filter === "Semua" || p.fields.tipe === filter);
   return (
     <>
       <PageIntro
@@ -587,14 +505,13 @@ function Gallery({ id }: { id?: string }) {
           </PageIntro>
           <div className="container section compact-top album-images">
             {images.map((img, i) => (
-              <button
-                key={img}
-                onClick={() => setLightbox(i)}
-                aria-label={"Lihat foto " + (i + 1)}
-              >
+              <button key={img} onClick={() => setLightbox(i)} aria-label={"Lihat foto " + (i + 1)}>
                 <img
                   src={img}
-                  alt={album.photoCaptions?.[i] || (i === 0 ? album.title : "Dokumentasi kegiatan WAPALA")}
+                  alt={
+                    album.photoCaptions?.[i] ||
+                    (i === 0 ? album.title : "Dokumentasi kegiatan WAPALA")
+                  }
                   width={900}
                   height={650}
                   loading="lazy"
@@ -613,28 +530,16 @@ function Gallery({ id }: { id?: string }) {
             <div className="filters">
               <label>
                 Kategori
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  {[
-                    "Semua kegiatan",
-                    ...new Set(source.map((a) => a.category)),
-                  ].map((v) => (
+                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  {["Semua kegiatan", ...new Set(source.map((a) => a.category))].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
                 </select>
               </label>
               <label>
                 Lokasi
-                <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                >
-                  {[
-                    "Semua lokasi",
-                    ...new Set(source.map((a) => a.location)),
-                  ].map((v) => (
+                <select value={location} onChange={(e) => setLocation(e.target.value)}>
+                  {["Semua lokasi", ...new Set(source.map((a) => a.location))].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
                 </select>
@@ -644,18 +549,8 @@ function Gallery({ id }: { id?: string }) {
             {filtered.length ? (
               <div className="album-grid">
                 {filtered.map((a) => (
-                  <Link
-                    className="album-card"
-                    key={a.id}
-                    href={"/galeri/" + a.id}
-                  >
-                    <img
-                      src={a.image}
-                      alt={a.title}
-                      width={600}
-                      height={700}
-                      loading="lazy"
-                    />
+                  <Link className="album-card" key={a.id} href={"/galeri/" + a.id}>
+                    <img src={a.image} alt={a.title} width={600} height={700} loading="lazy" />
                     <div>
                       <p>{a.category}</p>
                       <h2>{a.title}</h2>
@@ -721,8 +616,7 @@ function Lightbox({
       aria-label={title}
       onKeyDown={(e) => {
         if (e.key === "Escape") setIndex(null);
-        if (e.key === "ArrowLeft")
-          setIndex((index + images.length - 1) % images.length);
+        if (e.key === "ArrowLeft") setIndex((index + images.length - 1) % images.length);
         if (e.key === "ArrowRight") setIndex((index + 1) % images.length);
       }}
     >
@@ -783,10 +677,7 @@ function BookCatalog() {
         )}
         {books.map((book, i) => (
           <article className="book-card" key={book.id}>
-            <Link
-              href={"/buku/" + book.id}
-              className={"book-cover book-color-" + i}
-            >
+            <Link href={"/buku/" + book.id} className={"book-cover book-color-" + i}>
               <BookOpen size={26} />
               <span>{book.category}</span>
               <h2>{book.title}</h2>
@@ -839,12 +730,7 @@ function Contact() {
               <ArrowUpRight size={18} />
             </a>
             {s.whatsapp && (
-              <a
-                href={
-                  "https://wa.me/" +
-                  s.whatsapp.replace(/\D/g, "").replace(/^0/, "62")
-                }
-              >
+              <a href={"https://wa.me/" + s.whatsapp.replace(/\D/g, "").replace(/^0/, "62")}>
                 WhatsApp
                 <ArrowUpRight size={18} />
               </a>
@@ -870,12 +756,7 @@ function Contact() {
             <MapPin size={18} />
             {s.address}
           </p>
-          <a
-            className="btn secondary"
-            href={s.map}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="btn secondary" href={s.map} target="_blank" rel="noreferrer">
             Buka lokasi di Maps
             <ArrowUpRight size={18} />
           </a>
@@ -894,21 +775,20 @@ function Privacy() {
       <div className="container section legal-copy">
         <h2>Data yang diproses</h2>
         <p>
-          Data pendaftaran digunakan untuk Open Recruitment dan event. Kontak
-          peminjam digunakan untuk pengelolaan peminjaman serta pengembalian.
-          Bukti transfer digunakan untuk verifikasi donasi; daftar donatur tidak
-          dipublikasikan.
+          Data pendaftaran digunakan untuk Open Recruitment dan event. Kontak peminjam digunakan
+          untuk pengelolaan peminjaman serta pengembalian. Bukti transfer digunakan untuk verifikasi
+          donasi; daftar donatur tidak dipublikasikan.
         </p>
         <h2>Penyimpanan dan akses</h2>
         <p>
-          Data disimpan pada sistem WAPALA dan hanya diakses pengelola yang
-          berwenang sesuai tugasnya. Berkas pribadi, bukti pembayaran, dan
-          dokumen peserta tidak tersedia sebagai media publik.
+          Data disimpan pada sistem WAPALA dan hanya diakses pengelola yang berwenang sesuai
+          tugasnya. Berkas pribadi, bukti pembayaran, dan dokumen peserta tidak tersedia sebagai
+          media publik.
         </p>
         <h2>Hubungi organisasi</h2>
         <p>
-          Untuk pertanyaan atau permintaan terkait data pribadi, hubungi
-          organisasi pada <Link href="/kontak">halaman kontak</Link>.
+          Untuk pertanyaan atau permintaan terkait data pribadi, hubungi organisasi pada{" "}
+          <Link href="/kontak">halaman kontak</Link>.
         </p>
       </div>
     </>
@@ -931,11 +811,7 @@ export function PublicPage({ path }: { path: string[] }) {
     case "galeri":
       return <Gallery id={path[1]} />;
     case "buku":
-      return path[1] ? (
-        <BookReader key={path[1]} id={path[1]} />
-      ) : (
-        <BookCatalog />
-      );
+      return path[1] ? <BookReader key={path[1]} id={path[1]} /> : <BookCatalog />;
     case "kontak":
       return <Contact />;
     case "privasi":

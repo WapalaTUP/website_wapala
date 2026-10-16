@@ -45,8 +45,7 @@ export function BackendAudit({
   return (
     <>
       <Notice>
-        Audit bersifat append-only. Password, token, dan kredensial tidak
-        ditampilkan di sini.
+        Audit bersifat append-only. Password, token, dan kredensial tidak ditampilkan di sini.
       </Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {data.rows.length ? (
@@ -91,11 +90,7 @@ export function BackendAudit({
         />
       )}
       {data.cursor && (
-        <button
-          className="btn secondary"
-          disabled={busy}
-          onClick={() => void load()}
-        >
+        <button className="btn secondary" disabled={busy} onClick={() => void load()}>
           {busy ? "Memuat…" : "Muat aktivitas sebelumnya"}
         </button>
       )}
@@ -159,9 +154,7 @@ export function BackendSettings({
       const url = await uploadMedia(file, "branding", csrfToken);
       setFields((old) => ({ ...old, [key]: url }));
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Foto belum dapat diunggah.",
-      );
+      setError(error instanceof Error ? error.message : "Foto belum dapat diunggah.");
     } finally {
       setBusy(false);
     }
@@ -200,14 +193,12 @@ export function BackendSettings({
               logoMeaningImageUrl: fields.logoMeaningImageUrl,
               ...(fields.whatsapp ? { whatsapp: fields.whatsapp } : {}),
             },
-          "PATCH",
-        );
+            "PATCH",
+          );
           setSaved(true);
           router.refresh();
         } catch (e) {
-          setError(
-            e instanceof Error ? e.message : "Pengaturan belum dapat disimpan.",
-          );
+          setError(e instanceof Error ? e.message : "Pengaturan belum dapat disimpan.");
         } finally {
           setBusy(false);
         }
@@ -251,24 +242,20 @@ export function BackendSettings({
             )}
           </div>
         ))}
-        {(["profileHistory", "profileVision", "profileMissions"] as const).map(
-          (key) => (
-            <Textarea
-              key={key}
-              label={
-                key === "profileHistory"
-                  ? "Sejarah organisasi"
-                  : key === "profileVision"
-                    ? "Visi organisasi"
-                    : "Misi organisasi (satu per baris)"
-              }
-              value={fields[key]}
-              onChange={(value) =>
-                setFields({ ...fields, [key]: value.slice(0, 10000) })
-              }
-            />
-          ),
-        )}
+        {(["profileHistory", "profileVision", "profileMissions"] as const).map((key) => (
+          <Textarea
+            key={key}
+            label={
+              key === "profileHistory"
+                ? "Sejarah organisasi"
+                : key === "profileVision"
+                  ? "Visi organisasi"
+                  : "Misi organisasi (satu per baris)"
+            }
+            value={fields[key]}
+            onChange={(value) => setFields({ ...fields, [key]: value.slice(0, 10000) })}
+          />
+        ))}
         {(["map", "instagram", "tiktok", "youtube"] as const).map((key) => (
           <Field
             key={key}
@@ -285,9 +272,7 @@ export function BackendSettings({
           required
           value={fields.organization}
           maxLength={150}
-          onChange={(e) =>
-            setFields({ ...fields, organization: e.target.value })
-          }
+          onChange={(e) => setFields({ ...fields, organization: e.target.value })}
         />
         <Field
           label="Email organisasi"
@@ -311,8 +296,8 @@ export function BackendSettings({
         />
       </div>
       <Notice>
-        Periode Open Recruitment dan kampanye dibuka dari modul masing-masing.
-        Kredensial server tidak dikelola melalui form ini.
+        Periode Open Recruitment dan kampanye dibuka dari modul masing-masing. Kredensial server
+        tidak dikelola melalui form ini.
       </Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {saved && <Notice>Pengaturan tersimpan di database.</Notice>}
@@ -340,28 +325,16 @@ export function BackendArchives({
   return (
     <>
       <Notice>
-        Arsip tetap tersimpan di database. Peminjaman aktif, denda belum lunas,
-        dan jaminan tertahan tidak diarsipkan oleh pergantian kepengurusan.
-        Menampilkan hingga 100 arsip terbaru per jenis.
+        Arsip tetap tersimpan di database. Peminjaman aktif, denda belum lunas, dan jaminan tertahan
+        tidak diarsipkan oleh pergantian kepengurusan. Menampilkan hingga 100 arsip terbaru per
+        jenis.
       </Notice>
-      <Field
-        label="Cari arsip"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <Field label="Cari arsip" value={search} onChange={(e) => setSearch(e.target.value)} />
       <div className="button-row">
-        <a
-          download
-          className="btn secondary"
-          href="/api/admin/export/archives?format=xlsx"
-        >
+        <a download className="btn secondary" href="/api/admin/export/archives?format=xlsx">
           Ekspor daftar Excel
         </a>
-        <a
-          download
-          className="btn secondary"
-          href="/api/admin/export/archives?format=pdf"
-        >
+        <a download className="btn secondary" href="/api/admin/export/archives?format=pdf">
           Ekspor daftar PDF
         </a>
         <a
@@ -429,9 +402,8 @@ export function BackendArchives({
         }}
       >
         <p>
-          Pulihkan {selected?.title}? Riwayat tetap disimpan. Konten dan
-          kampanye dipulihkan sebagai draft; inventaris perlu diaktifkan kembali
-          dari modul inventaris.
+          Pulihkan {selected?.title}? Riwayat tetap disimpan. Konten dan kampanye dipulihkan sebagai
+          draft; inventaris perlu diaktifkan kembali dari modul inventaris.
         </p>
         <button
           className="btn primary"
@@ -453,11 +425,7 @@ export function BackendArchives({
               setData(next.rows);
               setSelected(null);
             } catch (e) {
-              setError(
-                e instanceof Error
-                  ? e.message
-                  : "Arsip belum dapat dipulihkan.",
-              );
+              setError(e instanceof Error ? e.message : "Arsip belum dapat dipulihkan.");
             } finally {
               setBusy(false);
             }

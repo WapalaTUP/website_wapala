@@ -18,11 +18,8 @@ export function ManagementReset({ role }: { role: Role }) {
     [review, setReview] = useState(false),
     [superReset, setSuperReset] = useState(false),
     [error, setError] = useState("");
-  if (role !== "Super User")
-    return <Notice tone="error">Menu ini hanya untuk Super User.</Notice>;
-  const users = state.records.pengguna.filter(
-    (u) => !u.archived && u.fields.role !== "Super User",
-  );
+  if (role !== "Super User") return <Notice tone="error">Menu ini hanya untuk Super User.</Notice>;
+  const users = state.records.pengguna.filter((u) => !u.archived && u.fields.role !== "Super User");
   let summary: ReturnType<typeof previewRollover> | null = null;
   try {
     summary = previewRollover(state, year, choices);
@@ -34,8 +31,8 @@ export function ManagementReset({ role }: { role: Role }) {
           <Badge>Kepengurusan {state.settings.managementPeriod}</Badge>
           <h2>Serah terima, tanpa kehilangan riwayat.</h2>
           <p>
-            Pinjaman selesai atau ditolak masuk arsip. Pengajuan dan alat yang
-            belum kembali tetap dikelola pada periode baru.
+            Pinjaman selesai atau ditolak masuk arsip. Pengajuan dan alat yang belum kembali tetap
+            dikelola pada periode baru.
           </p>
         </div>
         <Field
@@ -53,9 +50,8 @@ export function ManagementReset({ role }: { role: Role }) {
         />
       </div>
       <Notice>
-        Periode kepengurusan terpisah dari Open Recruitment. Anggota,
-        inventaris, kampanye dan periode OR tidak direset. Seluruh perubahan
-        berikut hanya simulasi frontend.
+        Periode kepengurusan terpisah dari Open Recruitment. Anggota, inventaris, kampanye dan
+        periode OR tidak direset. Seluruh perubahan berikut hanya simulasi frontend.
       </Notice>
       <h2 className="admin-section-title">Akses admin setelah pergantian</h2>
       <div className="table-wrap">
@@ -89,9 +85,7 @@ export function ManagementReset({ role }: { role: Role }) {
                     }}
                   >
                     <option value="keep">Pertahankan password</option>
-                    <option value="request-new">
-                      Ganti baru (permintaan preview)
-                    </option>
+                    <option value="request-new">Ganti baru (permintaan preview)</option>
                   </select>
                 </td>
                 <td>
@@ -112,32 +106,25 @@ export function ManagementReset({ role }: { role: Role }) {
           <p>
             <strong>{summary.archiveIds.length}</strong> pinjaman diarsipkan ·{" "}
             <strong>{summary.carryIds.length}</strong> pinjaman diteruskan ·{" "}
-            <strong>{summary.resetUserIds.length}</strong> permintaan ganti
-            password
+            <strong>{summary.resetUserIds.length}</strong> permintaan ganti password
           </p>
         ) : (
           <p>Masukkan tahun baru untuk melihat dampaknya.</p>
         )}
         <p>
-          Kode WPL, kondisi, jaminan, denda, dan riwayat tidak dihapus. Password
-          nyata belum berubah; permintaan akan menjadi alur backend pada tahap
-          berikutnya.
+          Kode WPL, kondisi, jaminan, denda, dan riwayat tidak dihapus. Password nyata belum
+          berubah; permintaan akan menjadi alur backend pada tahap berikutnya.
         </p>
         {error && <Notice tone="error">{error}</Notice>}
-        <button
-          className="btn primary"
-          disabled={!summary}
-          onClick={() => setReview(true)}
-        >
+        <button className="btn primary" disabled={!summary} onClick={() => setReview(true)}>
           Tinjau reset kepengurusan
         </button>
       </div>
       <div className="admin-panel super-reset-panel">
         <h3>Reset password Super User</h3>
         <p>
-          Tindakan terpisah dari reset massal. Pada preview, hanya status
-          permintaan yang dicatat; akun tidak terkunci dan password login tidak
-          diubah.
+          Tindakan terpisah dari reset massal. Pada preview, hanya status permintaan yang dicatat;
+          akun tidak terkunci dan password login tidak diubah.
         </p>
         {state.settings.superUserResetRequestedAt && (
           <Badge>Permintaan preview sudah tercatat</Badge>
@@ -154,18 +141,14 @@ export function ManagementReset({ role }: { role: Role }) {
         {summary && (
           <>
             <p>
-              Arsipkan {summary.archiveIds.length} peminjaman selesai/ditolak
-              dan teruskan {summary.carryIds.length} yang belum selesai.
+              Arsipkan {summary.archiveIds.length} peminjaman selesai/ditolak dan teruskan{" "}
+              {summary.carryIds.length} yang belum selesai.
             </p>
             <p>
-              Catat permintaan ganti untuk {summary.resetUserIds.length} akun.
-              Akun lain mempertahankan aksesnya; Super User tidak termasuk
-              operasi massal.
+              Catat permintaan ganti untuk {summary.resetUserIds.length} akun. Akun lain
+              mempertahankan aksesnya; Super User tidak termasuk operasi massal.
             </p>
-            <Notice>
-              Tidak ada penghapusan permanen. Ini hanya data preview pada
-              browser.
-            </Notice>
+            <Notice>Tidak ada penghapusan permanen. Ini hanya data preview pada browser.</Notice>
             <div className="button-row">
               <button
                 className="btn primary"
@@ -190,10 +173,7 @@ export function ManagementReset({ role }: { role: Role }) {
               >
                 Konfirmasi reset preview
               </button>
-              <button
-                className="btn secondary"
-                onClick={() => setReview(false)}
-              >
+              <button className="btn secondary" onClick={() => setReview(false)}>
                 Batal
               </button>
             </div>
@@ -206,8 +186,8 @@ export function ManagementReset({ role }: { role: Role }) {
         onClose={() => setSuperReset(false)}
       >
         <Notice>
-          Ini tidak mengganti kredensial nyata. Reset aman, verifikasi pemilik
-          dan pencabutan sesi diterapkan di backend.
+          Ini tidak mengganti kredensial nyata. Reset aman, verifikasi pemilik dan pencabutan sesi
+          diterapkan di backend.
         </Notice>
         <div className="button-row">
           <button
@@ -229,10 +209,7 @@ export function ManagementReset({ role }: { role: Role }) {
           >
             Catat permintaan preview
           </button>
-          <button
-            className="btn secondary"
-            onClick={() => setSuperReset(false)}
-          >
+          <button className="btn secondary" onClick={() => setSuperReset(false)}>
             Batal
           </button>
         </div>

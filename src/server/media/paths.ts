@@ -3,9 +3,7 @@ import { isAbsolute, join, resolve, relative } from "node:path";
 export function mediaPath(root: string, id: string, extension: "webp" | "pdf" | "epub") {
   if (
     !isAbsolute(root) ||
-    !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
-      id,
-    ) ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id) ||
     !["webp", "pdf", "epub"].includes(extension)
   )
     throw new Error("Invalid media storage path");

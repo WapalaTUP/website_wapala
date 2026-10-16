@@ -22,19 +22,12 @@ export function CampaignPages({ id }: { id?: string }) {
           list.map((c) => (
             <article key={c.id} className="campaign-public-card">
               {c.cover && (
-                <Image
-                  src={c.cover}
-                  width={640}
-                  height={360}
-                  alt={c.title}
-                  unoptimized
-                />
+                <Image src={c.cover} width={640} height={360} alt={c.title} unoptimized />
               )}
               <h2>{c.title}</h2>
               <p>{c.description}</p>
               <p>
-                {money(campaignTotal(state.donations, c.id))} terverifikasi dari{" "}
-                {money(c.target)}
+                {money(campaignTotal(state.donations, c.id))} terverifikasi dari {money(c.target)}
               </p>
               <Link href={"/donasi/" + c.id} className="btn primary">
                 Lihat kampanye

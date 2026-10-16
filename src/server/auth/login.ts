@@ -4,15 +4,17 @@ import { DomainError } from "../errors";
 import { verifyPassword, dummyHash } from "../security/password";
 import { newToken, digestToken } from "../security/tokens";
 import { csrfForSession } from "../security/csrf";
-import { takeThrottle, isLoginLocked, recordLoginFailure, clearLoginLock } from "../security/throttle";
+import {
+  takeThrottle,
+  isLoginLocked,
+  recordLoginFailure,
+  clearLoginLock,
+} from "../security/throttle";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
 const LOCK_AFTER_FAILURES = 6,
   LOCK_WINDOW_MS = 86400000;
-export async function login(
-  input: { email: string; password: string },
-  ctx: RequestContext,
-) {
+export async function login(input: { email: string; password: string }, ctx: RequestContext) {
   const email = input.email.trim().toLowerCase();
   await takeThrottle("login-ip:" + ctx.ipDigest, 20, 900000);
   await takeThrottle("login-email:" + email, 10, 900000);
@@ -26,10 +28,7 @@ export async function login(
       "Terlalu banyak percobaan gagal untuk akun ini dari jaringan Anda. Coba lagi nanti atau hubungi pengelola.",
     );
   const snapshot = await getDb().user.findUnique({ where: { email } });
-  const valid = await verifyPassword(
-    snapshot?.passwordHash || (await dummyHash()),
-    input.password,
-  );
+  const valid = await verifyPassword(snapshot?.passwordHash || (await dummyHash()), input.password);
   const token = newToken(),
     csrfToken = csrfForSession(token),
     expiresAt = new Date(Date.now() + 30 * 86400000);
@@ -48,8 +47,7 @@ export async function login(
         where: { id: snapshot.id },
       }),
       now = new Date();
-    const locked =
-      user.requiresUnlock || !!(user.lockUntil && user.lockUntil > now);
+    const locked = user.requiresUnlock || !!(user.lockUntil && user.lockUntil > now);
     if (
       !valid ||
       locked ||
@@ -94,12 +92,7 @@ export async function login(
   });
   if (!result) {
     if (wrongPassword)
-      await recordLoginFailure(
-        email,
-        ctx.ipDigest,
-        LOCK_AFTER_FAILURES,
-        LOCK_WINDOW_MS,
-      );
+      await recordLoginFailure(email, ctx.ipDigest, LOCK_AFTER_FAILURES, LOCK_WINDOW_MS);
     throw new DomainError(
       "LOGIN_FAILED",
       401,

@@ -29,11 +29,7 @@ export async function generateMetadata({
         : undefined,
   };
 }
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ path?: string[] }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ path?: string[] }> }) {
   const { path = [] } = await params;
   if (path.length && !(path[0] in titles)) notFound();
   return <PublicPage path={path} />;

@@ -11,19 +11,12 @@ export const dynamic = "force-dynamic";
 export function POST(request: Request) {
   return route(request, async () => {
     const { principal } = await authenticated(request, "data:reset");
-    return jsonResponse(
-      await previewDataReset(
-        principal,
-        await readJson(request, resetSelection),
-      ),
-    );
+    return jsonResponse(await previewDataReset(principal, await readJson(request, resetSelection)));
   });
 }
 export function DELETE(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "data:reset");
-    return jsonResponse(
-      await resetData(principal, await readJson(request, resetSchema), ctx),
-    );
+    return jsonResponse(await resetData(principal, await readJson(request, resetSchema), ctx));
   });
 }

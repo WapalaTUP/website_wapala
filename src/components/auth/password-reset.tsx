@@ -32,23 +32,14 @@ export function PasswordReset() {
     setBusy(true);
     setError("");
     try {
-      if (password !== confirmation)
-        throw new Error("Konfirmasi password belum sesuai.");
-      await authPost(
-        "reset",
-        { token, newPassword: password },
-        context.csrfToken,
-      );
+      if (password !== confirmation) throw new Error("Konfirmasi password belum sesuai.");
+      await authPost("reset", { token, newPassword: password }, context.csrfToken);
       setToken("");
       setPassword("");
       setConfirmation("");
       setDone(true);
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Tautan tidak valid atau sudah kedaluwarsa.",
-      );
+      setError(e instanceof Error ? e.message : "Tautan tidak valid atau sudah kedaluwarsa.");
     } finally {
       setBusy(false);
     }
@@ -58,8 +49,8 @@ export function PasswordReset() {
       <h1>Reset password.</h1>
       {context?.emailRecoveryEnabled === false ? (
         <Notice>
-          Email dinonaktifkan. Hubungi pengelola untuk pemulihan akun melalui
-          SSH atau reset oleh Super User.
+          Email dinonaktifkan. Hubungi pengelola untuk pemulihan akun melalui SSH atau reset oleh
+          Super User.
         </Notice>
       ) : done ? (
         <>

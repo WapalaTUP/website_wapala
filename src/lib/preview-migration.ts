@@ -18,12 +18,9 @@ export function migratePreviewState(input: DemoState): DemoState {
   ];
   state.records.pengguna ||= [];
   for (const account of accounts) {
-    const existing = state.records.pengguna.filter(
-      (u) => u.fields.role === account.role,
-    );
+    const existing = state.records.pengguna.filter((u) => u.fields.role === account.role);
     for (const user of existing)
-      if (user.fields.email?.toLowerCase() === account.old)
-        user.fields.email = account.email;
+      if (user.fields.email?.toLowerCase() === account.old) user.fields.email = account.email;
     if (!existing.length)
       state.records.pengguna.push({
         id: "default-" + account.role,

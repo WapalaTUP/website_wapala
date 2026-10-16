@@ -23,11 +23,7 @@ export function createMailTransport(): MailTransport {
     })
     .safeParse(process.env);
   if (!options.success)
-    throw new DomainError(
-      "SMTP_CONFIG_INVALID",
-      503,
-      "Konfigurasi SMTP belum valid.",
-    );
+    throw new DomainError("SMTP_CONFIG_INVALID", 503, "Konfigurasi SMTP belum valid.");
   const s = options.data,
     transport = nodemailer.createTransport({
       host: s.SMTP_HOST,

@@ -23,13 +23,7 @@ export function QuestionEditor({
   onMove: (direction: number) => void;
   disabled?: boolean;
 }) {
-  const choices = [
-    "radio",
-    "checkbox",
-    "select",
-    "radioGrid",
-    "checkboxGrid",
-  ].includes(q.kind);
+  const choices = ["radio", "checkbox", "select", "radioGrid", "checkboxGrid"].includes(q.kind);
   return (
     <fieldset className="event-question-edit" disabled={disabled}>
       <div className="event-question-head">
@@ -224,8 +218,7 @@ export function QuestionEditor({
                 value={q.validation[key as keyof typeof q.validation] ?? ""}
                 onChange={(e) => {
                   const validation = { ...q.validation };
-                  if (e.target.value === "")
-                    delete validation[key as keyof typeof validation];
+                  if (e.target.value === "") delete validation[key as keyof typeof validation];
                   else
                     Object.assign(validation, {
                       [key]: Number(e.target.value),
@@ -238,9 +231,7 @@ export function QuestionEditor({
           {q.kind === "date" &&
             (["minDate", "maxDate"] as const).map((key) => (
               <label key={key}>
-                {key === "minDate"
-                  ? "Tanggal paling awal"
-                  : "Tanggal paling akhir"}
+                {key === "minDate" ? "Tanggal paling awal" : "Tanggal paling akhir"}
                 <input
                   type="date"
                   value={q.validation[key] ?? ""}
@@ -315,12 +306,7 @@ export function QuestionEditor({
         >
           <Copy size={18} />
         </button>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Hapus pertanyaan"
-          onClick={onRemove}
-        >
+        <button type="button" className="icon-btn" aria-label="Hapus pertanyaan" onClick={onRemove}>
           <Trash2 size={18} />
         </button>
         <button

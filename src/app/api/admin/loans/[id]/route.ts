@@ -3,10 +3,7 @@ import { readJson } from "@/server/http/body";
 import { transitionLoan, transitionSchema } from "@/server/domains/loans";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "loans:write");
     return jsonResponse(

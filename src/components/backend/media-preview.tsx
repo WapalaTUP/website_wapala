@@ -1,10 +1,10 @@
 "use client";
+import { MEDIA_URL_PATTERN } from "@/lib/media-url";
 import { useState } from "react";
 
 export function MediaPreview({ src, label }: { src?: string; label: string }) {
   const [failed, setFailed] = useState(false);
-  if (!src || !/^\/api\/media\/[a-f0-9-]{36}$/.test(src))
-    return <p>{label}: belum tersedia.</p>;
+  if (!src || !MEDIA_URL_PATTERN.test(src)) return <p>{label}: belum tersedia.</p>;
   return (
     <figure style={{ margin: "16px 0" }}>
       {!failed && (

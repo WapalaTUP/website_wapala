@@ -2,29 +2,18 @@ import type { ServerConfig } from "../config";
 import { getConfig } from "../config";
 import { DomainError } from "../errors";
 import { constantEqual, hmacToken, newToken } from "./tokens";
-export function assertOrigin(
-  request: Request,
-  config: ServerConfig = getConfig(),
-) {
+export function assertOrigin(request: Request, config: ServerConfig = getConfig()) {
   if (request.headers.get("origin") !== config.appOrigin)
     throw new DomainError(
       "ORIGIN_DENIED",
       403,
-      "Alamat halaman tidak sesuai. Buka portal melalui " +
-        config.appOrigin +
-        "/wapala.",
+      "Alamat halaman tidak sesuai. Buka portal melalui " + config.appOrigin + "/wapala.",
     );
 }
-export function csrfForSession(
-  token: string,
-  config: ServerConfig = getConfig(),
-) {
+export function csrfForSession(token: string, config: ServerConfig = getConfig()) {
   return hmacToken("session-csrf:" + token, config.securityKey);
 }
-export function createPreAuthToken(
-  config: ServerConfig = getConfig(),
-  now = new Date(),
-) {
+export function createPreAuthToken(config: ServerConfig = getConfig(), now = new Date()) {
   const value = newToken() + "." + now.getTime();
   return value + "." + hmacToken("preauth:" + value, config.securityKey);
 }
@@ -34,12 +23,7 @@ export function validatePreAuthToken(
   config: ServerConfig = getConfig(),
   now = new Date(),
 ) {
-  if (
-    !cookie ||
-    !header ||
-    cookie.length > 150 ||
-    !constantEqual(cookie, header)
-  )
+  if (!cookie || !header || cookie.length > 150 || !constantEqual(cookie, header))
     throw new DomainError(
       "CSRF_DENIED",
       403,
@@ -52,10 +36,7 @@ export function validatePreAuthToken(
     !Number.isFinite(timestamp) ||
     timestamp > now.getTime() ||
     now.getTime() - timestamp > 900000 ||
-    !constantEqual(
-      parts[2],
-      hmacToken("preauth:" + parts[0] + "." + parts[1], config.securityKey),
-    )
+    !constantEqual(parts[2], hmacToken("preauth:" + parts[0] + "." + parts[1], config.securityKey))
   )
     throw new DomainError(
       "CSRF_DENIED",

@@ -13,11 +13,7 @@ const payloadSchema = z
   })
   .strict();
 type Options = { key?: Buffer; now?: number };
-export function issueEventFormToken(
-  eventId: string,
-  revisionId: string,
-  options: Options = {},
-) {
+export function issueEventFormToken(eventId: string, revisionId: string, options: Options = {}) {
   const key = options.key ?? getConfig().securityKey;
   const payload = payloadSchema.parse({
     eventId,
@@ -54,9 +50,7 @@ function verifyToken(token: string, options: Options, replay: boolean) {
   )
     return fail();
   try {
-    const v = payloadSchema.parse(
-      JSON.parse(Buffer.from(data, "base64url").toString()),
-    );
+    const v = payloadSchema.parse(JSON.parse(Buffer.from(data, "base64url").toString()));
     if (
       v.expiresAt + (replay ? 86400000 : 0) <= (options.now ?? Date.now()) ||
       v.expiresAt > (options.now ?? Date.now()) + 7200000

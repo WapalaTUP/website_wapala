@@ -63,15 +63,10 @@ export function BackendInventory({
   const rows = equipment.filter(
     (e) =>
       !e.archived &&
-      (e.code + " " + e.name + " " + e.category)
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      (e.code + " " + e.name + " " + e.category).toLowerCase().includes(search.toLowerCase()),
   );
   async function refresh() {
-    const data = await backendApi<{ equipment: Equipment[] }>(
-      "/api/admin/inventory",
-      csrfToken,
-    );
+    const data = await backendApi<{ equipment: Equipment[] }>("/api/admin/inventory", csrfToken);
     setEquipment(data.equipment);
   }
   async function save(value: Draft) {
@@ -104,13 +99,9 @@ export function BackendInventory({
         },
         "PATCH",
       );
-      setEquipment((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      setEquipment((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Ketersediaan belum dapat diubah.",
-      );
+      setError(e instanceof Error ? e.message : "Ketersediaan belum dapat diubah.");
       // Refresh stale versions so a rejected concurrent change can be retried.
       try {
         await refresh();
@@ -124,25 +115,11 @@ export function BackendInventory({
   return (
     <>
       <div className="admin-toolbar">
-        {canReset && (
-          <DataReset
-            target="inventory"
-            csrfToken={csrfToken}
-            onReset={refresh}
-          />
-        )}
-        <a
-          download
-          className="btn secondary"
-          href="/api/admin/export/inventory?format=xlsx"
-        >
+        {canReset && <DataReset target="inventory" csrfToken={csrfToken} onReset={refresh} />}
+        <a download className="btn secondary" href="/api/admin/export/inventory?format=xlsx">
           Ekspor Excel
         </a>
-        <a
-          download
-          className="btn secondary"
-          href="/api/admin/export/inventory?format=pdf"
-        >
+        <a download className="btn secondary" href="/api/admin/export/inventory?format=pdf">
           Ekspor PDF
         </a>
         <input
@@ -151,11 +128,7 @@ export function BackendInventory({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <BackendImport
-          kind="inventaris"
-          csrfToken={csrfToken}
-          onImported={refresh}
-        />
+        <BackendImport kind="inventaris" csrfToken={csrfToken} onImported={refresh} />
         <button
           className="btn primary"
           disabled={busy}
@@ -211,9 +184,7 @@ export function BackendInventory({
                     {row.total} / {row.fit}
                   </td>
                   <td>
-                    <Badge>
-                      {row.available ? "Tersedia" : "Tidak tersedia"}
-                    </Badge>
+                    <Badge>{row.available ? "Tersedia" : "Tidak tersedia"}</Badge>
                   </td>
                   <td>
                     <div className="inventory-actions">
@@ -235,10 +206,7 @@ export function BackendInventory({
                         disabled={busy}
                         onClick={() => void toggleAvailability(row)}
                       >
-                        <span
-                          className="inventory-availability-track"
-                          aria-hidden="true"
-                        >
+                        <span className="inventory-availability-track" aria-hidden="true">
                           <span />
                         </span>
                         {row.available ? "Tersedia" : "Tidak tersedia"}
@@ -292,9 +260,7 @@ export function BackendInventory({
                     setDraft({
                       ...draft,
                       [key]:
-                        typeof draft[key] === "number"
-                          ? Number(e.target.value)
-                          : e.target.value,
+                        typeof draft[key] === "number" ? Number(e.target.value) : e.target.value,
                     })
                   }
                 />
@@ -303,9 +269,7 @@ export function BackendInventory({
                 Kondisi
                 <select
                   value={draft.condition}
-                  onChange={(e) =>
-                    setDraft({ ...draft, condition: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, condition: e.target.value })}
                 >
                   {[
                     "Baik",
@@ -323,8 +287,8 @@ export function BackendInventory({
             </div>
             {!draft.id && (
               <p className="inventory-availability-hint">
-                Alat baru disimpan sebagai tidak tersedia. Aktifkan melalui
-                toggle pada kolom Aksi setelah disimpan.
+                Alat baru disimpan sebagai tidak tersedia. Aktifkan melalui toggle pada kolom Aksi
+                setelah disimpan.
               </p>
             )}
             <Upload
@@ -336,14 +300,8 @@ export function BackendInventory({
                 setBusy(true);
                 setError("");
                 try {
-                  const photo = await uploadMedia(
-                    files[0],
-                    "inventory",
-                    csrfToken,
-                  );
-                  setDraft((current) =>
-                    current ? { ...current, photo } : current,
-                  );
+                  const photo = await uploadMedia(files[0], "inventory", csrfToken);
+                  setDraft((current) => (current ? { ...current, photo } : current));
                 } catch (e) {
                   setError(e instanceof Error ? e.message : "Upload gagal.");
                 } finally {
@@ -351,11 +309,7 @@ export function BackendInventory({
                 }
               }}
             />
-            <MediaPreview
-              key={draft.photo}
-              src={draft.photo}
-              label="Foto alat"
-            />
+            <MediaPreview key={draft.photo} src={draft.photo} label="Foto alat" />
             {error && <Notice tone="error">{error}</Notice>}
             <div className="button-row">
               <button className="btn primary" disabled={busy}>
@@ -381,8 +335,8 @@ export function BackendInventory({
         }}
       >
         <Notice>
-          Alat yang masih terikat peminjaman tidak dapat diarsipkan. Tidak ada
-          stok yang dibebaskan oleh tindakan ini.
+          Alat yang masih terikat peminjaman tidak dapat diarsipkan. Tidak ada stok yang dibebaskan
+          oleh tindakan ini.
         </Notice>
         {error && <Notice tone="error">{error}</Notice>}
         <div className="button-row">
@@ -395,11 +349,7 @@ export function BackendInventory({
           >
             Arsipkan
           </button>
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={() => setArchive(null)}
-          >
+          <button className="btn secondary" disabled={busy} onClick={() => setArchive(null)}>
             Batal
           </button>
         </div>

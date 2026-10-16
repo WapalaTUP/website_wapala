@@ -81,32 +81,20 @@ export async function previewDataReset(p: Principal, input: unknown) {
   });
 }
 
-export async function resetData(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function resetData(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "data:reset");
   const v = resetSchema.parse(input);
   await takeThrottle("data-reset:" + p.userId, 5, 900000);
   const old = await getDb().user.findUniqueOrThrow({ where: { id: p.userId } });
   if (!(await verifyPassword(old.passwordHash, v.password)))
-    throw new DomainError(
-      "PASSWORD_INVALID",
-      400,
-      "Password Super User tidak sesuai.",
-    );
+    throw new DomainError("PASSWORD_INVALID", 400, "Password Super User tidak sesuai.");
   return getDb().$transaction(
     async (tx) => {
       // Match requestLoan/management reset: advisory lock precedes user/row locks.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('wapala:management'))::text`;
       const current = await assertFresh(tx, p, "data:reset");
       if (current.passwordHash !== old.passwordHash)
-        throw new DomainError(
-          "CONFLICT",
-          409,
-          "Kredensial berubah. Silakan login kembali.",
-        );
+        throw new DomainError("CONFLICT", 409, "Kredensial berubah. Silakan login kembali.");
       // Serialize master edits/imports and related writes while checking and executing.
       // Static identifiers only: never interpolate table names from request input.
       if (v.target === "members")

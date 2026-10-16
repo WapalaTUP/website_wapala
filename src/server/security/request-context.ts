@@ -29,9 +29,7 @@ export function requestContext(
   }
   return {
     ipDigest: hmacToken("ip:" + ip, config.securityKey),
-    userAgent: (request.headers.get("user-agent") || "")
-      .replace(/[\r\n\0]/g, "")
-      .slice(0, 256),
+    userAgent: (request.headers.get("user-agent") || "").replace(/[\r\n\0]/g, "").slice(0, 256),
     requestId: randomUUID(),
   };
 }

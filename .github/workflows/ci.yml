@@ -43,6 +43,9 @@ jobs:
       - name: Lint
         run: npm run lint -- --max-warnings=0
 
+      - name: Format check
+        run: npm run format:check
+
       - name: Build
         env:
           NEXT_TELEMETRY_DISABLED: "1"

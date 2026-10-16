@@ -15,23 +15,16 @@ export function previewRollover(
     Number(year) < 2004 ||
     Number(year) <= Number(state.settings.managementPeriod)
   )
-    throw new Error(
-      "Pilih tahun empat digit yang lebih baru dari kepengurusan saat ini.",
-    );
+    throw new Error("Pilih tahun empat digit yang lebih baru dari kepengurusan saat ini.");
   const loans = state.loans.filter((l) => !l.archived);
   return {
     archiveIds: loans
       .filter((l) => ["Dikembalikan", "Ditolak"].includes(l.status))
       .map((l) => l.id),
-    carryIds: loans
-      .filter((l) => !["Dikembalikan", "Ditolak"].includes(l.status))
-      .map((l) => l.id),
+    carryIds: loans.filter((l) => !["Dikembalikan", "Ditolak"].includes(l.status)).map((l) => l.id),
     resetUserIds: state.records.pengguna
       .filter(
-        (u) =>
-          !u.archived &&
-          u.fields.role !== "Super User" &&
-          choices[u.id] === "request-new",
+        (u) => !u.archived && u.fields.role !== "Super User" && choices[u.id] === "request-new",
       )
       .map((u) => u.id),
   };
@@ -42,8 +35,7 @@ export function applyRollover(
   choices: Record<string, PasswordChoice>,
   actor: Role,
 ) {
-  if (actor !== "Super User")
-    throw new Error("Hanya Super User dapat mereset kepengurusan.");
+  if (actor !== "Super User") throw new Error("Hanya Super User dapat mereset kepengurusan.");
   const next = previewRollover(state, year, choices),
     origin = state.settings.managementPeriod;
   for (const loan of state.loans) {

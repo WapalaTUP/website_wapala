@@ -13,23 +13,13 @@ function validateDatabaseParameters(url: URL, allowSchema: boolean) {
   for (const [key, value] of url.searchParams) {
     if (seen.has(key)) throw new Error();
     seen.add(key);
-    if (
-      key === "schema" &&
-      allowSchema &&
-      /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(value)
-    )
-      continue;
-    if (
-      key === "sslmode" &&
-      ["disable", "require", "verify-ca", "verify-full"].includes(value)
-    )
+    if (key === "schema" && allowSchema && /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(value)) continue;
+    if (key === "sslmode" && ["disable", "require", "verify-ca", "verify-full"].includes(value))
       continue;
     throw new Error();
   }
 }
-export function parseConfig(
-  input: Record<string, string | undefined>,
-): ServerConfig {
+export function parseConfig(input: Record<string, string | undefined>): ServerConfig {
   try {
     const production = input.NODE_ENV === "production";
     const app = new URL(input.APP_URL || "");
@@ -62,8 +52,7 @@ export function parseConfig(
       (production && (mode === "preview" || emailMode === "sink"))
     )
       throw new Error();
-    if (input.TRUST_PROXY && !["true", "false"].includes(input.TRUST_PROXY))
-      throw new Error();
+    if (input.TRUST_PROXY && !["true", "false"].includes(input.TRUST_PROXY)) throw new Error();
     return {
       appOrigin: app.origin,
       databaseUrl: db.toString(),
@@ -74,18 +63,11 @@ export function parseConfig(
       mode: mode as ServerConfig["mode"],
     };
   } catch {
-    throw new DomainError(
-      "CONFIG_INVALID",
-      503,
-      "Konfigurasi server belum valid.",
-    );
+    throw new DomainError("CONFIG_INVALID", 503, "Konfigurasi server belum valid.");
   }
 }
 export const getConfig = () => parseConfig(process.env);
-export function validateTestDatabaseUrl(
-  testUrl: string,
-  productionUrl?: string,
-): URL {
+export function validateTestDatabaseUrl(testUrl: string, productionUrl?: string): URL {
   try {
     const url = new URL(testUrl);
     validateDatabaseParameters(url, false);

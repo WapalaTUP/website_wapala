@@ -21,9 +21,7 @@ import { EventFormRenderer } from "./form-renderer";
 import { EventResponses } from "./event-responses";
 import { MediaPreview } from "../backend/media-preview";
 const localTime = (iso: string) =>
-  iso
-    ? new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 16)
-    : "";
+  iso ? new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 16) : "";
 export function EventEditor({
   initial,
   csrfToken,
@@ -63,11 +61,7 @@ export function EventEditor({
   };
   const form = (v: EventForm) => patch({ form: v });
   const close = () => {
-    if (
-      !dirty ||
-      window.confirm("Ada perubahan belum tersimpan. Tinggalkan editor?")
-    )
-      onClose();
+    if (!dirty || window.confirm("Ada perubahan belum tersimpan. Tinggalkan editor?")) onClose();
   };
   async function save(publish = false) {
     if (busyRef.current) return;
@@ -82,35 +76,27 @@ export function EventEditor({
     setMessage("");
     const checked = eventDraftSchema.safeParse(draft);
     if (!checked.success) {
-      setError(
-        checked.error.issues
-          .map((i) => i.path.join(".") + ": " + i.message)
-          .join("\n"),
-      );
+      setError(checked.error.issues.map((i) => i.path.join(".") + ": " + i.message).join("\n"));
       return;
     }
     busyRef.current = true;
     setBusy(true);
     try {
-      const saved = await backendApi<EventAdminDto>(
-        "/api/admin/events",
-        csrfToken,
-        {
-          ...checked.data,
-          ...(record ? { id: record.id, version: record.version } : {}),
-        },
-      );
+      const saved = await backendApi<EventAdminDto>("/api/admin/events", csrfToken, {
+        ...checked.data,
+        ...(record ? { id: record.id, version: record.version } : {}),
+      });
       setRecord(saved);
       setDraft(saved.draft);
       setDirty(false);
       onSaved(saved);
       setMessage("Draft tersimpan.");
       if (publish) {
-        const live = await backendApi<EventAdminDto>(
-          "/api/admin/events/action",
-          csrfToken,
-          { id: saved.id, version: saved.version, action: "publish" },
-        );
+        const live = await backendApi<EventAdminDto>("/api/admin/events/action", csrfToken, {
+          id: saved.id,
+          version: saved.version,
+          action: "publish",
+        });
         setRecord(live);
         onSaved(live);
         setMessage("Event dipublikasikan. Formulir siap menerima pendaftaran.");
@@ -175,42 +161,23 @@ export function EventEditor({
             Daftar event
           </button>
           <span role="status">
-            {dirty
-              ? "Perubahan belum tersimpan"
-              : record
-                ? "Draft tersimpan"
-                : "Event baru"}
+            {dirty ? "Perubahan belum tersimpan" : record ? "Draft tersimpan" : "Event baru"}
           </span>
           <div className="event-editor-tools">
-            <button
-              className="btn secondary"
-              onClick={() => setPreview(!preview)}
-            >
+            <button className="btn secondary" onClick={() => setPreview(!preview)}>
               <Eye size={17} />
               {preview ? "Kembali mengedit" : "Preview"}
             </button>
-            <button
-              className="btn secondary"
-              disabled={busy}
-              onClick={() => save()}
-            >
+            <button className="btn secondary" disabled={busy} onClick={() => save()}>
               <Save size={17} />
               Simpan draft
             </button>
-            <button
-              className="btn primary"
-              disabled={busy}
-              onClick={() => save(true)}
-            >
+            <button className="btn primary" disabled={busy} onClick={() => save(true)}>
               Publikasikan
             </button>
           </div>
         </div>
-        <div
-          className="event-tabs"
-          role="tablist"
-          aria-label="Editor formulir event"
-        >
+        <div className="event-tabs" role="tablist" aria-label="Editor formulir event">
           {[
             ["questions", "Pertanyaan"],
             ["responses", "Respons"],
@@ -226,9 +193,7 @@ export function EventEditor({
               }}
             >
               {label}
-              {key === "responses" && record
-                ? " (" + record.registrationCount + ")"
-                : ""}
+              {key === "responses" && record ? " (" + record.registrationCount + ")" : ""}
             </button>
           ))}
         </div>
@@ -247,9 +212,7 @@ export function EventEditor({
             <EventFormRenderer
               form={draft.form}
               answers={previewAnswers}
-              onChange={(id, v) =>
-                setPreviewAnswers((a) => ({ ...a, [id]: v }))
-              }
+              onChange={(id, v) => setPreviewAnswers((a) => ({ ...a, [id]: v }))}
             />
           </div>
         ) : tab === "responses" ? (
@@ -349,9 +312,7 @@ export function EventEditor({
                 <div key={key}>
                   <label className="event-upload-label">
                     <Upload size={18} />
-                    {key === "poster"
-                      ? "Upload poster event"
-                      : "Upload foto sampul"}
+                    {key === "poster" ? "Upload poster event" : "Upload foto sampul"}
                     <input
                       type="file"
                       disabled={busy}
@@ -362,16 +323,10 @@ export function EventEditor({
                         setBusy(true);
                         try {
                           patch({
-                            [key]: await uploadMedia(
-                              file,
-                              "event-" + key,
-                              csrfToken,
-                            ),
+                            [key]: await uploadMedia(file, "event-" + key, csrfToken),
                           });
                         } catch (e) {
-                          setError(
-                            e instanceof Error ? e.message : "Upload gagal.",
-                          );
+                          setError(e instanceof Error ? e.message : "Upload gagal.");
                         } finally {
                           setBusy(false);
                         }
@@ -383,14 +338,9 @@ export function EventEditor({
                       <MediaPreview
                         key={draft[key]}
                         src={draft[key]}
-                        label={
-                          key === "poster" ? "Poster event" : "Sampul event"
-                        }
+                        label={key === "poster" ? "Poster event" : "Sampul event"}
                       />
-                      <button
-                        className="text-link"
-                        onClick={() => patch({ [key]: "" })}
-                      >
+                      <button className="text-link" onClick={() => patch({ [key]: "" })}>
                         Hapus gambar
                       </button>
                     </>
@@ -408,9 +358,7 @@ export function EventEditor({
                   <input
                     value={draft.form.title}
                     maxLength={200}
-                    onChange={(e) =>
-                      form({ ...draft.form, title: e.target.value })
-                    }
+                    onChange={(e) => form({ ...draft.form, title: e.target.value })}
                   />
                 </label>
                 <label>
@@ -419,9 +367,7 @@ export function EventEditor({
                     rows={2}
                     value={draft.form.description}
                     maxLength={10000}
-                    onChange={(e) =>
-                      form({ ...draft.form, description: e.target.value })
-                    }
+                    onChange={(e) => form({ ...draft.form, description: e.target.value })}
                   />
                 </label>
               </div>
@@ -429,8 +375,7 @@ export function EventEditor({
                 <div className="event-empty-form">
                   <h2>Mulai dengan pertanyaanmu.</h2>
                   <p>
-                    Semua pertanyaan opsional secara default. Aktifkan Wajib
-                    hanya jika diperlukan.
+                    Semua pertanyaan opsional secara default. Aktifkan Wajib hanya jika diperlukan.
                   </p>
                   <button className="btn secondary" onClick={template}>
                     Gunakan template WAPALA
@@ -440,9 +385,7 @@ export function EventEditor({
               {draft.form.items.map((q, i) => (
                 <article
                   key={q.id}
-                  className={
-                    "event-question" + (selected === q.id ? " selected" : "")
-                  }
+                  className={"event-question" + (selected === q.id ? " selected" : "")}
                   onFocus={() => setSelected(q.id)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
@@ -465,20 +408,12 @@ export function EventEditor({
                     onChange={(next) =>
                       form({
                         ...draft.form,
-                        items: draft.form.items.map((x) =>
-                          x.id === q.id ? next : x,
-                        ),
+                        items: draft.form.items.map((x) => (x.id === q.id ? next : x)),
                       })
                     }
-                    onDuplicate={() =>
-                      form(duplicateQuestion(draft.form, q.id))
-                    }
+                    onDuplicate={() => form(duplicateQuestion(draft.form, q.id))}
                     onRemove={() => {
-                      if (
-                        draft.form.items.some(
-                          (x) => x.showWhen?.questionId === q.id,
-                        )
-                      ) {
+                      if (draft.form.items.some((x) => x.showWhen?.questionId === q.id)) {
                         setError(
                           "Pertanyaan ini dipakai sebagai kondisi. Hapus kondisi terkait dahulu.",
                         );
@@ -494,10 +429,7 @@ export function EventEditor({
                 </article>
               ))}
             </div>
-            <aside
-              className="event-builder-toolbar"
-              aria-label="Tambah isi formulir"
-            >
+            <aside className="event-builder-toolbar" aria-label="Tambah isi formulir">
               <button title="Tambah pertanyaan" onClick={() => add()}>
                 <Plus size={22} />
                 <span>Tambah pertanyaan</span>
@@ -508,8 +440,7 @@ export function EventEditor({
               <small>
                 {selected
                   ? eventKindLabels[
-                      draft.form.items.find((q) => q.id === selected)?.kind ??
-                        "shortText"
+                      draft.form.items.find((q) => q.id === selected)?.kind ?? "shortText"
                     ]
                   : "Pilih pertanyaan untuk mengedit."}
               </small>

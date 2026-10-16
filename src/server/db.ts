@@ -7,8 +7,7 @@ export function getDb(): PrismaClient {
   if (!databaseGlobal.wapalaDb) {
     const databaseUrl = getConfig().databaseUrl;
     const schema = new URL(databaseUrl).searchParams.get("schema") || "public";
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(schema))
-      throw new Error("Invalid database schema");
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(schema)) throw new Error("Invalid database schema");
     const adapter = new PrismaPg(
       {
         connectionString: databaseUrl,

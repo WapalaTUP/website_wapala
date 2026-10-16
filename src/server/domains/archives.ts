@@ -30,11 +30,7 @@ export function assertArchiveRestore(
   loan?: { status: string; penaltyStatus: string; collateralStatus: string },
 ) {
   if (!at || at.toISOString() !== expected)
-    throw new DomainError(
-      "CONFLICT",
-      409,
-      "Arsip telah berubah. Muat ulang daftar.",
-    );
+    throw new DomainError("CONFLICT", 409, "Arsip telah berubah. Muat ulang daftar.");
   if (
     loan &&
     (!["returned", "rejected"].includes(loan.status) ||
@@ -47,11 +43,7 @@ export function assertArchiveRestore(
       "Selesaikan kewajiban peminjaman sebelum pemulihan arsip.",
     );
 }
-export async function restoreArchive(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function restoreArchive(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "users:write");
   const v = archiveRestoreSchema.parse(input);
   return getDb().$transaction(async (tx) => {
@@ -89,11 +81,7 @@ export async function restoreArchive(
         });
         assertArchiveRestore(r?.archivedAt || null, v.at);
         const fields =
-          r!.fields &&
-          typeof r!.fields === "object" &&
-          !Array.isArray(r!.fields)
-            ? r!.fields
-            : {};
+          r!.fields && typeof r!.fields === "object" && !Array.isArray(r!.fields) ? r!.fields : {};
         const result = await tx.contentRecord.updateMany({
           where: {
             id: v.id,
@@ -176,46 +164,39 @@ export async function listArchives(principal: Principal, limit = 100) {
       orderBy: { archivedAt: "desc" as const },
       take: limit,
     };
-    const [
-      members,
-      content,
-      equipment,
-      loans,
-      applicants,
-      donations,
-      campaigns,
-    ] = await Promise.all([
-      tx.member.findMany({
-        ...filter,
-        select: { id: true, fields: true, archivedAt: true },
-      }),
-      tx.contentRecord.findMany({
-        ...filter,
-        select: { id: true, kind: true, fields: true, archivedAt: true },
-      }),
-      tx.equipment.findMany({
-        ...filter,
-        select: { id: true, name: true, archivedAt: true },
-      }),
-      tx.loan.findMany({
-        ...filter,
-        select: { id: true, code: true, archivedAt: true },
-      }),
-      tx.applicant.findMany({
-        ...filter,
-        select: { id: true, code: true, archivedAt: true },
-      }),
-      tx.donation.findMany({
-        ...filter,
-        select: { id: true, name: true, archivedAt: true },
-      }),
-      tx.campaign.findMany({
-        where: { status: "archived" },
-        orderBy: { updatedAt: "desc" },
-        take: limit,
-        select: { id: true, title: true, updatedAt: true },
-      }),
-    ]);
+    const [members, content, equipment, loans, applicants, donations, campaigns] =
+      await Promise.all([
+        tx.member.findMany({
+          ...filter,
+          select: { id: true, fields: true, archivedAt: true },
+        }),
+        tx.contentRecord.findMany({
+          ...filter,
+          select: { id: true, kind: true, fields: true, archivedAt: true },
+        }),
+        tx.equipment.findMany({
+          ...filter,
+          select: { id: true, name: true, archivedAt: true },
+        }),
+        tx.loan.findMany({
+          ...filter,
+          select: { id: true, code: true, archivedAt: true },
+        }),
+        tx.applicant.findMany({
+          ...filter,
+          select: { id: true, code: true, archivedAt: true },
+        }),
+        tx.donation.findMany({
+          ...filter,
+          select: { id: true, name: true, archivedAt: true },
+        }),
+        tx.campaign.findMany({
+          where: { status: "archived" },
+          orderBy: { updatedAt: "desc" },
+          take: limit,
+          select: { id: true, title: true, updatedAt: true },
+        }),
+      ]);
     return [
       ...members.map((r) => ({
         id: r.id,

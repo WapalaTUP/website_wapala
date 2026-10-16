@@ -1,3 +1,4 @@
+import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import type { Prisma } from "../../generated/prisma/client";
@@ -13,7 +14,7 @@ export { memberFields } from "../../lib/operational-schema";
 const text = z.string().trim().max(300);
 const optional = text.optional().default("");
 const media = z
-  .union([z.literal(""), z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/)])
+  .union([z.literal(""), mediaUrlSchema()])
   .optional()
   .default("");
 export const memberSchema = z
@@ -30,11 +31,7 @@ export const memberImportSchema = z
 export type MemberFields = z.infer<typeof memberFields>;
 const conflict = (e: unknown) => {
   if (e && typeof e === "object" && "code" in e && e.code === "P2002")
-    throw new DomainError(
-      "CONFLICT",
-      409,
-      "Identitas sudah ada. Tidak ada baris yang diimpor.",
-    );
+    throw new DomainError("CONFLICT", 409, "Identitas sudah ada. Tidak ada baris yang diimpor.");
   throw e;
 };
 export async function listMembers(principal: Principal) {
@@ -53,11 +50,7 @@ export async function listMembers(principal: Principal) {
     }));
   });
 }
-export async function importMembers(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function importMembers(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "members:write");
   const rows = memberImportSchema.parse({ rows: input }).rows;
   const seen = new Set<string>(),
@@ -103,28 +96,18 @@ export async function importMembers(
     return conflict(e);
   }
 }
-export async function saveMember(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function saveMember(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "members:write");
   const v = memberSchema.parse(input);
   try {
     return await getDb().$transaction(async (tx) => {
       await assertFresh(tx, principal, "members:write");
-      await assertMediaReferences(
-        tx,
-        [v.fields.foto],
-        ["member-photo"],
-        "private",
-      );
+      await assertMediaReferences(tx, [v.fields.foto], ["member-photo"], "private");
       if (v.id) {
         await tx.$queryRaw`SELECT id FROM "Member" WHERE id=${v.id}::uuid FOR UPDATE`;
         const old = await tx.member.findUnique({ where: { id: v.id } });
         if (!old) throw new DomainError("NOT_FOUND", 404);
-        if (!v.version || old.version !== v.version)
-          throw new DomainError("CONFLICT", 409);
+        if (!v.version || old.version !== v.version) throw new DomainError("CONFLICT", 409);
       }
       const data = {
         nia: v.fields.nia.toLowerCase(),
@@ -193,8 +176,17 @@ export const contentFields = {
       highlight: z.enum(["Ya", "Tidak"]).optional().default("Tidak"),
       status,
       gambar: z.array(media).max(500).optional().default([]),
-      sumber: z.union([z.literal(""), z.url().refine(value => value.startsWith("https://www.wapalatelkomuniversity.org/"))]).optional().default(""),
-      tahun_sumber: z.union([z.literal(""), z.string().regex(/^\d{4}$/)]).optional().default(""),
+      sumber: z
+        .union([
+          z.literal(""),
+          z.url().refine((value) => value.startsWith("https://www.wapalatelkomuniversity.org/")),
+        ])
+        .optional()
+        .default(""),
+      tahun_sumber: z
+        .union([z.literal(""), z.string().regex(/^\d{4}$/)])
+        .optional()
+        .default(""),
       keterangan_foto: z.array(z.string().max(10000)).max(500).optional().default([]),
     })
     .strict(),
@@ -236,14 +228,12 @@ export async function saveContent(
         ["content"],
         "public",
       );
-    if ("file" in v.fields)
-      await assertMediaReferences(tx, [v.fields.file], ["book"], "private");
+    if ("file" in v.fields) await assertMediaReferences(tx, [v.fields.file], ["book"], "private");
     if (v.id) {
       await tx.$queryRaw`SELECT id FROM "ContentRecord" WHERE id=${v.id}::uuid FOR UPDATE`;
       const row = await tx.contentRecord.findUnique({ where: { id: v.id } });
       if (!row || row.kind !== kind) throw new DomainError("NOT_FOUND", 404);
-      if (!v.version || row.version !== v.version)
-        throw new DomainError("CONFLICT", 409);
+      if (!v.version || row.version !== v.version) throw new DomainError("CONFLICT", 409);
     }
     const data = {
       kind,

@@ -1,3 +1,4 @@
+import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
 import type { Prisma } from "../../generated/prisma/client";
@@ -12,10 +13,7 @@ import { assertMediaReferences } from "../media/storage";
 const text = (max: number) => z.string().trim().max(max);
 const date = z.union([z.literal(""), z.iso.date()]);
 // Until media registration is connected, only controlled media endpoints are accepted.
-const media = z.union([
-  z.literal(""),
-  z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/),
-]);
+const media = z.union([z.literal(""), mediaUrlSchema()]);
 const money = z.number().int().min(1).max(1_000_000_000_000);
 export const campaignSchema = z
   .object({
@@ -54,14 +52,16 @@ export const campaignSchema = z
     const seen = new Set<string>();
     for (const b of v.bankAccounts) {
       const key = b.bank.toLowerCase() + ":" + b.number.replace(/[ -]/g, "");
-      if (seen.has(key))
-        ctx.addIssue({ code: "custom", message: "Rekening duplikat." });
+      if (seen.has(key)) ctx.addIssue({ code: "custom", message: "Rekening duplikat." });
       seen.add(key);
     }
     if (v.id && !v.version)
       ctx.addIssue({ code: "custom", message: "Versi wajib untuk perubahan." });
     if (v.status === "active" && !v.bankAccounts.length && !v.qrisImage)
-      ctx.addIssue({ code: "custom", message: "Tambahkan rekening atau QRIS sebelum membuka kampanye." });
+      ctx.addIssue({
+        code: "custom",
+        message: "Tambahkan rekening atau QRIS sebelum membuka kampanye.",
+      });
   });
 export const donationSchema = z
   .object({
@@ -99,21 +99,12 @@ function campaignDto(c: CampaignWithBanks) {
   };
 }
 const include = { bankAccounts: { orderBy: { position: "asc" as const } } };
-export async function saveCampaign(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function saveCampaign(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "campaigns:write");
   const v = campaignSchema.parse(input);
   return getDb().$transaction(async (tx) => {
     await assertFresh(tx, principal, "campaigns:write");
-    await assertMediaReferences(
-      tx,
-      [v.cover, v.poster, v.qrisImage],
-      ["campaign"],
-      "public",
-    );
+    await assertMediaReferences(tx, [v.cover, v.poster, v.qrisImage], ["campaign"], "public");
     if (v.id) {
       await tx.$queryRaw`SELECT id FROM "Campaign" WHERE id=${v.id}::uuid FOR UPDATE`;
       const old = await tx.campaign.findUnique({ where: { id: v.id } });
@@ -169,9 +160,7 @@ export async function saveCampaign(
       summary: { status: v.status, banks: v.bankAccounts.length },
       context: ctx,
     });
-    return campaignDto(
-      await tx.campaign.findUniqueOrThrow({ where: { id: c.id }, include }),
-    );
+    return campaignDto(await tx.campaign.findUniqueOrThrow({ where: { id: c.id }, include }));
   });
 }
 export async function listCampaigns(principal: Principal) {
@@ -193,10 +182,7 @@ export async function publicCampaigns() {
       AND: [
         { OR: [{ start: null }, { start: { lte: now } }] },
         {
-          OR: [
-            { end: null },
-            { end: { gte: new Date(now.toISOString().slice(0, 10)) } },
-          ],
+          OR: [{ end: null }, { end: { gte: new Date(now.toISOString().slice(0, 10)) } }],
         },
       ],
     },
@@ -218,7 +204,11 @@ export async function publicCampaigns() {
     total: Number(totals.find((t) => t.campaignId === c.id)?._sum.amount || 0),
   }));
 }
-export async function submitDonation(input: unknown, ctx: RequestContext, transaction?: Prisma.TransactionClient) {
+export async function submitDonation(
+  input: unknown,
+  ctx: RequestContext,
+  transaction?: Prisma.TransactionClient,
+) {
   const v = donationSchema.parse(input);
   const execute = async (tx: Prisma.TransactionClient) => {
     await tx.$queryRaw`SELECT id FROM "Campaign" WHERE id=${v.campaignId}::uuid FOR UPDATE`;
@@ -227,17 +217,8 @@ export async function submitDonation(input: unknown, ctx: RequestContext, transa
       include,
     });
     const today = new Date(new Date().toISOString().slice(0, 10));
-    if (
-      !c ||
-      c.status !== "active" ||
-      (c.start && c.start > today) ||
-      (c.end && c.end < today)
-    )
-      throw new DomainError(
-        "CAMPAIGN_CLOSED",
-        409,
-        "Kampanye tidak sedang menerima donasi.",
-      );
+    if (!c || c.status !== "active" || (c.start && c.start > today) || (c.end && c.end < today))
+      throw new DomainError("CAMPAIGN_CLOSED", 409, "Kampanye tidak sedang menerima donasi.");
     const bank = c.bankAccounts.find((b) => b.id === v.bankAccountId);
     if (
       (v.method === "bank" && !bank) ||
@@ -252,9 +233,7 @@ export async function submitDonation(input: unknown, ctx: RequestContext, transa
         method: v.method,
         proof: v.proof,
         bankAccountId: bank?.id,
-        bankAccountLabel: bank
-          ? `${bank.bank} · ${bank.number} · a.n. ${bank.holder}`
-          : null,
+        bankAccountLabel: bank ? `${bank.bank} · ${bank.number} · a.n. ${bank.holder}` : null,
       },
     });
     await writeAudit(tx, {
@@ -301,16 +280,14 @@ export async function reviewDonation(
   z.uuid().parse(id);
   z.enum(["verified", "rejected"]).parse(status);
   note = text(2000).parse(note);
-  if (status === "rejected" && !note)
-    throw new DomainError("REASON_REQUIRED", 400);
+  if (status === "rejected" && !note) throw new DomainError("REASON_REQUIRED", 400);
   return getDb().$transaction(async (tx) => {
     await assertFresh(tx, principal, "campaigns:write");
     await tx.$queryRaw`SELECT id FROM "Donation" WHERE id=${id}::uuid FOR UPDATE`;
     const row = await tx.donation.findUnique({ where: { id } });
     if (!row || row.archivedAt) throw new DomainError("NOT_FOUND", 404);
     if (row.status === status) return { id, status };
-    if (row.status !== "waiting")
-      throw new DomainError("ALREADY_REVIEWED", 409);
+    if (row.status !== "waiting") throw new DomainError("ALREADY_REVIEWED", 409);
     await tx.donation.update({
       where: { id },
       data: { status, note, reviewedAt: new Date() },

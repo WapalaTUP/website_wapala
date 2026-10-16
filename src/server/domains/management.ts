@@ -12,29 +12,19 @@ export const rolloverSchema = z
   .object({
     expectedYear: z.number().int().min(2004).max(2200),
     year: z.number().int().min(2004).max(2200),
-    passwordChoices: z
-      .array(z.object({ userId: z.uuid(), reset: z.boolean() }).strict())
-      .max(100),
+    passwordChoices: z.array(z.object({ userId: z.uuid(), reset: z.boolean() }).strict()).max(100),
   })
   .strict()
   .refine(
     (v) =>
       v.year > v.expectedYear &&
-      new Set(v.passwordChoices.map((c) => c.userId)).size ===
-        v.passwordChoices.length,
+      new Set(v.passwordChoices.map((c) => c.userId)).size === v.passwordChoices.length,
     { message: "Periksa tahun dan pilihan akun." },
   );
-export async function rollover(
-  principal: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function rollover(principal: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(principal, "users:write");
   const v = rolloverSchema.parse(input);
-  const prepared = new Map<
-    string,
-    { temporaryPassword: string; passwordHash: string }
-  >();
+  const prepared = new Map<string, { temporaryPassword: string; passwordHash: string }>();
   for (const choice of v.passwordChoices.filter((c) => c.reset)) {
     const temporaryPassword = newToken();
     prepared.set(choice.userId, {
@@ -69,12 +59,7 @@ export async function rollover(
         const target = await tx.user.findUnique({
           where: { id: choice.userId },
         });
-        if (
-          !target ||
-          target.role === "SUPER_USER" ||
-          !target.active ||
-          target.archivedAt
-        )
+        if (!target || target.role === "SUPER_USER" || !target.active || target.archivedAt)
           throw new DomainError(
             "RESET_UNAVAILABLE",
             409,

@@ -47,14 +47,7 @@ export const loanRequestSchema = z
   });
 export const transitionSchema = z
   .object({
-    status: z.enum([
-      "approved",
-      "borrowed",
-      "awaiting_return",
-      "late",
-      "returned",
-      "rejected",
-    ]),
+    status: z.enum(["approved", "borrowed", "awaiting_return", "late", "returned", "rejected"]),
     note,
     items: z
       .array(
@@ -69,11 +62,7 @@ export const transitionSchema = z
       .max(50)
       .optional(),
     returns: z
-      .array(
-        z
-          .object({ equipmentId: z.uuid(), condition: conditionSchema })
-          .strict(),
-      )
+      .array(z.object({ equipmentId: z.uuid(), condition: conditionSchema }).strict())
       .max(50)
       .optional(),
     penalty: z.number().int().min(0).max(1_000_000_000).optional(),
@@ -124,7 +113,11 @@ function dto(l: Prisma.LoanGetPayload<{ include: typeof include }>) {
     })),
   };
 }
-export async function requestLoan(input: unknown, ctx: RequestContext, transaction?: Prisma.TransactionClient) {
+export async function requestLoan(
+  input: unknown,
+  ctx: RequestContext,
+  transaction?: Prisma.TransactionClient,
+) {
   const v = loanRequestSchema.parse(input);
   const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -158,11 +151,7 @@ export async function requestLoan(input: unknown, ctx: RequestContext, transacti
           where: { id: 1 },
         });
         const code =
-          "WPL" +
-          Array.from(
-            { length: 5 },
-            () => alphabet[randomInt(alphabet.length)],
-          ).join("");
+          "WPL" + Array.from({ length: 5 }, () => alphabet[randomInt(alphabet.length)]).join("");
         const row = await tx.loan.create({
           data: {
             institution: v.institution,
@@ -198,24 +187,26 @@ export async function requestLoan(input: unknown, ctx: RequestContext, transacti
       return await (transaction ? execute(transaction) : getDb().$transaction(execute));
     } catch (e) {
       if (transaction) throw e;
-      if (!(e && typeof e === "object" && "code" in e && e.code === "P2002"))
-        throw e;
+      if (!(e && typeof e === "object" && "code" in e && e.code === "P2002")) throw e;
     }
   }
   throw new DomainError("CODE_UNAVAILABLE", 503);
 }
 export async function listLoans(principal: Principal) {
   requirePermission(principal, "loans:write");
-  return getDb().$transaction(async (tx) => {
-    await assertFresh(tx, principal, "loans:write");
-    return (
-      await tx.loan.findMany({
-        include,
-        orderBy: { createdAt: "desc" },
-        take: 1000,
-      })
-    ).map(dto);
-  }, { isolationLevel: "RepeatableRead" });
+  return getDb().$transaction(
+    async (tx) => {
+      await assertFresh(tx, principal, "loans:write");
+      return (
+        await tx.loan.findMany({
+          include,
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+        })
+      ).map(dto);
+    },
+    { isolationLevel: "RepeatableRead" },
+  );
 }
 export async function transitionLoan(
   principal: Principal,
@@ -232,13 +223,8 @@ export async function transitionLoan(
     const loan = await tx.loan.findUnique({ where: { id }, include });
     if (!loan || loan.archivedAt) throw new DomainError("NOT_FOUND", 404);
     if (!transitions[loan.status]?.includes(v.status))
-      throw new DomainError(
-        "INVALID_TRANSITION",
-        409,
-        "Perubahan status tidak tersedia.",
-      );
-    if (v.status === "rejected" && !v.note)
-      throw new DomainError("REASON_REQUIRED", 400);
+      throw new DomainError("INVALID_TRANSITION", 409, "Perubahan status tidak tersedia.");
+    if (v.status === "rejected" && !v.note) throw new DomainError("REASON_REQUIRED", 400);
     await lockEquipment(
       tx,
       loan.items.map((i) => i.equipmentId),
@@ -252,9 +238,7 @@ export async function transitionLoan(
       )
         throw new DomainError("INVALID_APPROVAL", 400);
       for (const item of loan.items) {
-        const approved = v.items.find(
-          (i) => i.equipmentId === item.equipmentId,
-        );
+        const approved = v.items.find((i) => i.equipmentId === item.equipmentId);
         if (
           !approved ||
           approved.approved > item.requested ||
@@ -264,18 +248,8 @@ export async function transitionLoan(
         const eq = await tx.equipment.findUniqueOrThrow({
           where: { id: item.equipmentId },
         });
-        const reserved = await reservedPeak(
-          tx,
-          eq.id,
-          loan.start,
-          loan.end,
-          loan.id,
-        );
-        if (
-          eq.archivedAt ||
-          !eq.available ||
-          approved.approved > eq.fit - reserved
-        )
+        const reserved = await reservedPeak(tx, eq.id, loan.start, loan.end, loan.id);
+        if (eq.archivedAt || !eq.available || approved.approved > eq.fit - reserved)
           throw new DomainError(
             "STOCK_UNAVAILABLE",
             409,
@@ -301,17 +275,13 @@ export async function transitionLoan(
       )
         throw new DomainError("RETURN_VERIFICATION_REQUIRED", 400);
       for (const item of approved) {
-        const returned = v.returns.find(
-          (i) => i.equipmentId === item.equipmentId,
-        );
+        const returned = v.returns.find((i) => i.equipmentId === item.equipmentId);
         if (!returned) throw new DomainError("INVALID_RETURN", 400);
         await tx.loanItem.update({
           where: { id: item.id },
           data: { returnCondition: returned.condition },
         });
-        if (
-          ["Rusak Ringan", "Rusak Berat", "Hilang"].includes(returned.condition)
-        ) {
+        if (["Rusak Ringan", "Rusak Berat", "Hilang"].includes(returned.condition)) {
           const eq = await tx.equipment.findUniqueOrThrow({
             where: { id: item.equipmentId },
           });

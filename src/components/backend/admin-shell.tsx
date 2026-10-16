@@ -27,16 +27,7 @@ const modules = {
 const permissions: Record<Role, Array<keyof typeof modules>> = {
   SUPER_USER: Object.keys(modules) as Array<keyof typeof modules>,
   POH: ["anggota", "angkatan", "koreksi", "or"],
-  MULTIMEDIA: [
-    "angkatan",
-    "koreksi",
-    "konten",
-    "galeri",
-    "buku",
-    "or",
-    "donasi",
-    "event",
-  ],
+  MULTIMEDIA: ["angkatan", "koreksi", "konten", "galeri", "buku", "or", "donasi", "event"],
   INVENTARIS: ["inventaris", "peminjaman", "or"],
   ANGGOTA: ["anggota"],
 };
@@ -128,17 +119,14 @@ export function BackendAdminShell({
               <Menu />
             </button>
             <span className="breadcrumb">
-              Portal organisasi /{" "}
-              {modules[module as keyof typeof modules] || "Beranda"}
+              Portal organisasi / {modules[module as keyof typeof modules] || "Beranda"}
             </span>
           </div>
           <ThemeButton />
         </header>
         <main className="admin-main" id="main">
           <div className="admin-page-header">
-            <h1>
-              {modules[module as keyof typeof modules] || "Portal WAPALA"}
-            </h1>
+            <h1>{modules[module as keyof typeof modules] || "Portal WAPALA"}</h1>
           </div>
           {error && <Notice tone="error">{error}</Notice>}
           {children}

@@ -22,9 +22,7 @@ export function GET(request: Request, { params }: Context) {
     );
     return jsonResponse({
       records:
-        kind === "anggota"
-          ? await listMembers(principal)
-          : await listContent(principal, kind),
+        kind === "anggota" ? await listMembers(principal) : await listContent(principal, kind),
     });
   });
 }
@@ -36,9 +34,7 @@ export function POST(request: Request, { params }: Context) {
       kind === "anggota" ? "members:write" : "content:write",
     );
     if (kind === "anggota")
-      return jsonResponse(
-        await saveMember(principal, await readJson(request, memberSchema), ctx),
-      );
+      return jsonResponse(await saveMember(principal, await readJson(request, memberSchema), ctx));
     const schema = z
       .object({
         id: z.uuid().optional(),
@@ -48,12 +44,7 @@ export function POST(request: Request, { params }: Context) {
       })
       .strict();
     return jsonResponse(
-      await saveContent(
-        principal,
-        kind,
-        await readJson(request, schema, 262144),
-        ctx,
-      ),
+      await saveContent(principal, kind, await readJson(request, schema, 262144), ctx),
     );
   });
 }

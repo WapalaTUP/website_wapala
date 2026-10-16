@@ -52,9 +52,7 @@ export function BackendLoans({
     (l) =>
       !l.archived &&
       (status === "all" || l.status === status) &&
-      (l.code + " " + l.pic + " " + l.institution)
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      (l.code + " " + l.pic + " " + l.institution).toLowerCase().includes(search.toLowerCase()),
   );
   function open(loan: Loan, next: Status) {
     setDetail(null);
@@ -63,9 +61,7 @@ export function BackendLoans({
       loan,
       status: next,
       note: "",
-      quantities: Object.fromEntries(
-        loan.items.map((i) => [i.equipmentId, i.requested]),
-      ),
+      quantities: Object.fromEntries(loan.items.map((i) => [i.equipmentId, i.requested])),
       reasons: {},
       conditions: Object.fromEntries(
         loan.items
@@ -106,10 +102,7 @@ export function BackendLoans({
             }
           : {}),
       });
-      const data = await backendApi<{ loans: Loan[] }>(
-        "/api/admin/loans",
-        csrfToken,
-      );
+      const data = await backendApi<{ loans: Loan[] }>("/api/admin/loans", csrfToken);
       setLoans(data.loans);
       setDraft(null);
     } catch (e) {
@@ -140,8 +133,8 @@ export function BackendLoans({
         </label>
       </div>
       <Notice>
-        Stok disahkan oleh server saat persetujuan. Alat yang belum diverifikasi
-        kembali tetap terikat peminjaman.
+        Stok disahkan oleh server saat persetujuan. Alat yang belum diverifikasi kembali tetap
+        terikat peminjaman.
       </Notice>
       {error && !draft && <Notice tone="error">{error}</Notice>}
       {rows.length ? (
@@ -175,10 +168,7 @@ export function BackendLoans({
                   </td>
                   <td>{l.managementYear}</td>
                   <td>
-                    <button
-                      className="btn secondary"
-                      onClick={() => setDetail(l)}
-                    >
+                    <button className="btn secondary" onClick={() => setDetail(l)}>
                       Lihat
                     </button>
                   </td>
@@ -255,19 +245,12 @@ export function BackendLoans({
               {detail.status !== "requested" &&
                 detail.status !== "rejected" &&
                 detail.items.some((item) => item.approved > 0) && (
-                  <a
-                    className="btn secondary"
-                    href={`/api/admin/loans/${detail.id}/invoice`}
-                  >
+                  <a className="btn secondary" href={`/api/admin/loans/${detail.id}/invoice`}>
                     Unduh invoice PDF
                   </a>
                 )}
               {actions[detail.status].map((next) => (
-                <button
-                  key={next}
-                  className="btn secondary"
-                  onClick={() => open(detail, next)}
-                >
+                <button key={next} className="btn secondary" onClick={() => open(detail, next)}>
                   {next === "approved"
                     ? "Tinjau persetujuan"
                     : next === "returned"
@@ -281,11 +264,7 @@ export function BackendLoans({
       </Modal>
       <Modal
         open={!!draft}
-        title={
-          draft
-            ? labels[draft.status] + " · " + draft.loan.code
-            : "Perubahan status"
-        }
+        title={draft ? labels[draft.status] + " · " + draft.loan.code : "Perubahan status"}
         onClose={() => {
           if (!busy) setDraft(null);
         }}
@@ -300,8 +279,8 @@ export function BackendLoans({
             {draft.status === "approved" && (
               <>
                 <Notice>
-                  Jumlah yang dikurangi wajib disertai alasan. Jadwal yang
-                  tumpang tindih diperiksa otomatis saat disimpan.
+                  Jumlah yang dikurangi wajib disertai alasan. Jadwal yang tumpang tindih diperiksa
+                  otomatis saat disimpan.
                 </Notice>
                 {draft.loan.items.map((i) => (
                   <div className="form-grid" key={i.equipmentId}>
@@ -343,9 +322,8 @@ export function BackendLoans({
             {draft.status === "returned" && (
               <>
                 <Notice>
-                  Verifikasi kondisi alat dan pengembalian jaminan sebelum
-                  menyimpan. Alat rusak/hilang mengurangi jumlah layak
-                  inventaris.
+                  Verifikasi kondisi alat dan pengembalian jaminan sebelum menyimpan. Alat
+                  rusak/hilang mengurangi jumlah layak inventaris.
                 </Notice>
                 {draft.loan.items
                   .filter((i) => i.approved > 0)
@@ -365,16 +343,8 @@ export function BackendLoans({
                           })
                         }
                       >
-                        <option value="">
-                          Pilih kondisi setelah diperiksa
-                        </option>
-                        {[
-                          "Baik",
-                          "Kotor",
-                          "Rusak Ringan",
-                          "Rusak Berat",
-                          "Hilang",
-                        ].map((c) => (
+                        <option value="">Pilih kondisi setelah diperiksa</option>
+                        {["Baik", "Kotor", "Rusak Ringan", "Rusak Berat", "Hilang"].map((c) => (
                           <option key={c}>{c}</option>
                         ))}
                       </select>
@@ -387,9 +357,7 @@ export function BackendLoans({
                     min={0}
                     max={1000000000}
                     value={draft.penalty}
-                    onChange={(e) =>
-                      setDraft({ ...draft, penalty: Number(e.target.value) })
-                    }
+                    onChange={(e) => setDraft({ ...draft, penalty: Number(e.target.value) })}
                   />
                   <label>
                     Pembayaran denda
@@ -411,9 +379,7 @@ export function BackendLoans({
             )}
             <Textarea
               label="Catatan admin"
-              required={
-                draft.status === "rejected" || draft.status === "returned"
-              }
+              required={draft.status === "rejected" || draft.status === "returned"}
               value={draft.note}
               onChange={(value) => setDraft({ ...draft, note: value })}
             />

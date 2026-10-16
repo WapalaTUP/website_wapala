@@ -7,8 +7,7 @@ import { hashPassword } from "../security/password";
 import type { RequestContext } from "../security/request-context";
 import { writeAudit } from "../audit";
 export async function setupRequired() {
-  return !(await getDb().bootstrapState.findUnique({ where: { id: 1 } }))
-    ?.completedAt;
+  return !(await getDb().bootstrapState.findUnique({ where: { id: 1 } }))?.completedAt;
 }
 export async function createBootstrapToken(ctx: RequestContext) {
   await seedFoundation();
@@ -19,10 +18,7 @@ export async function createBootstrapToken(ctx: RequestContext) {
     const state = await tx.bootstrapState.findUniqueOrThrow({
       where: { id: 1 },
     });
-    if (
-      state.completedAt ||
-      (await tx.user.count({ where: { role: "SUPER_USER" } }))
-    )
+    if (state.completedAt || (await tx.user.count({ where: { role: "SUPER_USER" } })))
       throw new DomainError("SETUP_CLOSED", 409);
     await tx.bootstrapState.update({
       where: { id: 1 },
@@ -36,12 +32,8 @@ export async function createBootstrapToken(ctx: RequestContext) {
   });
   return { token, expiresAt };
 }
-export async function bootstrap(
-  input: { token: string; password: string },
-  ctx: RequestContext,
-) {
-  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token))
-    throw new DomainError("SETUP_INVALID", 400);
+export async function bootstrap(input: { token: string; password: string }, ctx: RequestContext) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(input.token)) throw new DomainError("SETUP_INVALID", 400);
   const passwordHash = await hashPassword(input.password);
   await getDb().$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BootstrapState" WHERE id=1 FOR UPDATE`;

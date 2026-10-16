@@ -9,13 +9,7 @@ import { writeAudit } from "../audit";
 import { assertFresh } from "./sessions";
 import { loginLockPrefixFor } from "../security/throttle";
 import { requirePermission, type Principal, type Role } from "./policy";
-const roleSchema = z.enum([
-  "SUPER_USER",
-  "POH",
-  "MULTIMEDIA",
-  "INVENTARIS",
-  "ANGGOTA",
-]);
+const roleSchema = z.enum(["SUPER_USER", "POH", "MULTIMEDIA", "INVENTARIS", "ANGGOTA"]);
 const createSchema = z
   .object({
     email: z.email().max(254),
@@ -62,33 +56,17 @@ export async function createAdmin(
         ? await tx.member.findUnique({ where: { id: fields.memberId } })
         : null;
       if (!member || member.archivedAt)
-        throw new DomainError(
-          "INVALID_MEMBER",
-          400,
-          "Pilih profil anggota aktif untuk akun ini.",
-        );
+        throw new DomainError("INVALID_MEMBER", 400, "Pilih profil anggota aktif untuk akun ini.");
       if (await tx.user.findUnique({ where: { memberId: member.id } }))
-        throw new DomainError(
-          "MEMBER_LINKED",
-          409,
-          "Profil anggota sudah memiliki akun.",
-        );
+        throw new DomainError("MEMBER_LINKED", 409, "Profil anggota sudah memiliki akun.");
     } else if (fields.memberId)
-      throw new DomainError(
-        "INVALID_MEMBER",
-        400,
-        "Tautan profil hanya untuk peran Anggota.",
-      );
+      throw new DomainError("INVALID_MEMBER", 400, "Tautan profil hanya untuk peran Anggota.");
     if (
       await tx.user.findUnique({
         where: { email: fields.email.trim().toLowerCase() },
       })
     )
-      throw new DomainError(
-        "EMAIL_EXISTS",
-        409,
-        "Identitas akun sudah digunakan.",
-      );
+      throw new DomainError("EMAIL_EXISTS", 409, "Identitas akun sudah digunakan.");
     const created = await tx.user.create({
       data: {
         ...fields,
@@ -126,8 +104,7 @@ export async function updateAdmin(
 ) {
   requirePermission(principal, "users:write");
   const fields = updateSchema.parse(input);
-  if (!z.uuid().safeParse(id).success)
-    throw new DomainError("INVALID_INPUT", 400);
+  if (!z.uuid().safeParse(id).success) throw new DomainError("INVALID_INPUT", 400);
   return getDb().$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(72615001)::text`;
     await assertFresh(tx, principal, "users:write");
@@ -135,11 +112,7 @@ export async function updateAdmin(
     const target = await tx.user.findUnique({ where: { id } });
     if (!target) throw new DomainError("NOT_FOUND", 404);
     const archivedAt =
-      fields.archived === undefined
-        ? target.archivedAt
-        : fields.archived
-          ? new Date()
-          : null;
+      fields.archived === undefined ? target.archivedAt : fields.archived ? new Date() : null;
     const active = fields.active ?? target.active,
       role = fields.role ?? target.role;
     const memberId =
@@ -149,29 +122,14 @@ export async function updateAdmin(
           : fields.memberId
         : null;
     if (role === "ANGGOTA") {
-      const member = memberId
-        ? await tx.member.findUnique({ where: { id: memberId } })
-        : null;
+      const member = memberId ? await tx.member.findUnique({ where: { id: memberId } }) : null;
       if (
         (!member || member.archivedAt) &&
-        ((active && !archivedAt) ||
-          role !== target.role ||
-          memberId !== target.memberId)
+        ((active && !archivedAt) || role !== target.role || memberId !== target.memberId)
       )
-        throw new DomainError(
-          "INVALID_MEMBER",
-          400,
-          "Pilih profil anggota aktif.",
-        );
-      if (
-        memberId &&
-        (await tx.user.findFirst({ where: { memberId, id: { not: id } } }))
-      )
-        throw new DomainError(
-          "MEMBER_LINKED",
-          409,
-          "Profil sudah memiliki akun.",
-        );
+        throw new DomainError("INVALID_MEMBER", 400, "Pilih profil anggota aktif.");
+      if (memberId && (await tx.user.findFirst({ where: { memberId, id: { not: id } } })))
+        throw new DomainError("MEMBER_LINKED", 409, "Profil sudah memiliki akun.");
     } else if (fields.memberId) throw new DomainError("INVALID_MEMBER", 400);
     if (
       target.active &&
@@ -190,11 +148,7 @@ export async function updateAdmin(
           "Super User aktif terakhir harus dipertahankan.",
         );
     }
-    const revoke =
-      !active ||
-      !!archivedAt ||
-      role !== target.role ||
-      memberId !== target.memberId;
+    const revoke = !active || !!archivedAt || role !== target.role || memberId !== target.memberId;
     const row = await tx.user.update({
       where: { id },
       data: {
@@ -204,9 +158,7 @@ export async function updateAdmin(
         role,
         memberId,
         ...(revoke ? { credentialVersion: { increment: 1 } } : {}),
-        ...(fields.unlock
-          ? { requiresUnlock: false, lockUntil: null, failedLoginCount: 0 }
-          : {}),
+        ...(fields.unlock ? { requiresUnlock: false, lockUntil: null, failedLoginCount: 0 } : {}),
       },
       select: userSelect,
     });
@@ -230,14 +182,9 @@ export async function updateAdmin(
     return row;
   });
 }
-export async function resetAdminPassword(
-  principal: Principal,
-  id: string,
-  ctx: RequestContext,
-) {
+export async function resetAdminPassword(principal: Principal, id: string, ctx: RequestContext) {
   requirePermission(principal, "users:write");
-  if (!z.uuid().safeParse(id).success)
-    throw new DomainError("INVALID_INPUT", 400);
+  if (!z.uuid().safeParse(id).success) throw new DomainError("INVALID_INPUT", 400);
   const temporaryPassword = newToken(),
     passwordHash = await hashPassword(temporaryPassword);
   await getDb().$transaction(async (tx) => {

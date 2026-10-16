@@ -21,9 +21,6 @@ export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "campaigns:write");
     const input = await readJson(request, campaignSchema, 32768);
-    return jsonResponse(
-      await saveCampaign(principal, input, ctx),
-      input.id ? 200 : 201,
-    );
+    return jsonResponse(await saveCampaign(principal, input, ctx), input.id ? 200 : 201);
   });
 }

@@ -2,15 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "../../generated/prisma/client";
-import {
-  validateEventAnswers,
-  type EventAnswers,
-  type EventIssue,
-} from "../../lib/event-form";
-import {
-  eventDraftSchema,
-  type EventRegistrationDto,
-} from "../../lib/event-types";
+import { validateEventAnswers, type EventAnswers, type EventIssue } from "../../lib/event-form";
+import { eventDraftSchema, type EventRegistrationDto } from "../../lib/event-types";
 import { getDb } from "../db";
 import { DomainError } from "../errors";
 import { requirePermission, type Principal } from "../auth/policy";
@@ -69,124 +62,118 @@ export async function submitEventRegistration(
 ) {
   const v = registrationSchema.parse(input),
     payloadDigest = digestToken(stable(v));
-  return getDb().$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Event" WHERE id=${v.eventId}::uuid FOR UPDATE`;
-    const e = await tx.event.findUnique({ where: { id: v.eventId } });
-    if (!e) throw new DomainError("NOT_FOUND", 404);
-    const previous = await tx.eventRegistration.findUnique({
-      where: {
-        eventId_idempotencyKey: {
-          eventId: v.eventId,
-          idempotencyKey: v.idempotencyKey,
-        },
-      },
-    });
-    if (previous) {
-      if (
-        previous.ownerDigest !== ownerDigest ||
-        previous.payloadDigest !== payloadDigest
-      )
-        throw new DomainError(
-          "REPLAY_CONFLICT",
-          409,
-          "Permintaan ini sudah digunakan untuk jawaban berbeda.",
-        );
-      return { code: previous.code };
-    }
-    if (
-      await tx.eventReplayFence.findUnique({
+  return getDb().$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Event" WHERE id=${v.eventId}::uuid FOR UPDATE`;
+      const e = await tx.event.findUnique({ where: { id: v.eventId } });
+      if (!e) throw new DomainError("NOT_FOUND", 404);
+      const previous = await tx.eventRegistration.findUnique({
         where: {
           eventId_idempotencyKey: {
             eventId: v.eventId,
             idempotencyKey: v.idempotencyKey,
           },
         },
-      })
-    )
-      throw new DomainError(
-        "ATTEMPT_CLOSED",
-        409,
-        "Percobaan ini sudah direkonsiliasi. Muat formulir baru untuk mendaftar.",
-      );
-    if (e.publishedRevisionId !== v.revisionId)
-      throw new DomainError(
-        "FORM_CHANGED",
-        409,
-        "Formulir diperbarui. Tinjau pertanyaan terbaru sebelum mengirim.",
-      );
-    const revision = await tx.eventFormRevision.findUnique({
-      where: { id: v.revisionId },
-    });
-    if (!revision || revision.eventId !== e.id)
-      throw new DomainError("NOT_FOUND", 404);
-    const draft = eventDraftSchema.parse(revision.snapshot),
-      count = await tx.eventRegistration.count({ where: { eventId: e.id } });
-    if (!acceptsEvent(e.status, draft, count))
-      throw new DomainError(
-        "EVENT_CLOSED",
-        409,
-        "Pendaftaran ditutup, belum dimulai, atau kuota telah penuh.",
-      );
-    const result = validateEventAnswers(draft.form, v.answers);
-    if (result.issues.length) throw new EventAnswerError(result.issues);
-    // Existing receipts may replay without reusing a consumed challenge.
-    if (beforeCreate) await beforeCreate();
-    const id = randomUUID();
-    const files = draft.form.items
-      .filter((q) => q.kind === "upload" && result.answers[q.id])
-      .map((q) => ({ id: String(result.answers[q.id]), questionId: q.id }));
-    if (new Set(files.map((f) => f.id)).size !== files.length)
-      throw new DomainError(
-        "INVALID_MEDIA",
-        400,
-        "Gunakan berkas berbeda untuk setiap pertanyaan.",
-      );
-    for (const file of files.sort((a, b) => a.id.localeCompare(b.id))) {
-      await tx.$queryRaw`SELECT id FROM "Media" WHERE id=${file.id}::uuid FOR UPDATE`;
-      const m = await tx.media.findUnique({ where: { id: file.id } });
+      });
+      if (previous) {
+        if (previous.ownerDigest !== ownerDigest || previous.payloadDigest !== payloadDigest)
+          throw new DomainError(
+            "REPLAY_CONFLICT",
+            409,
+            "Permintaan ini sudah digunakan untuk jawaban berbeda.",
+          );
+        return { code: previous.code };
+      }
       if (
-        !m ||
-        m.purpose !== "event-upload" ||
-        m.visibility !== "private" ||
-        m.ownerDigest !==
-          eventUploadOwner(e.id, revision.id, file.questionId, ownerDigest) ||
-        m.boundTo ||
-        Date.now() - m.createdAt.getTime() > 86400000
+        await tx.eventReplayFence.findUnique({
+          where: {
+            eventId_idempotencyKey: {
+              eventId: v.eventId,
+              idempotencyKey: v.idempotencyKey,
+            },
+          },
+        })
       )
+        throw new DomainError(
+          "ATTEMPT_CLOSED",
+          409,
+          "Percobaan ini sudah direkonsiliasi. Muat formulir baru untuk mendaftar.",
+        );
+      if (e.publishedRevisionId !== v.revisionId)
+        throw new DomainError(
+          "FORM_CHANGED",
+          409,
+          "Formulir diperbarui. Tinjau pertanyaan terbaru sebelum mengirim.",
+        );
+      const revision = await tx.eventFormRevision.findUnique({
+        where: { id: v.revisionId },
+      });
+      if (!revision || revision.eventId !== e.id) throw new DomainError("NOT_FOUND", 404);
+      const draft = eventDraftSchema.parse(revision.snapshot),
+        count = await tx.eventRegistration.count({ where: { eventId: e.id } });
+      if (!acceptsEvent(e.status, draft, count))
+        throw new DomainError(
+          "EVENT_CLOSED",
+          409,
+          "Pendaftaran ditutup, belum dimulai, atau kuota telah penuh.",
+        );
+      const result = validateEventAnswers(draft.form, v.answers);
+      if (result.issues.length) throw new EventAnswerError(result.issues);
+      // Existing receipts may replay without reusing a consumed challenge.
+      if (beforeCreate) await beforeCreate();
+      const id = randomUUID();
+      const files = draft.form.items
+        .filter((q) => q.kind === "upload" && result.answers[q.id])
+        .map((q) => ({ id: String(result.answers[q.id]), questionId: q.id }));
+      if (new Set(files.map((f) => f.id)).size !== files.length)
         throw new DomainError(
           "INVALID_MEDIA",
           400,
-          "Berkas tidak terdaftar untuk sesi pendaftaran ini.",
+          "Gunakan berkas berbeda untuk setiap pertanyaan.",
         );
-      await tx.media.update({ where: { id: file.id }, data: { boundTo: id } });
-    }
-    const r = await tx.eventRegistration.create({
-      data: {
-        id,
-        code:
-          "EVT-" + randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase(),
-        eventId: e.id,
-        revisionId: revision.id,
-        idempotencyKey: v.idempotencyKey,
-        ownerDigest,
-        payloadDigest,
-        answers: asJson(result.answers),
-      },
-    });
-    await writeAudit(tx, {
-      actorType: "ANONYMOUS",
-      action: "EVENT_REGISTERED",
-      entityId: r.id,
-      summary: { eventId: e.id, revision: revision.number },
-      context: ctx,
-    });
-    return { code: r.code };
-  }, { timeout: 20000 });
+      for (const file of files.sort((a, b) => a.id.localeCompare(b.id))) {
+        await tx.$queryRaw`SELECT id FROM "Media" WHERE id=${file.id}::uuid FOR UPDATE`;
+        const m = await tx.media.findUnique({ where: { id: file.id } });
+        if (
+          !m ||
+          m.purpose !== "event-upload" ||
+          m.visibility !== "private" ||
+          m.ownerDigest !== eventUploadOwner(e.id, revision.id, file.questionId, ownerDigest) ||
+          m.boundTo ||
+          Date.now() - m.createdAt.getTime() > 86400000
+        )
+          throw new DomainError(
+            "INVALID_MEDIA",
+            400,
+            "Berkas tidak terdaftar untuk sesi pendaftaran ini.",
+          );
+        await tx.media.update({ where: { id: file.id }, data: { boundTo: id } });
+      }
+      const r = await tx.eventRegistration.create({
+        data: {
+          id,
+          code: "EVT-" + randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase(),
+          eventId: e.id,
+          revisionId: revision.id,
+          idempotencyKey: v.idempotencyKey,
+          ownerDigest,
+          payloadDigest,
+          answers: asJson(result.answers),
+        },
+      });
+      await writeAudit(tx, {
+        actorType: "ANONYMOUS",
+        action: "EVENT_REGISTERED",
+        entityId: r.id,
+        summary: { eventId: e.id, revision: revision.number },
+        context: ctx,
+      });
+      return { code: r.code };
+    },
+    { timeout: 20000 },
+  );
 }
-export async function reconcileEventRegistration(
-  input: unknown,
-  ownerDigest: string,
-) {
+export async function reconcileEventRegistration(input: unknown, ownerDigest: string) {
   const v = registrationSchema.parse(input),
     payloadDigest = digestToken(stable(v));
   return getDb().$transaction(async (tx) => {
@@ -198,21 +185,14 @@ export async function reconcileEventRegistration(
       where: { eventId_idempotencyKey: key },
     });
     if (old) {
-      if (
-        old.ownerDigest !== ownerDigest ||
-        old.payloadDigest !== payloadDigest
-      )
+      if (old.ownerDigest !== ownerDigest || old.payloadDigest !== payloadDigest)
         throw new DomainError("REPLAY_CONFLICT", 409);
       return { code: old.code };
     }
     const fence = await tx.eventReplayFence.findUnique({
       where: { eventId_idempotencyKey: key },
     });
-    if (
-      fence &&
-      (fence.ownerDigest !== ownerDigest ||
-        fence.payloadDigest !== payloadDigest)
-    )
+    if (fence && (fence.ownerDigest !== ownerDigest || fence.payloadDigest !== payloadDigest))
       throw new DomainError("REPLAY_CONFLICT", 409);
     if (!fence)
       await tx.eventReplayFence.create({
@@ -246,15 +226,10 @@ export async function registrationWhere(
     ...(filter.from || filter.to
       ? {
           createdAt: {
-            ...(filter.from
-              ? { gte: new Date(filter.from + "T00:00:00+07:00") }
-              : {}),
+            ...(filter.from ? { gte: new Date(filter.from + "T00:00:00+07:00") } : {}),
             ...(filter.to
               ? {
-                  lt: new Date(
-                    new Date(filter.to + "T00:00:00+07:00").getTime() +
-                      86400000,
-                  ),
+                  lt: new Date(new Date(filter.to + "T00:00:00+07:00").getTime() + 86400000),
                 }
               : {}),
           },

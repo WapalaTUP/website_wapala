@@ -24,9 +24,7 @@ export function BackendManagement({
   users: Awaited<ReturnType<typeof listUsers>>;
   csrfToken: string;
 }) {
-  const admins = users.filter(
-    (u) => u.role !== "SUPER_USER" && u.active && !u.archivedAt,
-  );
+  const admins = users.filter((u) => u.role !== "SUPER_USER" && u.active && !u.archivedAt);
   const [year, setYear] = useState(initialYear),
     [nextYear, setNextYear] = useState(initialYear + 1);
   const [choices, setChoices] = useState<Record<string, boolean>>({});
@@ -40,18 +38,14 @@ export function BackendManagement({
     setBusy(true);
     setError("");
     try {
-      const data = await backendApi<Result>(
-        "/api/admin/management",
-        csrfToken,
-        {
-          expectedYear: year,
-          year: nextYear,
-          passwordChoices: admins.map((u) => ({
-            userId: u.id,
-            reset: !!choices[u.id],
-          })),
-        },
-      );
+      const data = await backendApi<Result>("/api/admin/management", csrfToken, {
+        expectedYear: year,
+        year: nextYear,
+        passwordChoices: admins.map((u) => ({
+          userId: u.id,
+          reset: !!choices[u.id],
+        })),
+      });
       setYear(data.year);
       setNextYear(data.year + 1);
       setChoices({});
@@ -67,15 +61,14 @@ export function BackendManagement({
   return (
     <>
       <Notice>
-        Periode kepengurusan berbeda dari periode Open Recruitment. Pergantian
-        ini tidak menutup atau menghapus pendaftaran anggota.
+        Periode kepengurusan berbeda dari periode Open Recruitment. Pergantian ini tidak menutup
+        atau menghapus pendaftaran anggota.
       </Notice>
       <div className="card">
         <h2>Periode {year}</h2>
         <p>
-          Peminjaman selesai atau ditolak diarsipkan hanya jika tidak ada denda
-          dan jaminan yang belum diselesaikan. Peminjaman aktif tetap dibawa ke
-          periode baru; stok tidak dibebaskan.
+          Peminjaman selesai atau ditolak diarsipkan hanya jika tidak ada denda dan jaminan yang
+          belum diselesaikan. Peminjaman aktif tetap dibawa ke periode baru; stok tidak dibebaskan.
         </p>
         <Field
           label="Tahun kepengurusan baru"
@@ -88,8 +81,7 @@ export function BackendManagement({
       </div>
       <h2>Password admin</h2>
       <p>
-        Pilihan awal mempertahankan semua password. Akun Super User tidak
-        termasuk reset massal ini.
+        Pilihan awal mempertahankan semua password. Akun Super User tidak termasuk reset massal ini.
       </p>
       {admins.length ? (
         <div className="table-wrap">
@@ -138,11 +130,7 @@ export function BackendManagement({
         <button
           className="btn primary"
           disabled={
-            !Number.isInteger(nextYear) ||
-            nextYear <= year ||
-            nextYear > 2200 ||
-            busy ||
-            !!result
+            !Number.isInteger(nextYear) || nextYear <= year || nextYear > 2200 || busy || !!result
           }
           onClick={() => {
             setError("");
@@ -167,13 +155,12 @@ export function BackendManagement({
           Periode {year} menjadi {nextYear}.
         </p>
         <p>
-          {admins.filter((u) => choices[u.id]).length} akun mendapat password
-          baru dan seluruh sesi akun tersebut dicabut. Akun lainnya
-          mempertahankan password.
+          {admins.filter((u) => choices[u.id]).length} akun mendapat password baru dan seluruh sesi
+          akun tersebut dicabut. Akun lainnya mempertahankan password.
         </p>
         <Notice>
-          Pengarsipan dan pergantian password dilakukan dalam satu transaksi.
-          Periksa pilihan sebelum melanjutkan.
+          Pengarsipan dan pergantian password dilakukan dalam satu transaksi. Periksa pilihan
+          sebelum melanjutkan.
         </Notice>
         <Field
           label={"Ketik tahun " + nextYear + " untuk mengonfirmasi"}
@@ -190,31 +177,23 @@ export function BackendManagement({
           >
             {busy ? "Memproses…" : "Ganti periode kepengurusan"}
           </button>
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={() => setConfirm(false)}
-          >
+          <button className="btn secondary" disabled={busy} onClick={() => setConfirm(false)}>
             Batal
           </button>
         </div>
       </Modal>
-      <Modal
-        open={!!result}
-        title="Periode berhasil diganti"
-        onClose={() => setResult(null)}
-      >
+      <Modal open={!!result} title="Periode berhasil diganti" onClose={() => setResult(null)}>
         {result && (
           <>
             <p>
-              Periode {result.year}. {result.archived} peminjaman diarsipkan;{" "}
-              {result.carried} kewajiban dibawa ke periode baru.
+              Periode {result.year}. {result.archived} peminjaman diarsipkan; {result.carried}{" "}
+              kewajiban dibawa ke periode baru.
             </p>
             {result.credentials.length > 0 && (
               <>
                 <Notice>
-                  Password sementara hanya ditampilkan sekarang. Salin dan
-                  sampaikan melalui jalur privat sebelum menutup panel ini.
+                  Password sementara hanya ditampilkan sekarang. Salin dan sampaikan melalui jalur
+                  privat sebelum menutup panel ini.
                 </Notice>
                 {result.credentials.map((c) => (
                   <div key={c.userId}>

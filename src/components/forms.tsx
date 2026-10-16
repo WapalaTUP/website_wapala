@@ -2,11 +2,7 @@
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/lib/store";
-import {
-  getBankAccounts,
-  canConfirmDonation,
-  campaignTotal,
-} from "@/lib/campaigns";
+import { getBankAccounts, canConfirmDonation, campaignTotal } from "@/lib/campaigns";
 import { money, date } from "@/lib/content";
 import { orPersonal, orAcademic } from "@/lib/recruitment-fields";
 import { PageIntro } from "./page-intro";
@@ -65,9 +61,7 @@ export function LoanForm() {
     [receipt, setReceipt] = useState("");
   const key = useRef<string | null>(null);
   const catalog = state.publicEquipment ?? [];
-  const chosen = catalog.filter(
-      (e) => e.available && (selection[e.id] ?? 0) > 0,
-    ),
+  const chosen = catalog.filter((e) => e.available && (selection[e.id] ?? 0) > 0),
     filtered = catalog.filter(
       (e) =>
         (category === "Semua kategori" || e.category === category) &&
@@ -87,10 +81,7 @@ export function LoanForm() {
     <>
       <h3>Sebelum berangkat</h3>
       <p>Jumlah akhir yang disetujui ditentukan tim inventaris.</p>
-      <p>
-        Pengembalian wajib diverifikasi pengelola sebelum barang kembali
-        tersedia.
-      </p>
+      <p>Pengembalian wajib diverifikasi pengelola sebelum barang kembali tersedia.</p>
       <Link href="/peminjaman/status">Lacak pengajuan</Link>
       <p>{chosen.length} jenis alat dipilih</p>
     </>
@@ -195,9 +186,7 @@ export function LoanForm() {
                   }
                   maxLength={key === "purpose" ? 2000 : 300}
                   value={fields[key] ?? ""}
-                  onChange={(e) =>
-                    setFields({ ...fields, [key]: e.target.value })
-                  }
+                  onChange={(e) => setFields({ ...fields, [key]: e.target.value })}
                 />
               ))}
             </div>
@@ -218,10 +207,7 @@ export function LoanForm() {
                   />
                   <Select
                     label="Kategori"
-                    options={[
-                      "Semua kategori",
-                      ...new Set(catalog.map((e) => e.category)),
-                    ]}
+                    options={["Semua kategori", ...new Set(catalog.map((e) => e.category))]}
                     value={category}
                     onChange={setCategory}
                   />
@@ -232,14 +218,9 @@ export function LoanForm() {
                       <div>
                         <h3>{eq.name}</h3>
                         <p>{eq.category}</p>
+                        <p>{eq.available ? "Tersedia" : "Tidak tersedia saat ini"}</p>
                         <p>
-                          {eq.available
-                            ? "Tersedia"
-                            : "Tidak tersedia saat ini"}
-                        </p>
-                        <p>
-                          Maksimal {eq.maxDays} hari · {eq.maxQuantity} per
-                          pengajuan
+                          Maksimal {eq.maxDays} hari · {eq.maxQuantity} per pengajuan
                         </p>
                       </div>
                       <div>
@@ -258,10 +239,7 @@ export function LoanForm() {
                               ...selection,
                               [eq.id]: Math.max(
                                 0,
-                                Math.min(
-                                  eq.maxQuantity,
-                                  Math.floor(Number(e.target.value) || 0),
-                                ),
+                                Math.min(eq.maxQuantity, Math.floor(Number(e.target.value) || 0)),
                               ),
                             });
                           }}
@@ -271,10 +249,7 @@ export function LoanForm() {
                   ))}
                 </div>
                 {!filtered.length && (
-                  <Empty
-                    title="Alat tidak ditemukan"
-                    description="Coba nama atau kategori lain."
-                  />
+                  <Empty title="Alat tidak ditemukan" description="Coba nama atau kategori lain." />
                 )}
               </>
             ) : (
@@ -426,13 +401,9 @@ export function LoanTracking({ initialCode = "" }: { initialCode?: string }) {
                 {labels[h.status] ?? h.status} — {h.note}
               </p>
             ))}
-            {[
-              "approved",
-              "borrowed",
-              "late",
-              "awaiting_return",
-              "returned",
-            ].includes(found.record.status ?? "") && (
+            {["approved", "borrowed", "late", "awaiting_return", "returned"].includes(
+              found.record.status ?? "",
+            ) && (
               <button
                 className="btn secondary"
                 disabled={t.busy}
@@ -469,11 +440,7 @@ export function LoanTracking({ initialCode = "" }: { initialCode?: string }) {
                   } catch {}
                 }}
               >
-                <Textarea
-                  label="Catatan pengembalian"
-                  value={note}
-                  onChange={setNote}
-                />
+                <Textarea label="Catatan pengembalian" value={note} onChange={setNote} />
                 <button className="btn primary" disabled={t.busy}>
                   Ajukan pengembalian
                 </button>
@@ -601,57 +568,46 @@ export function Recruitment() {
           }}
         >
           <div className="form-grid">
-            {[...orPersonal, ...orAcademic, ...extraFields].map(
-              ([field, label]) =>
-                selectors[field] ? (
-                  <Select
-                    key={field}
-                    label={label}
-                    required
-                    options={selectors[field]}
-                    value={fields[field] ?? ""}
-                    onChange={(value) => {
-                      key.current = null;
-                      setFields({ ...fields, [field]: value });
-                    }}
-                  />
-                ) : (
-                  <Field
-                    key={field}
-                    label={label}
-                    type={
-                      field === "tanggal_lahir"
-                        ? "date"
-                        : field === "email"
-                          ? "email"
-                          : field.startsWith("telepon")
-                            ? "tel"
-                            : "text"
-                    }
-                    required={
-                      !["pengalaman_organisasi", "riwayat_penyakit"].includes(
-                        field,
-                      )
-                    }
-                    disabled={
-                      !!edit && ["nim", "telepon", "email"].includes(field)
-                    }
-                    maxLength={
-                      [
-                        "motivasi",
-                        "pengalaman_organisasi",
-                        "riwayat_penyakit",
-                      ].includes(field)
-                        ? 2000
-                        : 300
-                    }
-                    value={fields[field] ?? ""}
-                    onChange={(e) => {
-                      key.current = null;
-                      setFields({ ...fields, [field]: e.target.value });
-                    }}
-                  />
-                ),
+            {[...orPersonal, ...orAcademic, ...extraFields].map(([field, label]) =>
+              selectors[field] ? (
+                <Select
+                  key={field}
+                  label={label}
+                  required
+                  options={selectors[field]}
+                  value={fields[field] ?? ""}
+                  onChange={(value) => {
+                    key.current = null;
+                    setFields({ ...fields, [field]: value });
+                  }}
+                />
+              ) : (
+                <Field
+                  key={field}
+                  label={label}
+                  type={
+                    field === "tanggal_lahir"
+                      ? "date"
+                      : field === "email"
+                        ? "email"
+                        : field.startsWith("telepon")
+                          ? "tel"
+                          : "text"
+                  }
+                  required={!["pengalaman_organisasi", "riwayat_penyakit"].includes(field)}
+                  disabled={!!edit && ["nim", "telepon", "email"].includes(field)}
+                  maxLength={
+                    ["motivasi", "pengalaman_organisasi", "riwayat_penyakit"].includes(field)
+                      ? 2000
+                      : 300
+                  }
+                  value={fields[field] ?? ""}
+                  onChange={(e) => {
+                    key.current = null;
+                    setFields({ ...fields, [field]: e.target.value });
+                  }}
+                />
+              ),
             )}
           </div>
           <Consent />
@@ -665,10 +621,7 @@ export function Recruitment() {
               onUploaded={setPhoto}
             />
           )}
-          <button
-            className="btn primary"
-            disabled={t.busy || (!edit && !photo)}
-          >
+          <button className="btn primary" disabled={t.busy || (!edit && !photo)}>
             {edit ? "Simpan revisi" : "Kirim pendaftaran"}
           </button>
         </form>
@@ -718,9 +671,7 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
                   name: fields.name,
                   amount: Number(fields.amount),
                   method: fields.method,
-                  ...(fields.method === "bank"
-                    ? { bankAccountId: fields.bankAccountId }
-                    : {}),
+                  ...(fields.method === "bank" ? { bankAccountId: fields.bankAccountId } : {}),
                   proof,
                 },
               });
@@ -729,9 +680,7 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
           }}
         >
           {done ? (
-            <Notice>
-              Konfirmasi diterima dan menunggu verifikasi pengelola.
-            </Notice>
+            <Notice>Konfirmasi diterima dan menunggu verifikasi pengelola.</Notice>
           ) : (
             <>
               <h2>Konfirmasi donasi</h2>
@@ -768,9 +717,7 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
                   }}
                 >
                   <option value="">Pilih metode</option>
-                  {banks.length > 0 && (
-                    <option value="bank">Transfer bank</option>
-                  )}
+                  {banks.length > 0 && <option value="bank">Transfer bank</option>}
                   {campaign.qrisImage && <option value="qris">QRIS</option>}
                 </select>
               </label>
@@ -812,16 +759,11 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
           <h2>Tujuan donasi</h2>
           <p>{campaign.description}</p>
           <p>
-            {money(campaignTotal(state.donations, campaignId))} terverifikasi
-            dari target {money(campaign.target)}
+            {money(campaignTotal(state.donations, campaignId))} terverifikasi dari target{" "}
+            {money(campaign.target)}
           </p>
           {campaign.poster && (
-            <img
-              src={campaign.poster}
-              alt="Poster donasi"
-              width={600}
-              height={800}
-            />
+            <img src={campaign.poster} alt="Poster donasi" width={600} height={800} />
           )}
           <h3>Rekening penerima</h3>
           {banks.map((bank) => (
@@ -832,16 +774,9 @@ export function DonationForm({ campaignId }: { campaignId: string }) {
             </div>
           ))}
           {campaign.qrisImage && (
-            <img
-              src={campaign.qrisImage}
-              alt={"QRIS " + campaign.title}
-              width={400}
-              height={400}
-            />
+            <img src={campaign.qrisImage} alt={"QRIS " + campaign.title} width={400} height={400} />
           )}
-          <p>
-            Hanya donasi yang diverifikasi pengelola menambah total kampanye.
-          </p>
+          <p>Hanya donasi yang diverifikasi pengelola menambah total kampanye.</p>
         </aside>
       </section>
     </>

@@ -19,11 +19,9 @@ export const permissions: Record<Role, Module[]> = {
   Multimedia: ["konten", "galeri", "buku", "or", "donasi"],
   Inventaris: ["inventaris", "peminjaman", "or"],
 };
-export const canAccess = (role: Role, module: Module) =>
-  permissions[role].includes(module);
+export const canAccess = (role: Role, module: Module) => permissions[role].includes(module);
 export const canEdit = (role: Role, module: Module) =>
-  canAccess(role, module) &&
-  (module !== "or" || role === "Multimedia" || role === "Super User");
+  canAccess(role, module) && (module !== "or" || role === "Multimedia" || role === "Super User");
 const transitions: Record<LoanStatus, LoanStatus[]> = {
   Diajukan: ["Disetujui", "Ditolak"],
   Ditolak: [],
@@ -33,24 +31,19 @@ const transitions: Record<LoanStatus, LoanStatus[]> = {
   "Menunggu Verifikasi Pengembalian": ["Dikembalikan"],
   Dikembalikan: [],
 };
-export const canTransition = (from: LoanStatus, to: LoanStatus) =>
-  transitions[from].includes(to);
+export const canTransition = (from: LoanStatus, to: LoanStatus) => transitions[from].includes(to);
 export function latePenalty(end: string, today: string) {
-  const delta =
-    (Date.parse(today + "T00:00:00Z") - Date.parse(end + "T00:00:00Z")) /
-    86400000;
+  const delta = (Date.parse(today + "T00:00:00Z") - Date.parse(end + "T00:00:00Z")) / 86400000;
   return Math.max(0, Math.floor(delta)) * 2000;
 }
 export function validateDates(start: string, end: string) {
   if (!start || !end) return "Lengkapi tanggal pengambilan dan pengembalian.";
   if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)))
     return "Tanggal tidak valid.";
-  if (end < start)
-    return "Tanggal kembali tidak boleh sebelum tanggal pengambilan.";
+  if (end < start) return "Tanggal kembali tidak boleh sebelum tanggal pengambilan.";
   return "";
 }
-export const validPhone = (v: string) =>
-  /^(\+62|62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, ""));
+export const validPhone = (v: string) => /^(\+62|62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, ""));
 export function uniqueCode(
   prefix: string,
   existing: string[],
@@ -65,10 +58,7 @@ export function uniqueCode(
   throw new Error("Kode belum dapat dibuat. Coba kembali.");
 }
 export const normalizeCode = (code: string) => code.trim().toUpperCase();
-export function uploadError(
-  file: File,
-  kind: "photo" | "proof" | "book" = "photo",
-) {
+export function uploadError(file: File, kind: "photo" | "proof" | "book" = "photo") {
   const allowed =
     kind === "book"
       ? ["application/pdf", "application/epub+zip"]

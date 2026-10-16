@@ -47,11 +47,7 @@ export async function listEvents(p: Principal) {
     return rows.map((e) => eventAdminDto(e, e._count.registrations));
   });
 }
-export async function saveEvent(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function saveEvent(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "events:write");
   const v = eventSaveSchema.parse(input);
   if (v.id && !v.version) throw new DomainError("CONFLICT", 409);
@@ -98,10 +94,7 @@ export async function saveEvent(
       summary: { questions: draft.form.items.length },
       context: ctx,
     });
-    return eventAdminDto(
-      e,
-      await tx.eventRegistration.count({ where: { eventId: e.id } }),
-    );
+    return eventAdminDto(e, await tx.eventRegistration.count({ where: { eventId: e.id } }));
   });
 }
 export async function publishEvent(
@@ -111,11 +104,7 @@ export async function publishEvent(
 ) {
   return actOnEvent(p, { ...v, action: "publish" }, ctx);
 }
-export async function actOnEvent(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function actOnEvent(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "events:write");
   const v = eventActionSchema.parse(input);
   return getDb().$transaction(async (tx) => {
@@ -169,17 +158,8 @@ export async function actOnEvent(
       });
       revisionId = rev.id;
     } else if (v.action === "reopen" && !revisionId)
-      throw new DomainError(
-        "INVALID_STATE",
-        400,
-        "Publikasikan formulir sebelum membuka event.",
-      );
-    const status =
-      v.action === "archive"
-        ? "archived"
-        : v.action === "close"
-          ? "closed"
-          : "active";
+      throw new DomainError("INVALID_STATE", 400, "Publikasikan formulir sebelum membuka event.");
+    const status = v.action === "archive" ? "archived" : v.action === "close" ? "closed" : "active";
     const e = await tx.event.update({
       where: { id: old.id },
       data: {
@@ -196,18 +176,10 @@ export async function actOnEvent(
       summary: { revisionId: revisionId ?? "", status },
       context: ctx,
     });
-    return eventAdminDto(
-      e,
-      await tx.eventRegistration.count({ where: { eventId: e.id } }),
-    );
+    return eventAdminDto(e, await tx.eventRegistration.count({ where: { eventId: e.id } }));
   });
 }
-export function acceptsEvent(
-  status: string,
-  d: EventDraft,
-  count: number,
-  now = new Date(),
-) {
+export function acceptsEvent(status: string, d: EventDraft, count: number, now = new Date()) {
   return (
     status === "active" &&
     (!d.start || new Date(d.start) <= now) &&
@@ -216,8 +188,7 @@ export function acceptsEvent(
   );
 }
 async function publicRows(id?: string) {
-  if (id && !z.uuid().safeParse(id).success)
-    throw new DomainError("NOT_FOUND", 404);
+  if (id && !z.uuid().safeParse(id).success) throw new DomainError("NOT_FOUND", 404);
   return getDb().$transaction(async (tx) => {
     const events = await tx.event.findMany({
       where: {
@@ -232,9 +203,7 @@ async function publicRows(id?: string) {
       where: { id: { in: events.map((e) => e.publishedRevisionId!) } },
     });
     return events.flatMap((e) => {
-      const r = revisions.find(
-        (r) => r.id === e.publishedRevisionId && r.eventId === e.id,
-      );
+      const r = revisions.find((r) => r.id === e.publishedRevisionId && r.eventId === e.id);
       if (!r) return [];
       const d = eventDraftSchema.parse(r.snapshot);
       return [

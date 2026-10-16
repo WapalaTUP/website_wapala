@@ -1,14 +1,8 @@
+import { mediaUrlSchema } from "./media-url";
 import { z } from "zod";
-import {
-  eventFormSchema,
-  type EventAnswers,
-  type EventForm,
-} from "./event-form";
+import { eventFormSchema, type EventAnswers, type EventForm } from "./event-form";
 const when = z.union([z.literal(""), z.iso.datetime()]);
-const media = z.union([
-  z.literal(""),
-  z.string().regex(/^\/api\/media\/[a-f0-9-]{36}$/),
-]);
+const media = z.union([z.literal(""), mediaUrlSchema()]);
 export const eventDraftSchema = z
   .object({
     title: z.string().trim().min(1).max(200),

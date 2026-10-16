@@ -4,8 +4,7 @@ import { DomainError } from "../errors";
 // berkas, bukan 3-4x. formData() dari Undici menyalin sekali lagi.
 export async function readMultipart(request: Request, maxBytes: number) {
   const type = request.headers.get("content-type") || "";
-  if (!type.startsWith("multipart/form-data;"))
-    throw new DomainError("INVALID_CONTENT_TYPE", 415);
+  if (!type.startsWith("multipart/form-data;")) throw new DomainError("INVALID_CONTENT_TYPE", 415);
   if (Number(request.headers.get("content-length") || 0) > maxBytes)
     throw new DomainError("BODY_TOO_LARGE", 413);
   const reader = request.body?.getReader();
@@ -22,10 +21,7 @@ export async function readMultipart(request: Request, maxBytes: number) {
       }
       if (!buffer || offset + value.byteLength > buffer.length) {
         const nextSize = Math.min(
-          Math.max(
-            buffer ? buffer.length * 2 : 1 << 20,
-            offset + value.byteLength,
-          ),
+          Math.max(buffer ? buffer.length * 2 : 1 << 20, offset + value.byteLength),
           maxBytes,
         );
         const grown = new Uint8Array(new ArrayBuffer(nextSize));

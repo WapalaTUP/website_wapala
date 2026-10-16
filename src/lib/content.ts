@@ -10,8 +10,7 @@ export const divisions = [
   {
     name: "Gunung Hutan",
     slug: "gunung-hutan",
-    description:
-      "Membaca medan, mengenali arah, dan belajar hidup di alam terbuka.",
+    description: "Membaca medan, mengenali arah, dan belajar hidup di alam terbuka.",
     detail:
       "Navigasi darat, teknik perjalanan, survival, dan keselamatan pendakian menjadi bekal dalam setiap perjalanan.",
     position: "33.333% center",
@@ -81,13 +80,7 @@ export const books: Array<{
   file: string;
   image: string;
 }> = [];
-export const conditions = [
-  "Baik",
-  "Kotor",
-  "Rusak Ringan",
-  "Rusak Berat",
-  "Hilang",
-] as const;
+export const conditions = ["Baik", "Kotor", "Rusak Ringan", "Rusak Berat", "Hilang"] as const;
 export const money = (n: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",

@@ -14,8 +14,7 @@ export function PasswordChange({ csrfToken }: { csrfToken: string }) {
     setBusy(true);
     setError("");
     try {
-      if (password !== confirmation)
-        throw new Error("Konfirmasi password belum sesuai.");
+      if (password !== confirmation) throw new Error("Konfirmasi password belum sesuai.");
       const result = await authPost(
         "password",
         { currentPassword: current, newPassword: password },
@@ -32,8 +31,8 @@ export function PasswordChange({ csrfToken }: { csrfToken: string }) {
     <main className="container section auth-panel">
       <h1>Perbarui password.</h1>
       <p>
-        Gunakan passphrase minimal 12 karakter. Setelah diperbarui, semua sesi
-        akun akan dicabut dan kamu perlu login kembali.
+        Gunakan passphrase minimal 12 karakter. Setelah diperbarui, semua sesi akun akan dicabut dan
+        kamu perlu login kembali.
       </p>
       <form onSubmit={submit} aria-busy={busy}>
         <Field

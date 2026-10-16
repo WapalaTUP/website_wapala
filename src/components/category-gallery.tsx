@@ -8,10 +8,7 @@ import { getPublicAlbums, getCategoryGalleryPhotos } from "@/lib/gallery";
 export function CategoryGallery() {
   const state = useDemo();
   const source = useMemo(
-    () =>
-      getCategoryGalleryPhotos(
-        getPublicAlbums(state.records.galeri, !state.backend),
-      ),
+    () => getCategoryGalleryPhotos(getPublicAlbums(state.records.galeri, !state.backend)),
     [state.records.galeri, state.backend],
   );
   const [index, setIndex] = useState(0),
@@ -24,10 +21,9 @@ export function CategoryGallery() {
     const motion = () => setReduced(media.matches);
     motion();
     media.addEventListener("change", motion);
-    const observer = new IntersectionObserver(
-      ([entry]) => setActive(entry.isIntersecting),
-      { threshold: 0.1 },
-    );
+    const observer = new IntersectionObserver(([entry]) => setActive(entry.isIntersecting), {
+      threshold: 0.1,
+    });
     if (ref.current) observer.observe(ref.current);
     return () => {
       observer.disconnect();
@@ -80,11 +76,7 @@ export function CategoryGallery() {
           <span>
             {(index % source.length) + 1} / {source.length} kategori
           </span>
-          <button
-            className="icon-btn"
-            aria-label="Momen sebelumnya"
-            onClick={() => move(-1)}
-          >
+          <button className="icon-btn" aria-label="Momen sebelumnya" onClick={() => move(-1)}>
             <ChevronLeft size={18} />
           </button>
           <button
@@ -95,11 +87,7 @@ export function CategoryGallery() {
           >
             {paused ? <Play size={16} /> : <Pause size={16} />}
           </button>
-          <button
-            className="icon-btn"
-            aria-label="Momen berikutnya"
-            onClick={() => move(1)}
-          >
+          <button className="icon-btn" aria-label="Momen berikutnya" onClick={() => move(1)}>
             <ChevronRight size={18} />
           </button>
         </div>

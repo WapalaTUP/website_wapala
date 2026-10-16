@@ -17,13 +17,7 @@ const date = (s: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(s));
-export function EventResponses({
-  eventId,
-  csrfToken,
-}: {
-  eventId: string;
-  csrfToken: string;
-}) {
+export function EventResponses({ eventId, csrfToken }: { eventId: string; csrfToken: string }) {
   const [data, setData] = useState<Data>({
       rows: [],
       total: 0,
@@ -43,10 +37,7 @@ export function EventResponses({
     [exporting, setExporting] = useState(false);
   useEffect(() => {
     let valid = true;
-    backendApi<Data>(
-      "/api/admin/events/" + eventId + "/responses?" + params,
-      csrfToken,
-    )
+    backendApi<Data>("/api/admin/events/" + eventId + "/responses?" + params, csrfToken)
       .then((result) => {
         if (valid) {
           setData(result);
@@ -74,10 +65,10 @@ export function EventResponses({
     setExporting(true);
     setError("");
     try {
-      const r = await fetch(
-        "/api/admin/events/" + eventId + "/export?" + params,
-        { credentials: "same-origin", cache: "no-store" },
-      );
+      const r = await fetch("/api/admin/events/" + eventId + "/export?" + params, {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
       if (!r.ok) {
         const e = await r.json();
         throw new Error(e.error || "Ekspor gagal.");
@@ -98,11 +89,7 @@ export function EventResponses({
     <div className="event-responses">
       <div className="event-response-summary">
         <h2>{data.total} respons</h2>
-        <button
-          className="btn secondary"
-          disabled={exporting || loading}
-          onClick={download}
-        >
+        <button className="btn secondary" disabled={exporting || loading} onClick={download}>
           {exporting ? "Menyiapkan Excel…" : "Ekspor Excel"}
         </button>
       </div>
@@ -118,9 +105,7 @@ export function EventResponses({
           Versi formulir
           <select
             value={filter.revisionId}
-            onChange={(e) =>
-              setFilter({ ...filter, revisionId: e.target.value })
-            }
+            onChange={(e) => setFilter({ ...filter, revisionId: e.target.value })}
           >
             <option value="">Semua versi</option>
             {data.revisions.map((r) => (
@@ -197,19 +182,12 @@ export function EventResponses({
                         .slice(0, 2)
                         .map((q) => (
                           <div key={q.id}>
-                            {q.title}:{" "}
-                            {String(eventAnswerLabel(q, r.answers[q.id])).slice(
-                              0,
-                              100,
-                            )}
+                            {q.title}: {String(eventAnswerLabel(q, r.answers[q.id])).slice(0, 100)}
                           </div>
                         ))}
                     </td>
                     <td>
-                      <button
-                        className="btn secondary"
-                        onClick={() => setSelected(r)}
-                      >
+                      <button className="btn secondary" onClick={() => setSelected(r)}>
                         Lihat
                       </button>
                     </td>

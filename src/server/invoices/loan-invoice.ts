@@ -1,10 +1,8 @@
+import { parseMediaUrl } from "@/lib/media-url";
 import "server-only";
 import QRCode from "qrcode";
 import type { Prisma } from "../../generated/prisma/client";
-import {
-  buildInvoiceDocument,
-  type InvoiceAssets,
-} from "@/lib/invoice-document";
+import { buildInvoiceDocument, type InvoiceAssets } from "@/lib/invoice-document";
 import { emptyState } from "@/lib/empty-state";
 import type { Condition, Loan, LoanStatus } from "@/lib/types";
 import { getDb } from "@/server/db";
@@ -24,8 +22,7 @@ const strings = (value: Prisma.JsonValue): Record<string, string> =>
       ) as Record<string, string>)
     : {};
 
-const mediaId = (url: string) =>
-  /^\/api\/media\/([a-f0-9-]{36})$/.exec(url)?.[1];
+const mediaId = (url: string) => parseMediaUrl(url);
 
 async function mediaAsset(
   url: string,
@@ -38,13 +35,8 @@ async function mediaAsset(
     return {
       logo: `data:${media.mime};base64,${media.bytes.toString("base64")}`,
       logoFormat:
-        media.mime === "image/jpeg"
-          ? "JPEG"
-          : media.mime === "image/png"
-            ? "PNG"
-            : "WEBP",
-      logoRatio:
-        media.width && media.height ? media.width / media.height : undefined,
+        media.mime === "image/jpeg" ? "JPEG" : media.mime === "image/png" ? "PNG" : "WEBP",
+      logoRatio: media.width && media.height ? media.width / media.height : undefined,
     };
   } catch {
     return {};
@@ -82,9 +74,7 @@ function toLoan(row: InvoiceLoanRow): Loan {
           ? "Belum Lunas"
           : "Tidak Ada",
     attachments: Array.isArray(row.attachments)
-      ? row.attachments.filter(
-          (item): item is string => typeof item === "string",
-        )
+      ? row.attachments.filter((item): item is string => typeof item === "string")
       : [],
     createdAt: row.createdAt.toISOString(),
     history: [],
@@ -100,10 +90,9 @@ function toLoan(row: InvoiceLoanRow): Loan {
 }
 
 export async function findInvoiceLoan(id: string) {
-  return getDb().$transaction(
-    (tx) => tx.loan.findUnique({ where: { id }, include }),
-    { isolationLevel: "RepeatableRead" },
-  );
+  return getDb().$transaction((tx) => tx.loan.findUnique({ where: { id }, include }), {
+    isolationLevel: "RepeatableRead",
+  });
 }
 
 export async function renderLoanInvoice(row: InvoiceLoanRow, origin: string) {
@@ -112,9 +101,7 @@ export async function renderLoanInvoice(row: InvoiceLoanRow, origin: string) {
   const [logo, telLogo, qr] = await Promise.all([
     mediaAsset(config.logoUrl || ""),
     mediaAsset(config.telULogoUrl || ""),
-    QRCode.toDataURL(
-      `${origin}/peminjaman/status/${encodeURIComponent(row.code)}`,
-    ),
+    QRCode.toDataURL(`${origin}/peminjaman/status/${encodeURIComponent(row.code)}`),
   ]);
   const state = emptyState();
   state.settings.address = config.address || "";

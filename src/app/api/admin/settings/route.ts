@@ -13,11 +13,7 @@ export function PATCH(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "settings:write");
     return jsonResponse(
-      await updateSettings(
-        principal,
-        await readJson(request, settingsSchema),
-        ctx,
-      ),
+      await updateSettings(principal, await readJson(request, settingsSchema), ctx),
     );
   });
 }

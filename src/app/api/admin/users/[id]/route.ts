@@ -13,9 +13,7 @@ export function PATCH(request: Request, context: Context) {
       z
         .object({
           name: z.string().max(100).optional(),
-          role: z
-            .enum(["SUPER_USER", "POH", "MULTIMEDIA", "INVENTARIS", "ANGGOTA"])
-            .optional(),
+          role: z.enum(["SUPER_USER", "POH", "MULTIMEDIA", "INVENTARIS", "ANGGOTA"]).optional(),
           active: z.boolean().optional(),
           memberId: z.uuid().nullable().optional(),
           archived: z.boolean().optional(),
@@ -23,20 +21,13 @@ export function PATCH(request: Request, context: Context) {
         })
         .strict(),
     );
-    return jsonResponse(
-      await updateAdmin(principal, (await context.params).id, input, ctx),
-    );
+    return jsonResponse(await updateAdmin(principal, (await context.params).id, input, ctx));
   });
 }
 export function POST(request: Request, context: Context) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "users:write");
-    await readJson(
-      request,
-      z.object({ action: z.literal("reset-password") }).strict(),
-    );
-    return jsonResponse(
-      await resetAdminPassword(principal, (await context.params).id, ctx),
-    );
+    await readJson(request, z.object({ action: z.literal("reset-password") }).strict());
+    return jsonResponse(await resetAdminPassword(principal, (await context.params).id, ctx));
   });
 }

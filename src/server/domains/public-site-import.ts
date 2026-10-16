@@ -16,10 +16,7 @@ const sourceUrl = z.url().refine((value) => {
   const u = new URL(value);
   return (
     u.protocol === "https:" &&
-    [
-      "www.wapalatelkomuniversity.org",
-      "dskozecjuuogndcaqguc.supabase.co",
-    ].includes(u.hostname) &&
+    ["www.wapalatelkomuniversity.org", "dskozecjuuogndcaqguc.supabase.co"].includes(u.hostname) &&
     !u.username &&
     !u.password &&
     !u.port
@@ -76,16 +73,13 @@ export const publicSiteManifestSchema = z.object({
         year: z.number().int().nullable(),
         expectedPhotos: z.number().int().min(1).max(500),
         coverUrl: sourceUrl,
-        photos: z
-          .array(z.object({ url: sourceUrl, caption: z.string().max(10000) }))
-          .max(500),
+        photos: z.array(z.object({ url: sourceUrl, caption: z.string().max(10000) })).max(500),
       }),
     )
     .max(1000),
   assets: z.array(asset).max(5000),
 });
-const hash = (bytes: Buffer | string) =>
-  createHash("sha256").update(bytes).digest("hex");
+const hash = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
 const mediaId = (checksum: string) => {
   const h = hash("wapala-public-source-image:" + checksum);
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
@@ -93,25 +87,19 @@ const mediaId = (checksum: string) => {
 async function checkedPath(root: string, path: string) {
   const full = join(root, path);
   const stat = await lstat(full);
-  if (!stat.isFile() || stat.isSymbolicLink())
-    throw Error("Invalid bundle file");
+  if (!stat.isFile() || stat.isSymbolicLink()) throw Error("Invalid bundle file");
   const resolved = await realpath(full),
     rel = relative(root, resolved);
-  if (!rel || rel.startsWith("..") || isAbsolute(rel))
-    throw Error("Bundle path escaped root");
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) throw Error("Bundle path escaped root");
   return resolved;
 }
 export async function importPublicSite(bundleRoot: string, apply = false) {
   const root = await realpath(bundleRoot);
   const raw = await readFile(await checkedPath(root, "manifest.json"));
   if (raw.length > 10 * 1024 * 1024) throw Error("Manifest too large");
-  const checksum = (
-    await readFile(await checkedPath(root, "manifest.sha256"), "utf8")
-  ).trim();
+  const checksum = (await readFile(await checkedPath(root, "manifest.sha256"), "utf8")).trim();
   if (hash(raw) !== checksum) throw Error("Manifest checksum mismatch");
-  const manifest = publicSiteManifestSchema.parse(
-    JSON.parse(raw.toString("utf8")),
-  );
+  const manifest = publicSiteManifestSchema.parse(JSON.parse(raw.toString("utf8")));
   if (manifest.assets.reduce((n, a) => n + a.bytes, 0) > 500 * 1024 * 1024)
     throw Error("Bundle exceeds 500 MB import budget");
   if (
@@ -119,17 +107,14 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
     manifest.coverage.albums !== manifest.albums.length ||
     (manifest.coverage.expectedAlbums &&
       manifest.coverage.expectedAlbums !== manifest.albums.length) ||
-    manifest.coverage.photos !==
-      manifest.albums.reduce((n, a) => n + a.photos.length, 0)
+    manifest.coverage.photos !== manifest.albums.reduce((n, a) => n + a.photos.length, 0)
   )
     throw Error("Incomplete source coverage");
   if (
     new Set(manifest.generations.map((g) => Number(g.number))).size !==
       manifest.generations.length ||
-    new Set(manifest.albums.map((a) => a.sourceId)).size !==
-      manifest.albums.length ||
-    new Set(manifest.assets.map((a) => a.sourceUrl)).size !==
-      manifest.assets.length
+    new Set(manifest.albums.map((a) => a.sourceId)).size !== manifest.albums.length ||
+    new Set(manifest.assets.map((a) => a.sourceUrl)).size !== manifest.assets.length
   )
     throw Error("Duplicate source identifiers");
   for (const album of manifest.albums)
@@ -141,10 +126,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
   const assets = new Map(manifest.assets.map((a) => [a.sourceUrl, a]));
   const requested = [
     ...manifest.generations.map((g) => g.imageUrl),
-    ...manifest.albums.flatMap((a) => [
-      a.coverUrl,
-      ...a.photos.map((p) => p.url),
-    ]),
+    ...manifest.albums.flatMap((a) => [a.coverUrl, ...a.photos.map((p) => p.url)]),
   ];
   for (const url of requested)
     if (!assets.has(url)) throw Error("Referenced photo absent from bundle");
@@ -157,9 +139,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
     }),
   ]);
   for (const row of manifest.generations) {
-    const old = existingGenerations.find(
-      (g) => g.number === Number(row.number),
-    );
+    const old = existingGenerations.find((g) => g.number === Number(row.number));
     if (old && old.sourceKey !== source + "#" + row.sourceKey)
       throw Error("Generation number already belongs to another source");
   }
@@ -167,10 +147,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
     (g) => !existingGenerations.some((e) => e.number === Number(g.number)),
   );
   const albums = manifest.albums.filter(
-    (a) =>
-      !existingAlbums.some(
-        (e) => e.sourceId === source + "/album#" + a.sourceId,
-      ),
+    (a) => !existingAlbums.some((e) => e.sourceId === source + "/album#" + a.sourceId),
   );
   const report = {
     apply,
@@ -216,8 +193,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
       )
         throw Error("Imported media identity conflict");
       const file = await readFile(mediaPath(mediaRoot(), id, "webp"));
-      if (hash(file) !== old.checksum)
-        throw Error("Existing media checksum mismatch");
+      if (hash(file) !== old.checksum) throw Error("Existing media checksum mismatch");
       report.media.reuse++;
       continue;
     }
@@ -233,8 +209,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
         failOn: "error",
       });
       const metadata = await image.metadata();
-      if ((metadata.pages || 1) > 1)
-        throw Error("Animated source image unsupported");
+      if ((metadata.pages || 1) > 1) throw Error("Animated source image unsupported");
       imageBytes = await image
         .rotate()
         .resize({
@@ -255,8 +230,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
   if (!apply) return report;
   if (prepared.size) {
     const assetFolder = await realpath(join(root, "assets"));
-    if (relative(root, assetFolder) !== "assets")
-      throw Error("Invalid asset directory");
+    if (relative(root, assetFolder) !== "assets") throw Error("Invalid asset directory");
     await scanMediaDirectory(assetFolder);
   }
   const ctx = {
@@ -276,12 +250,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
         try {
           await writeFile(path, entry.bytes, { flag: "wx", mode: 0o600 });
         } catch (error) {
-          if (!(
-            error &&
-            typeof error === "object" &&
-            "code" in error &&
-            error.code === "EEXIST"
-          ))
+          if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST"))
             throw error;
           if (hash(await readFile(path)) !== hash(entry.bytes))
             throw Error("Media storage collision");
@@ -302,8 +271,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
           },
         });
       }
-      const url = (value: string) =>
-        "/api/media/" + mediaId(assets.get(value)!.sha256);
+      const url = (value: string) => "/api/media/" + mediaId(assets.get(value)!.sha256);
       for (const row of generations) {
         const old = await tx.generation.findUnique({
           where: { number: Number(row.number) },
@@ -335,8 +303,7 @@ export async function importPublicSite(bundleRoot: string, apply = false) {
         )
           continue;
         const photos = [...row.photos].sort(
-          (a, b) =>
-            Number(b.url === row.coverUrl) - Number(a.url === row.coverUrl),
+          (a, b) => Number(b.url === row.coverUrl) - Number(a.url === row.coverUrl),
         );
         const fields = contentFields.galeri.parse({
           judul: row.title,

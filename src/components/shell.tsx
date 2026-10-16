@@ -3,16 +3,7 @@ import { activeCampaigns } from "@/lib/campaigns";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  Menu,
-  X,
-  Moon,
-  Sun,
-  Instagram,
-  Youtube,
-  Mail,
-  ChevronDown,
-} from "lucide-react";
+import { Menu, X, Moon, Sun, Instagram, Youtube, Mail, ChevronDown } from "lucide-react";
 import { divisions } from "@/lib/content";
 import { useTheme } from "./providers";
 import { useDemo } from "@/lib/store";
@@ -22,12 +13,7 @@ export function Logo() {
     <Link href="/" className="brand" aria-label="WAPALA, beranda">
       <span className="logo-panel">
         {settings.logoUrl ? (
-          <img
-            src={settings.logoUrl}
-            alt="Logo WAPALA"
-            width={38}
-            height={57}
-          />
+          <img src={settings.logoUrl} alt="Logo WAPALA" width={38} height={57} />
         ) : (
           <span className="logo-mark" aria-hidden="true">
             W
@@ -47,9 +33,7 @@ export function ThemeButton() {
     <button
       className="icon-btn theme-btn"
       onClick={toggle}
-      aria-label={
-        theme === "dark" ? "Gunakan tema terang" : "Gunakan tema gelap"
-      }
+      aria-label={theme === "dark" ? "Gunakan tema terang" : "Gunakan tema gelap"}
     >
       {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
     </button>
@@ -139,11 +123,7 @@ export function Header() {
             aria-label="Navigasi utama"
             id="main-navigation"
           >
-            <Link
-              href="/"
-              aria-current={path === "/" ? "page" : undefined}
-              onClick={close}
-            >
+            <Link href="/" aria-current={path === "/" ? "page" : undefined} onClick={close}>
               Beranda
             </Link>
             {groups.map((group) => (
@@ -151,8 +131,7 @@ export function Header() {
                 className="nav-group"
                 key={group.label}
                 onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget))
-                    setExpanded("");
+                  if (!e.currentTarget.contains(e.relatedTarget)) setExpanded("");
                 }}
               >
                 <button
@@ -161,12 +140,9 @@ export function Header() {
                   aria-controls={"nav-" + group.label}
                   data-active={group.links.some(
                     ([, href]) =>
-                      path === href.split("#")[0] ||
-                      path.startsWith(href.split("#")[0] + "/"),
+                      path === href.split("#")[0] || path.startsWith(href.split("#")[0] + "/"),
                   )}
-                  onClick={() =>
-                    setExpanded(expanded === group.label ? "" : group.label)
-                  }
+                  onClick={() => setExpanded(expanded === group.label ? "" : group.label)}
                 >
                   {group.label}
                   <ChevronDown size={13} />
@@ -203,21 +179,13 @@ export function Header() {
               </Link>
             )}
             {activeCampaigns(state).length > 0 && (
-              <Link
-                href="/donasi"
-                className="btn nav-spotlight nav-donation"
-                onClick={close}
-              >
+              <Link href="/donasi" className="btn nav-spotlight nav-donation" onClick={close}>
                 <span aria-hidden="true" className="nav-spotlight-dot" />
                 Donasi
               </Link>
             )}
             {state.events?.some((e) => e.status === "active") && (
-              <Link
-                href="/event"
-                className="btn nav-spotlight nav-event"
-                onClick={close}
-              >
+              <Link href="/event" className="btn nav-spotlight nav-event" onClick={close}>
                 Event
               </Link>
             )}
@@ -274,20 +242,10 @@ export function Footer() {
           </a>
           <p>{s.address}</p>
           <div className="social-links">
-            <a
-              href={s.instagram}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Instagram WAPALA"
-            >
+            <a href={s.instagram} target="_blank" rel="noreferrer" aria-label="Instagram WAPALA">
               <Instagram size={20} />
             </a>
-            <a
-              href={s.youtube}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="YouTube WAPALA"
-            >
+            <a href={s.youtube} target="_blank" rel="noreferrer" aria-label="YouTube WAPALA">
               <Youtube size={23} />
             </a>
             <a href={s.tiktok} target="_blank" rel="noreferrer">

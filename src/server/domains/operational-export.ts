@@ -1,3 +1,4 @@
+import { parseMediaUrl } from "@/lib/media-url";
 import "server-only";
 import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
@@ -18,11 +19,7 @@ export async function exportOperational(
   archived = false,
 ) {
   const permission =
-    kind === "members"
-      ? "members:read"
-      : kind === "inventory"
-        ? "inventory:write"
-        : "users:write";
+    kind === "members" ? "members:read" : kind === "inventory" ? "inventory:write" : "users:write";
   requirePermission(p, permission);
   let headers: string[], values: string[][];
   if (kind === "archives") {
@@ -47,9 +44,7 @@ export async function exportOperational(
               orderBy: { id: "asc" },
               take: 10001,
             }),
-            keys = Object.keys(memberFields.shape) as Array<
-              keyof typeof memberFields.shape
-            >;
+            keys = Object.keys(memberFields.shape) as Array<keyof typeof memberFields.shape>;
           return {
             headers: keys.map((k) => k.replaceAll("_", " ")),
             values: rows.map((r) => {
@@ -122,8 +117,7 @@ export function assertOperationalBudget(headers: string[], rows: string[][]) {
     rows.length > 10000 ||
     headers.length > 100 ||
     rows.length * headers.length > 200000 ||
-    rows.reduce((n, r) => n + Buffer.byteLength(JSON.stringify(r)), 0) >
-      20 * 1024 * 1024 ||
+    rows.reduce((n, r) => n + Buffer.byteLength(JSON.stringify(r)), 0) > 20 * 1024 * 1024 ||
     rows.some((r) => r.some((v) => v.length > 30000))
   )
     throw new DomainError(
@@ -132,11 +126,7 @@ export function assertOperationalBudget(headers: string[], rows: string[][]) {
       "Ekspor terlalu besar. Persempit filter; data tidak diekspor sebagian.",
     );
 }
-export async function operationalWorkbook(
-  title: string,
-  headers: string[],
-  rows: string[][],
-) {
+export async function operationalWorkbook(title: string, headers: string[], rows: string[][]) {
   assertOperationalBudget(headers, rows);
   const wb = new ExcelJS.Workbook();
   wb.creator = "WAPALA";
@@ -159,11 +149,7 @@ export async function operationalWorkbook(
   };
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
-export function operationalPdf(
-  title: string,
-  headers: string[],
-  rows: string[][],
-) {
+export function operationalPdf(title: string, headers: string[], rows: string[][]) {
   assertOperationalBudget(headers, rows);
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   let y = 18;
@@ -174,21 +160,12 @@ export function operationalPdf(
   for (let i = 0; i < rows.length; i++) {
     const lines: string[] = [];
     headers.forEach((h, j) =>
-      lines.push(
-        ...(pdf.splitTextToSize(
-          h + ": " + (rows[i][j] || "—"),
-          180,
-        ) as string[]),
-      ),
+      lines.push(...(pdf.splitTextToSize(h + ": " + (rows[i][j] || "—"), 180) as string[])),
     );
     for (const line of [String(i + 1) + ".", ...lines, ""]) {
       if (y > 280) {
         if (pdf.getNumberOfPages() >= 200)
-          throw new DomainError(
-            "EXPORT_LIMIT",
-            413,
-            "PDF melebihi 200 halaman. Persempit filter.",
-          );
+          throw new DomainError("EXPORT_LIMIT", 413, "PDF melebihi 200 halaman. Persempit filter.");
         pdf.addPage();
         y = 18;
       }
@@ -198,11 +175,7 @@ export function operationalPdf(
   }
   return Buffer.from(pdf.output("arraybuffer"));
 }
-export async function exportApplicants(
-  p: Principal,
-  year: number,
-  format: "xlsx" | "pdf",
-) {
+export async function exportApplicants(p: Principal, year: number, format: "xlsx" | "pdf") {
   requirePermission(p, "recruitment:read");
   periodSchema.shape.year.parse(year);
   const rows = await getDb().$transaction(
@@ -214,11 +187,7 @@ export async function exportApplicants(
         Array<{ bytes: bigint }>
       >`SELECT COALESCE(SUM(octet_length(fields::text)),0)::bigint AS bytes FROM "Applicant" WHERE year=${year}`;
       if (Number(sizes[0]?.bytes || 0) > 20 * 1024 * 1024)
-        throw new DomainError(
-          "EXPORT_LIMIT",
-          413,
-          "Isian periode melebihi batas ekspor.",
-        );
+        throw new DomainError("EXPORT_LIMIT", 413, "Isian periode melebihi batas ekspor.");
       const result = await tx.applicant.findMany({
         where: { year },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -233,17 +202,10 @@ export async function exportApplicants(
     },
     { isolationLevel: "RepeatableRead", timeout: 20000 },
   );
-  const keys = Object.keys(applicantFields.shape) as Array<
-    keyof typeof applicantFields.shape
-  >;
+  const keys = Object.keys(applicantFields.shape) as Array<keyof typeof applicantFields.shape>;
   const headers = ["Kode", "Waktu", ...keys.map((k) => k.replaceAll("_", " "))];
-  const values = rows.map((r) => [
-    r.code,
-    r.time,
-    ...keys.map((k) => r.fields[k]),
-  ]);
-  if (format === "xlsx")
-    return operationalWorkbook("OR " + year, headers, values);
+  const values = rows.map((r) => [r.code, r.time, ...keys.map((k) => r.fields[k])]);
+  if (format === "xlsx") return operationalWorkbook("OR " + year, headers, values);
   if (rows.length > 200)
     throw new DomainError(
       "EXPORT_LIMIT",
@@ -253,7 +215,7 @@ export async function exportApplicants(
   const illustrated = [];
   for (const row of rows) {
     let photoData: string | undefined;
-    const id = /^\/api\/media\/([a-f0-9-]{36})$/.exec(row.photo)?.[1];
+    const id = parseMediaUrl(row.photo);
     if (id) {
       try {
         const media = await readMedia(id, p);

@@ -5,11 +5,7 @@ export function POST(request: Request) {
   return route(request, async (ctx) => {
     const { principal } = await authenticated(request, "events:write");
     return jsonResponse(
-      await actOnEvent(
-        principal,
-        await readJson(request, eventActionSchema),
-        ctx,
-      ),
+      await actOnEvent(principal, await readJson(request, eventActionSchema), ctx),
     );
   });
 }

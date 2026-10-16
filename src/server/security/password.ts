@@ -39,8 +39,7 @@ export async function hashPassword(value: string) {
   );
 }
 export async function verifyPassword(hash: string, value: string) {
-  if (typeof value !== "string" || Buffer.byteLength(value) > 1024)
-    return false;
+  if (typeof value !== "string" || Buffer.byteLength(value) > 1024) return false;
   return bounded(() => argon2.verify(hash, value).catch(() => false));
 }
 let dummy: Promise<string> | undefined;

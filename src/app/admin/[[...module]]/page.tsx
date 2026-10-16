@@ -7,10 +7,7 @@ import { csrfForSession } from "@/server/security/csrf";
 import { BackendAdminShell } from "@/components/backend/admin-shell";
 import { BackendCampaigns } from "@/components/backend/campaigns";
 import { listCampaigns, listDonations } from "@/server/domains/campaigns";
-import {
-  BackendRecords,
-  type BackendRecord,
-} from "@/components/backend/records";
+import { BackendRecords, type BackendRecord } from "@/components/backend/records";
 import { BackendRecruitment } from "@/components/backend/recruitment";
 import { listMembers, listContent } from "@/server/domains/records";
 import { listPeriods, listApplicants } from "@/server/domains/recruitment";
@@ -34,20 +31,13 @@ import { BackendEvents } from "@/components/backend/events";
 import { listEvents } from "@/server/domains/events";
 import { BackendGenerations } from "@/components/backend/generations";
 import { listGenerations } from "@/server/domains/generations";
-import {
-  BackendMemberPortal,
-  BackendMemberCorrections,
-} from "@/components/backend/member-portal";
+import { BackendMemberPortal, BackendMemberCorrections } from "@/components/backend/member-portal";
 import { memberPortal, listCorrections } from "@/server/domains/member-portal";
 export const metadata: Metadata = {
   title: "Portal organisasi",
   robots: { index: false, follow: false },
 };
-export default async function AdminPage({
-  params,
-}: {
-  params: Promise<{ module?: string[] }>;
-}) {
+export default async function AdminPage({ params }: { params: Promise<{ module?: string[] }> }) {
   const { module = [] } = await params;
   const { principal, token } = await pageSession();
   if (!module.length) {
@@ -73,8 +63,7 @@ export default async function AdminPage({
   const permissions: Record<string, Permission> = {
     angkatan: "generations:write",
     koreksi: "corrections:review",
-    anggota:
-      principal.role === "ANGGOTA" ? "members:directory" : "members:read",
+    anggota: principal.role === "ANGGOTA" ? "members:directory" : "members:read",
     konten: "content:write",
     galeri: "content:write",
     buku: "content:write",
@@ -113,10 +102,7 @@ export default async function AdminPage({
           csrfToken={csrfToken}
         />
       ) : (
-        <BackendMemberPortal
-          initial={await memberPortal(principal)}
-          csrfToken={csrfToken}
-        />
+        <BackendMemberPortal initial={await memberPortal(principal)} csrfToken={csrfToken} />
       );
     return (
       <BackendAdminShell
@@ -144,10 +130,7 @@ export default async function AdminPage({
         module="event"
         csrfToken={csrfForSession(token)}
       >
-        <BackendEvents
-          initialEvents={events}
-          csrfToken={csrfForSession(token)}
-        />
+        <BackendEvents initialEvents={events} csrfToken={csrfForSession(token)} />
       </BackendAdminShell>
     );
   }
@@ -159,30 +142,16 @@ export default async function AdminPage({
     const csrfToken = csrfForSession(token);
     let view;
     if (module[0] === "peminjaman")
-      view = (
-        <BackendLoans
-          initialLoans={await listLoans(principal)}
-          csrfToken={csrfToken}
-        />
-      );
+      view = <BackendLoans initialLoans={await listLoans(principal)} csrfToken={csrfToken} />;
     else if (module[0] === "pengaturan") {
       const settings = await getSettings(principal),
         config: Record<string, string> = {};
-      if (
-        settings.config &&
-        typeof settings.config === "object" &&
-        !Array.isArray(settings.config)
-      )
+      if (settings.config && typeof settings.config === "object" && !Array.isArray(settings.config))
         for (const [key, value] of Object.entries(settings.config))
           if (typeof value === "string") config[key] = value;
       view = <BackendSettings initialConfig={config} csrfToken={csrfToken} />;
     } else if (module[0] === "arsip")
-      view = (
-        <BackendArchives
-          rows={await listArchives(principal)}
-          csrfToken={csrfToken}
-        />
-      );
+      view = <BackendArchives rows={await listArchives(principal)} csrfToken={csrfToken} />;
     else {
       const audit = await listAudit(principal, { limit: 50 });
       view = (
@@ -325,17 +294,11 @@ export default async function AdminPage({
         where: { id: principal.userId },
         select: { name: true },
       }),
-      kind === "anggota"
-        ? listMembers(principal)
-        : listContent(principal, kind),
+      kind === "anggota" ? listMembers(principal) : listContent(principal, kind),
     ]);
     const records: BackendRecord[] = source.map((row) => {
       const fields: Record<string, string | string[]> = {};
-      if (
-        row.fields &&
-        typeof row.fields === "object" &&
-        !Array.isArray(row.fields)
-      )
+      if (row.fields && typeof row.fields === "object" && !Array.isArray(row.fields))
         for (const [key, value] of Object.entries(row.fields)) {
           if (
             typeof value === "string" ||
@@ -352,12 +315,7 @@ export default async function AdminPage({
     });
     const csrfToken = csrfForSession(token);
     return (
-      <BackendAdminShell
-        role={principal.role}
-        name={user.name}
-        module={kind}
-        csrfToken={csrfToken}
-      >
+      <BackendAdminShell role={principal.role} name={user.name} module={kind} csrfToken={csrfToken}>
         <BackendRecords
           kind={kind}
           canReset={principal.role === "SUPER_USER"}
@@ -376,25 +334,16 @@ export default async function AdminPage({
       listPeriods(principal),
     ]);
     const year =
-      periods.find((p) => p.active)?.year ||
-      periods[0]?.year ||
-      new Date().getFullYear();
+      periods.find((p) => p.active)?.year || periods[0]?.year || new Date().getFullYear();
     const applicants = await listApplicants(principal, year),
       csrfToken = csrfForSession(token);
     return (
-      <BackendAdminShell
-        role={principal.role}
-        name={user.name}
-        module="or"
-        csrfToken={csrfToken}
-      >
+      <BackendAdminShell role={principal.role} name={user.name} module="or" csrfToken={csrfToken}>
         <BackendRecruitment
           initialPeriods={periods}
           initialApplicants={applicants}
           initialYear={year}
-          canWrite={
-            principal.role === "SUPER_USER" || principal.role === "MULTIMEDIA"
-          }
+          canWrite={principal.role === "SUPER_USER" || principal.role === "MULTIMEDIA"}
           csrfToken={csrfToken}
         />
       </BackendAdminShell>

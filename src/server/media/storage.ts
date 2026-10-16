@@ -1,27 +1,15 @@
+import { parseMediaUrl } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
-import {
-  randomUUID,
-  createHash,
-} from "node:crypto";
-import {
-  mkdir,
-  writeFile,
-  readFile,
-  unlink,
-  stat,
-} from "node:fs/promises";
+import { randomUUID, createHash } from "node:crypto";
+import { mkdir, writeFile, readFile, unlink, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { dirname, join } from "node:path";
 import type { Prisma } from "../../generated/prisma/client";
 import { getDb } from "../db";
 import { DomainError } from "../errors";
-import {
-  requirePermission,
-  type Permission,
-  type Principal,
-} from "../auth/policy";
+import { requirePermission, type Permission, type Principal } from "../auth/policy";
 import { assertFresh, assertFreshRead } from "../auth/sessions";
 import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
@@ -73,14 +61,12 @@ const publicPurposes = new Set<MediaPurpose>([
   "inventory",
   "branding",
 ]);
-export const mediaWritePermission = (purpose: MediaPurpose) =>
-  writePermissions[purpose];
+export const mediaWritePermission = (purpose: MediaPurpose) => writePermissions[purpose];
 type StorageOptions = {
   root?: string;
   scan?: (path: string) => Promise<number>;
 };
-const hash = (bytes: Buffer) =>
-  createHash("sha256").update(bytes).digest("hex");
+const hash = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 // Semaphore per kelas pengunggah: publik dan admin tidak saling
 // memblokir. Pola antrean sama dengan security/password.ts.
 export type MediaSlotKind = "admin" | "public";
@@ -91,10 +77,7 @@ const slotWaiters: Record<MediaSlotKind, Array<() => void>> = {
   admin: [],
   public: [],
 };
-export async function mediaSlot<T>(
-  kind: MediaSlotKind,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function mediaSlot<T>(kind: MediaSlotKind, fn: () => Promise<T>): Promise<T> {
   if (slotActive[kind] >= slotLimit[kind]) {
     if (slotWaiters[kind].length >= slotQueueMax[kind])
       throw new DomainError(
@@ -226,9 +209,7 @@ export async function readMediaStream(
   options: Pick<StorageOptions, "root"> = {},
 ) {
   const { media, path } = await readMediaMeta(id, principal, options);
-  const stream = Readable.toWeb(
-    createReadStream(path),
-  ) as unknown as ReadableStream<Uint8Array>;
+  const stream = Readable.toWeb(createReadStream(path)) as unknown as ReadableStream<Uint8Array>;
   return {
     stream,
     mime: media.mime,
@@ -244,8 +225,7 @@ export async function readMedia(
 ) {
   const { media, path } = await readMediaMeta(id, principal, options);
   const bytes = await readFile(path);
-  if (hash(bytes) !== media.checksum)
-    throw new DomainError("MEDIA_CORRUPT", 503);
+  if (hash(bytes) !== media.checksum) throw new DomainError("MEDIA_CORRUPT", 503);
   return {
     bytes,
     mime: media.mime,
@@ -262,7 +242,7 @@ export async function assertMediaReferences(
   visibility: "public" | "private",
 ) {
   for (const url of [...new Set(urls.filter(Boolean))]) {
-    const id = /^\/api\/media\/([a-f0-9-]{36})$/.exec(url)?.[1];
+    const id = parseMediaUrl(url);
     if (!id) throw new DomainError("INVALID_MEDIA", 400);
     const media = await tx.media.findUnique({ where: { id } });
     if (

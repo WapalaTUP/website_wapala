@@ -20,17 +20,13 @@ export function BackendEvents({
   csrfToken: string;
 }) {
   const [events, setEvents] = useState(initialEvents),
-    [editing, setEditing] = useState<EventAdminDto | null | undefined>(
-      undefined,
-    ),
+    [editing, setEditing] = useState<EventAdminDto | null | undefined>(undefined),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const update = (e: EventAdminDto) =>
     setEvents((rows) =>
-      rows.some((x) => x.id === e.id)
-        ? rows.map((x) => (x.id === e.id ? e : x))
-        : [e, ...rows],
+      rows.some((x) => x.id === e.id) ? rows.map((x) => (x.id === e.id ? e : x)) : [e, ...rows],
     );
   async function action(e: EventAdminDto, action: string) {
     if (lock.current) return;
@@ -77,9 +73,7 @@ export function BackendEvents({
   return (
     <>
       <div className="admin-toolbar">
-        <p>
-          Kelola kegiatan, susun formulir sendiri, dan unduh hasil pendaftaran.
-        </p>
+        <p>Kelola kegiatan, susun formulir sendiri, dan unduh hasil pendaftaran.</p>
         <button className="btn primary" onClick={() => setEditing(null)}>
           Tambah event
         </button>
@@ -97,25 +91,16 @@ export function BackendEvents({
             <div>
               <Badge>{status[e.status]}</Badge>
               <h2>{e.draft.title}</h2>
-              {e.draft.cover && (
-                <MediaPreview src={e.draft.cover} label="Sampul event" />
-              )}
-              {e.draft.poster && (
-                <MediaPreview src={e.draft.poster} label="Poster event" />
-              )}
+              {e.draft.cover && <MediaPreview src={e.draft.cover} label="Sampul event" />}
+              {e.draft.poster && <MediaPreview src={e.draft.poster} label="Poster event" />}
               <p>{e.draft.description.slice(0, 200)}</p>
               <p>
                 {e.registrationCount} pendaftar.{" "}
-                {e.draft.form.items.filter((q) => q.kind !== "section").length}{" "}
-                pertanyaan.
+                {e.draft.form.items.filter((q) => q.kind !== "section").length} pertanyaan.
               </p>
             </div>
             <div className="event-card-actions">
-              <button
-                className="btn secondary"
-                disabled={busy}
-                onClick={() => setEditing(e)}
-              >
+              <button className="btn secondary" disabled={busy} onClick={() => setEditing(e)}>
                 Edit / respons
               </button>
               {e.publishedRevisionId && (
@@ -141,11 +126,7 @@ export function BackendEvents({
                 </button>
               ) : null}
               {e.status !== "archived" && (
-                <button
-                  className="text-link"
-                  disabled={busy}
-                  onClick={() => action(e, "archive")}
-                >
+                <button className="text-link" disabled={busy} onClick={() => action(e, "archive")}>
                   Arsipkan
                 </button>
               )}

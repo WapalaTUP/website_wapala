@@ -33,9 +33,7 @@ export async function memberPortal(p: Principal) {
   requirePermission(p, "members:directory");
   return getDb().$transaction(async (tx) => {
     const user = await assertFresh(tx, p, "members:directory");
-    const own = user.memberId
-      ? await tx.member.findUnique({ where: { id: user.memberId } })
-      : null;
+    const own = user.memberId ? await tx.member.findUnique({ where: { id: user.memberId } }) : null;
     const members = await tx.member.findMany({
       where: { archivedAt: null },
       orderBy: { nia: "asc" },
@@ -77,11 +75,7 @@ export async function memberPortal(p: Principal) {
     };
   });
 }
-export async function requestCorrection(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function requestCorrection(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "members:correct");
   const v = correctionSchema.parse(input);
   return getDb().$transaction(async (tx) => {
@@ -115,10 +109,7 @@ export async function requestCorrection(
       ...memberFields.parse(member.fields),
       ...v.changes,
     });
-    if (
-      JSON.stringify(proposed) ===
-      JSON.stringify(memberFields.parse(member.fields))
-    )
+    if (JSON.stringify(proposed) === JSON.stringify(memberFields.parse(member.fields)))
       throw new DomainError("NO_CHANGES", 400, "Tidak ada perubahan data.");
     const row = await tx.memberCorrection.create({
       data: {
@@ -161,11 +152,7 @@ export async function listCorrections(p: Principal, cursor?: string) {
     }));
   });
 }
-export async function reviewCorrection(
-  p: Principal,
-  input: unknown,
-  ctx: RequestContext,
-) {
+export async function reviewCorrection(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "corrections:review");
   const v = reviewSchema.parse(input);
   try {
