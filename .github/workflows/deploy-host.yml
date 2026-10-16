@@ -7,6 +7,9 @@ concurrency:
   group: deploy-host
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: SSH deploy ke VPS
@@ -14,21 +17,24 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Validasi secrets
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           missing=0
-          for v in VPS_HOST VPS_USER VPS_SSH_KEY; do
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS; do
             if [ -z "${!v}" ]; then
               echo "::error::Secret ${v} belum diset di Settings > Secrets and variables > Actions."
               missing=1
             fi
           done
+          # Tanpa VPS_KNOWN_HOSTS verifikasi host server menjadi TOFU
+          # (rentan MITM) — wajib diisi dari `ssh-keyscan -p PORT HOST`.
           exit "$missing"
 
       - name: Deploy over SSH
@@ -46,14 +52,11 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          if [ -n "$VPS_KNOWN_HOSTS" ]; then
-            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            echo "::warning::Secret VPS_KNOWN_HOSTS kosong; ssh-keyscan dipakai sekali. Isi secret ini agar verifikasi host penuh."
-            ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # %q meng-escape nilai dengan aman utk shell remote (branch bebas
+          # mengandung karakter spesial).
+          remote_cmd="$(printf 'WAPALA_REPO_URL=%q WAPALA_BRANCH=%q bash -s' "$REPO_URL" "$DEPLOY_BRANCH")"
           ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 \
-            "$VPS_USER@$VPS_HOST" \
-            "WAPALA_REPO_URL='$REPO_URL' WAPALA_BRANCH='$DEPLOY_BRANCH' bash -s" \
+            "$VPS_USER@$VPS_HOST" "$remote_cmd" \
             < host/host-deploy.sh

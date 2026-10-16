@@ -70,6 +70,8 @@ PG_PORT="$(pg_isready | sed -n 's/^.*:\([0-9]*\) - accept.*/\1/p' || echo 5432)"
 
 # ---------- User layanan & direktori ----------
 id -u wapala >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin wapala
+# User build non-root: npm ci/build/migrate TIDAK pernah jalan sebagai root.
+id -u builder >/dev/null 2>&1 || useradd --system --create-home --home-dir /home/builder --shell /bin/bash builder
 mkdir -p "$APP_DIR/releases" "$ETC_DIR" "$MEDIA_ROOT" "$ACME_ROOT"
 chmod 0755 "$APP_DIR" "$APP_DIR/releases"
 chmod 0700 "$ETC_DIR"
@@ -142,7 +144,7 @@ else
 fi
 
 # ---------- systemd unit ----------
-log "Memasang unit systemd wapala.service..."
+log "Memasang unit systemd (aplikasi + maintenance)..."
 unit_tmp="$(mktemp)"
 sed "s|/usr/bin/node|$NODE_BIN|" "$(here)/wapala-host.service" > "$unit_tmp"
 if [ "$PROVISION_CLAMAV" = "1" ]; then
@@ -150,8 +152,17 @@ if [ "$PROVISION_CLAMAV" = "1" ]; then
 fi
 mv "$unit_tmp" /etc/systemd/system/wapala.service
 chmod 0644 /etc/systemd/system/wapala.service
+NPM_BIN="$(dirname "$NODE_BIN")/npm"
+sed "s|/usr/bin/npm|$NPM_BIN|" "$(here)/wapala-maintenance.service" \
+  > /etc/systemd/system/wapala-maintenance.service
+chmod 0644 /etc/systemd/system/wapala-maintenance.service
+install -m 0644 "$(here)/wapala-maintenance.timer" /etc/systemd/system/wapala-maintenance.timer
 systemctl daemon-reload
 systemctl enable wapala.service >/dev/null 2>&1 || true
+# Timer maintenance (prune throttle/session/token) — service akan gagal
+# tanpa bahaya sampai deploy pertama membuat /srv/wapala/current.
+systemctl enable wapala-maintenance.timer >/dev/null 2>&1 || true
+systemctl start wapala-maintenance.timer >/dev/null 2>&1 || true
 
 # ---------- ClamAV (opsional) ----------
 if [ "$PROVISION_CLAMAV" = "1" ]; then
@@ -249,6 +260,8 @@ Role migrate : wapala      -> MIGRATE_DATABASE_URL  (owner)
 Password DB  : runtime=$DB_APP_PW owner=$DB_OWNER_PW
 Env file     : $ENV_FILE (mode 0600, EDIT sebelum deploy)
 Unit         : wapala.service (enabled; start otomatis oleh deploy pertama)
+Builder      : user non-root 'builder' (npm/build tidak pernah sebagai root)
+Maintenance  : wapala-maintenance.timer 03:17 (prune throttle/sesi/token)
 ClamAV       : $([ "$PROVISION_CLAMAV" = "1" ] && echo "terpasang" || echo "TIDAK (upload ditolak sampai dipasang)")
 
 LANGKAH BERIKUTNYA:

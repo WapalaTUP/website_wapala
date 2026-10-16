@@ -1,6 +1,7 @@
 # Website WAPALA — Production Deploy (`host`)
 
 [![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
+[![CI host](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml)
 
 Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif development: [wapala.my.id](https://wapala.my.id).
 
@@ -179,7 +180,7 @@ Tambahkan di **Settings → Secrets and variables → Actions**:
 | `VPS_USER` | ✅ | `root` atau user sudo |
 | `VPS_SSH_KEY` | ✅ | Isi file kunci **privat** `wapala_deploy_key` |
 | `VPS_PORT` | NAT | Port SSH publik dari provider (dedicated: kosongkan = 22) |
-| `VPS_KNOWN_HOSTS` | disarankan | Output `ssh-keyscan` (mencegah MITM) |
+| `VPS_KNOWN_HOSTS` | ✅ | Output `ssh-keyscan` — wajib; tanpa ini deploy ditolak agar tidak rentan MITM |
 | `VPS_REPO_URL` | repo private | URL clone + kredensial/deploy key bila repo tidak publik |
 
 ## Langkah 5 — Deploy
@@ -228,9 +229,11 @@ Perintah ini membuka lock (`lockUntil`, `requiresUnlock`), mencabut semua sesi a
 | Deploy manual dengan repo lain | `sudo WAPALA_REPO_URL=https://... bash host/host-deploy.sh` |
 | Log aplikasi | `journalctl -u wapala -f` |
 | Status service | `systemctl status wapala` |
+| Log maintenance | `journalctl -u wapala-maintenance.service -n 50` |
 | Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
 | Backup database+media | `sudo node scripts/release-backup.mjs backup /root/backup-$(date +%F)` |
 | Migration manual | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run db:migrate'` |
+| Prune manual (throttle/sesi) | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run maintenance:prune'` |
 
 Rollback **otomatis** terjadi bila health check gagal setelah deploy: symlink dikembalikan ke release sebelumnya dan service direstart. Database rollback bukan bagian dari symlink — gunakan backup.
 
@@ -263,36 +266,49 @@ Build sukses ditandai `.next/BUILD_ID` dan `.next/standalone/server.js`; script 
 
 ## Keamanan & batasan
 
-- Aplikasi non-root, `ProtectSystem=strict`, hanya loopback `:3000`; Nginx satu-satunya gerbang publik dengan TLS.
-- Dua role database: runtime tanpa DDL/TRUNCATE; migrasi lewat role owner terpisah (`MIGRATE_DATABASE_URL`).
-- Media privat di `MEDIA_ROOT` (mode `0700`), pemindaian malware **fail-closed** — tanpa scanner, unggahan ditolak.
+- Aplikasi non-root (`wapala`), `ProtectSystem=strict` + sandbox systemd (kernel/devices/syscalls dibatasi), hanya loopback `:3000`; Nginx satu-satunya gerbang publik dengan TLS.
+- **Kode release milik `root`**; runtime hanya boleh menulis `.next/cache` dan media — kompromi aplikasi tidak bisa menimpa kode yang akan dieksekusi ulang.
+- **Build/migration berjalan sebagai user non-root `builder`**; install script dependensi tidak pernah dieksekusi sebagai root.
+- **Lockout login per (email, IP)**: 6× password salah → terkunci 24 jam untuk kombinasi itu saja; akun tidak bisa dikunci permanen oleh pihak ketiga. Unlock: panel admin (modul Pengguna) atau `auth:recover-superuser` via SSH.
+- Dua role database: runtime tanpa DDL/TRUNCATE; migrasi lewat role owner terpisah (`MIGRATE_DATABASE_URL`); password DB tidak pernah lewat argv proses.
+- Media privat di `MEDIA_ROOT` (mode `0700`), pemindaian malware **fail-closed** dan dijalankan **sebelum** decode; serving media lewat stream + ETag/304 (tanpa memuat berkas penuh ke RAM).
+- Env file dibaca deploy script baris-per-baris tanpa shell eval — nilai berisi `& $ ' ` aman.
+- Rate limit Nginx untuk `/api/auth` (30/menit) dan `/api/public` (120/menit) berlaku sebelum request menyentuh Node.
+- Timer `wapala-maintenance` (03:17 harian) membersihkan throttle, sesi kadaluarsa, dan token reset — tidak bergantung pada `EMAIL_MODE`.
 - HSTS aktif di produksi; `TRUST_PROXY=true` hanya aman karena Nginx loopback tepercaya.
 - Jangan menjalankan seed/demo di production; database diisi via panel + bootstrap.
 - Secret hanya di `/etc/wapala/production.env` (root, `0600`) dan GitHub Secrets — jangan pernah di-commit atau ke artifact.
+- CI ringan (`ci.yml`: typecheck + lint + build) jalan tiap push ke `host`; jalankan deploy setelah CI hijau.
 
 ## Troubleshooting
 
 | Gejala | Periksa |
 | --- | --- |
-| Actions merah di tahap SSH | Secrets `VPS_HOST/PORT/USER/SSH_KEY/KNOWN_HOSTS`, kunci terpasang di `authorized_keys` |
+| CI merah sebelum deploy | Log workflow `CI host` — typecheck/lint/build gagal; perbaiki dulu sebelum deploy |
+| Actions merah di tahap SSH | Secrets `VPS_HOST/PORT/USER/SSH_KEY/KNOWN_HOSTS` (semua wajib), kunci terpasang di `authorized_keys` |
 | `Certbot gagal` saat provision | DNS/forwarding belum aktif, atau NAT tanpa forwarding publik `:80` → pakai `WAPALA_SKIP_CERTBOT=1` + DNS-01 |
 | Build `Killed` | RAM kurang — lihat [Kapasitas](#kapasitas--build-hemat-memori) |
-| Health check gagal lalu rollback | `journalctl -u wapala -n 100`; umumnya env/database salah |
+| Health check gagal lalu rollback | `journalctl -u wapala -n 100`; umumnya env/database salah. Ingat: migration sudah jalan (expand/contract) |
+| `423` saat login | Lock per (email, IP) aktif (6× salah, 24 jam) — tunggu, unlock via panel admin, atau `auth:recover-superuser` via SSH |
+| `429 MEDIA_BUSY` saat upload | Antrean slot upload penuh — coba beberapa saat; slot publik dan admin terpisah |
 | `503` saat unggah media | ClamAV tidak terpasang/mati — pasang via opsi provisioning atau periksa `clamav-daemon` |
+| `413` saat unggah buku | Pastikan ≤ 50 MB dan nginx `client_max_body_size 60m` aktif |
 | Halaman terbuka tapi aset 404 | Pastikan deploy melalui script (menyalin `.next/static` + `public` ke standalone) |
 
 ## Struktur branch `host`
 
 ```text
-.github/workflows/deploy-host.yml   # Pemicu otomatis: push/manuel → SSH → host/host-deploy.sh
+.github/workflows/deploy-host.yml   # Opsional: Run workflow → SSH → host/host-deploy.sh
+.github/workflows/ci.yml            # Gate: typecheck + lint + build tiap push ke host
 host/
   host-provision.sh                 # Provisioning sekali (paket, DB, env, systemd, Nginx, TLS)
-  host-deploy.sh                    # Deploy berulang (clone, build, migrate, aktifkan, cek, rollback)
-  wapala-host.service               # Unit systemd aplikasi
+  host-deploy.sh                    # Deploy berulang (clone, build non-root, migrate, aktifkan, cek, rollback)
+  wapala-host.service               # Unit systemd aplikasi (sandbox ketat)
+  wapala-maintenance.service/.timer # Prune harian throttle/sesi/token
   nginx-wapala.conf                 # Nginx dedicated IP (80/443)
   nginx-wapala-nat.conf             # Nginx NAT VPS (port khusus provider)
   clamdscan-wapala.sh               # Wrapper scanner ClamAV
-scripts/                            # Tool operasional: bootstrap, recovery, worker, backup
+scripts/                            # Tool operasional: bootstrap, recovery, worker, backup, prune
 prisma/                             # Schema + migrations (tanpa seed)
 src/ public/                        # Source aplikasi (dibutuhkan build)
 README.md                           # Dokumen ini

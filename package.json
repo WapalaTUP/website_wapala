@@ -12,6 +12,7 @@
     "auth:bootstrap-token": "tsx --conditions=react-server scripts/bootstrap-token.ts",
     "auth:recover-superuser": "tsx --conditions=react-server scripts/recover-superuser.ts",
     "email:worker": "tsx --conditions=react-server scripts/email-worker.ts",
+    "maintenance:prune": "tsx --conditions=react-server scripts/maintenance-prune.ts",
     "loans:overdue": "tsx --conditions=react-server scripts/loan-overdue.ts",
     "media:cleanup-events": "tsx --conditions=react-server scripts/event-media-cleanup.ts",
     "backup": "node scripts/release-backup.mjs backup",
