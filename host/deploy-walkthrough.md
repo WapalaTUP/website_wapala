@@ -1,5 +1,11 @@
 # Walkthrough Deploy Nyata — InterServer KVM + Domain hostdata.id
 
+> ⚡ **Cara cepat:** sebagian besar langkah di dokumen ini kini diotomasi oleh
+> installer interaktif — cukup `sudo bash host/wapala.sh` setelah clone
+> (lihat [README](../README.md) bagian *Memulai*). Dokumen ini tetap relevan
+> sebagai **referensi pemahaman**: apa yang sebenarnya terjadi di tiap tahap,
+> cara manual per langkah, dan jebakan yang kami temui di lapangan.
+
 Dokumen ini adalah **catatan deployment yang benar-benar dijalankan** (Oktober 2026):
 VPS **InterServer KVM Linux VPS Slice 1** (1 vCPU, 1.9 GB RAM + 1 GB swap, 38 GB disk,
 Ubuntu 24.04.5), akses SSH memakai user non-root `codex`, dan domain
@@ -177,6 +183,11 @@ Super User → wajib ganti password saat login pertama.
 4. Upload media → **ditolak 503 sampai ClamAV terpasang** (fail-closed by design) → lanjut bagian 6.
 
 ## 6. Pasang ClamAV (agar upload aktif)
+
+> Bila provisioning dijalankan dengan `WAPALA_PROVISION_CLAMAV=1` (atau lewat
+> installer yang menanyakan ClamAV), langkah 1-6 di bawah sudah diotomasi —
+> termasuk `StreamMaxLength 60M` dan wrapper. Bagian ini tetap berguna untuk
+> pemasangan manual di server yang sudah berjalan, dan untuk memahami tiap langkah.
 
 ⚠️ clamd makan ~1-1.5 GB RAM sendiri. Di VPS 2 GB bersama app + PostgreSQL ia akan
 menyentuh swap. Pantau dengan `free -h`; bila available sering < 200 MB, pilih
