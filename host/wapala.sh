@@ -339,9 +339,11 @@ update_repo() {
   branch="$(sudo -u "$owner" git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
   dirty="$(sudo -u "$owner" git -C "$repo_dir" status --porcelain 2>/dev/null)"
   [ -n "$dirty" ] && warn "Ada perubahan lokal — akan di-stash sementara sebelum pull."
-  run "git -C $repo_dir pull --ff-only (user $owner, branch $branch)"
+  run "git -C $repo_dir pull --ff-only origin $branch (user $owner)"
   [ -n "$dirty" ] && sudo -u "$owner" git -C "$repo_dir" stash || true
-  if sudo -u "$owner" git -C "$repo_dir" pull --ff-only; then
+  # Tarik EKSPLISIT per branch: config upstream/refspec lama (mis. sisa
+  # clone single-branch host) tidak bisa merusak pull.
+  if sudo -u "$owner" git -C "$repo_dir" pull --ff-only origin "$branch"; then
     head="$(sudo -u "$owner" git -C "$repo_dir" rev-parse --short HEAD)"
     ok "Kode terbaru aktif: $head"
     echo "  - Perubahan host/*.sh & scripts/*.sh : langsung aktif di menu ini"
