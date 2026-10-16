@@ -206,7 +206,17 @@ Bila memakai mode otomatis (Langkah 4), deploy juga terpicu tombol **Actions →
 sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:bootstrap-token'
 ```
 
-Token sekali pakai berlaku 30 menit — buka `https://contoh-domain.com/wapala` dan buat akun Super User. Tidak ada password bawaan; setup sudah selesai tidak perlu diulang. Pemulihan akun Super User: `npm run auth:recover-superuser` (prompt password tersembunyi via SSH).
+Token sekali pakai berlaku 30 menit — buka `https://contoh-domain.com/wapala` dan buat akun Super User. Tidak ada password bawaan; setup sudah selesai tidak perlu diulang.
+
+### Pemulihan akses (via SSH)
+
+Bila Super User lupa password **atau** terkunci login (6+ gagal → `requiresUnlock`), pulihkan lewat SSH — password diminta lewat prompt tersembunyi, bukan argumen:
+
+```sh
+sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:recover-superuser'
+```
+
+Perintah ini membuka lock (`lockUntil`, `requiresUnlock`), mencabut semua sesi aktif, dan menyiapkan penggantian password. Untuk **akun selain Super User**: reset password dan unlock dilakukan Super User lewat panel (modul Pengguna → aksi Reset/Unlock) — tidak perlu SSH. Karena `EMAIL_MODE=disabled`, jalur reset via email tidak tersedia.
 
 ---
 
