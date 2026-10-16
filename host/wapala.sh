@@ -364,26 +364,36 @@ deploy_again() {
 }
 
 show_status() {
+  local current
+  current="$(readlink "$CURRENT_LINK" 2>/dev/null || echo '?')"
   systemctl status "$SERVICE" --no-pager -l | head -n 12 || true
   echo
   systemctl is-enabled --quiet "$SERVICE" && ok "Auto-start on boot: AKTIF" || warn "Auto-start: MATI"
   echo
   free -h
   echo
-  echo "Releases:"
-  ls -1 "$RELEASES_DIR" 2>/dev/null | tail -n 6 || true
-  echo "Aktif: $(readlink "$CURRENT_LINK" 2>/dev/null || echo '?')"
+  echo "Releases (branch asal):"
+  local r marker
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    marker=""
+    [ -f "$RELEASES_DIR/$r/.deploy-branch" ] && marker="[$(cat "$RELEASES_DIR/$r/.deploy-branch")]"
+    printf '  %s %s %s\n' "$r" "$marker" "$([ "$RELEASES_DIR/$r" = "$current" ] && echo '<- aktif')"
+  done < <(ls -1 "$RELEASES_DIR" 2>/dev/null | tail -n 8)
+  echo "Aktif: $current"
 }
 
 rollback_flow() {
   local current list=() i=1 target choice
   current="$(readlink "$CURRENT_LINK" 2>/dev/null || true)"
   mapfile -t list < <(ls -1 "$RELEASES_DIR" | sort -r)
-  echo "Aktif: $current"
+  echo "Aktif: $current $([ -f "$current/.deploy-branch" ] && echo "[$(cat "$current/.deploy-branch")]")"
   local idx=1
   for r in "${list[@]}"; do
     [ "$RELEASES_DIR/$r" = "$current" ] && continue
-    printf '  %d) %s %s\n' "$idx" "$r" "$([ -f "$RELEASES_DIR/$r/.next/BUILD_ID" ] || echo '(tanpa BUILD_ID — dilewati)')"
+    marker=""
+    [ -f "$RELEASES_DIR/$r/.deploy-branch" ] && marker=" [$(cat "$RELEASES_DIR/$r/.deploy-branch")]"
+    printf '  %d) %s%s %s\n' "$idx" "$r" "$marker" "$([ -f "$RELEASES_DIR/$r/.next/BUILD_ID" ] || echo '(tanpa BUILD_ID — dilewati)')"
     idx=$((idx + 1))
   done
   [ "$idx" -le 1 ] && { warn "Tidak ada release lain untuk rollback."; return; }

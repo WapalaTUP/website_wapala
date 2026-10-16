@@ -3,7 +3,7 @@
 #
 #   sudo bash host/import-album.sh
 #
-# Sumber paket: repo lama hulwanulazka-companion/wapala_dev @ staging,
+# Sumber paket: arsip import-packages (repo lama hulwanulazka-companion/wapala_dev),
 # folder import-packages/wapala-public-site (21 angkatan, 22 album, 129 foto).
 # Anggota/inventaris TIDAK ikut diimpor. Importer idempoten: re-import
 # hanya melaporkan skip/konflik dan TIDAK PERNAH menghapus data.

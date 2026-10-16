@@ -141,6 +141,8 @@ log "Menyiapkan aset standalone..."
 mkdir -p "$RELEASE_DIR/.next/standalone/.next/cache"
 cp -a "$RELEASE_DIR/.next/static" "$RELEASE_DIR/.next/standalone/.next/"
 cp -a "$RELEASE_DIR/public" "$RELEASE_DIR/.next/standalone/"
+# Penanda branch asal rilis — dibaca menu manajemen (status/rollback).
+printf '%s\n' "$WAPALA_BRANCH" > "$RELEASE_DIR/.deploy-branch"
 
 # ---------- Migrate (sebagai builder; role owner dari env) ----------
 if [ "$WAPALA_SKIP_MIGRATE" != "1" ]; then
