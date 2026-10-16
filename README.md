@@ -1,6 +1,6 @@
 # Website WAPALA — Production Deploy (`host`)
 
-[![Deploy host](https://github.com/hulwanulazka-companion/wapala_dev/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/hulwanulazka-companion/wapala_dev/actions/workflows/deploy-host.yml)
+[![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
 
 Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif: [wapala.my.id](https://wapala.my.id).
 
@@ -69,7 +69,7 @@ SSH ke VPS, lalu clone branch `host` dan jalankan provisioning:
 
 ```sh
 apt-get update && apt-get install -y git
-git clone --branch host --single-branch https://github.com/hulwanulazka-companion/wapala_dev.git wapala-setup
+git clone --branch host --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
 cd wapala-setup
 ```
 
