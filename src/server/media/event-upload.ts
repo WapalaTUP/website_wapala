@@ -25,7 +25,7 @@ export const eventUploadOwner = (
     getConfig().securityKey,
   );
 export async function cleanupEventUploads(root = mediaRoot()) {
-  return mediaSlot(() =>
+  return mediaSlot("admin", () =>
     getDb().$transaction(
       async (tx) => {
         const cutoff = new Date(Date.now() - 86400000);
@@ -69,7 +69,7 @@ export async function registerEventUpload(
     );
   if (!input.bytes.length || input.bytes.length > 5 * 1024 * 1024)
     throw new DomainError("MEDIA_TOO_LARGE", 413, "Berkas maksimal 5 MB.");
-  return mediaSlot(async () => {
+  return mediaSlot("admin", async () => {
     const result =
       input.mime === "application/pdf"
         ? validateBook(input.bytes, input.mime)

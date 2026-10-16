@@ -26,7 +26,7 @@ export async function registerPublicUpload(input: { purpose: Purpose; scope: str
     if (!campaign || campaign.status !== "active" || (campaign.start && campaign.start > today) || (campaign.end && campaign.end < today)) throw new DomainError("CAMPAIGN_CLOSED", 409);
   }
   if (!input.bytes.length || input.bytes.length > 5 * 1024 * 1024) throw new DomainError("MEDIA_TOO_LARGE", 413, "Berkas maksimal 5 MB.");
-  return mediaSlot(async () => {
+  return mediaSlot("public", async () => {
     const result = await sanitizeImage(input.bytes, input.mime), root = mediaRoot(), id = randomUUID();
     const quarantine = join(root, "quarantine", id + ".bin"), final = mediaPath(root, id, result.extension);
     let written = false;

@@ -1,7 +1,18 @@
 import "server-only";
 import { z } from "zod";
-import { randomUUID, createHash } from "node:crypto";
-import { mkdir, writeFile, readFile, unlink } from "node:fs/promises";
+import {
+  randomUUID,
+  createHash,
+} from "node:crypto";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  unlink,
+  stat,
+} from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 import { dirname, join } from "node:path";
 import type { Prisma } from "../../generated/prisma/client";
 import { getDb } from "../db";
@@ -11,7 +22,7 @@ import {
   type Permission,
   type Principal,
 } from "../auth/policy";
-import { assertFresh } from "../auth/sessions";
+import { assertFresh, assertFreshRead } from "../auth/sessions";
 import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
 import { mediaRoot, mediaPath } from "./paths";
@@ -70,19 +81,35 @@ type StorageOptions = {
 };
 const hash = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
-let processing = false;
-export async function mediaSlot<T>(fn: () => Promise<T>): Promise<T> {
-  if (processing)
-    throw new DomainError(
-      "MEDIA_BUSY",
-      429,
-      "Ada berkas yang sedang diperiksa. Coba beberapa saat lagi.",
-    );
-  processing = true;
+// Semaphore per kelas pengunggah: publik dan admin tidak saling
+// memblokir. Pola antrean sama dengan security/password.ts.
+export type MediaSlotKind = "admin" | "public";
+const slotLimit: Record<MediaSlotKind, number> = { admin: 2, public: 1 };
+const slotQueueMax: Record<MediaSlotKind, number> = { admin: 8, public: 4 };
+const slotActive: Record<MediaSlotKind, number> = { admin: 0, public: 0 };
+const slotWaiters: Record<MediaSlotKind, Array<() => void>> = {
+  admin: [],
+  public: [],
+};
+export async function mediaSlot<T>(
+  kind: MediaSlotKind,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (slotActive[kind] >= slotLimit[kind]) {
+    if (slotWaiters[kind].length >= slotQueueMax[kind])
+      throw new DomainError(
+        "MEDIA_BUSY",
+        429,
+        "Ada berkas yang sedang diperiksa. Coba beberapa saat lagi.",
+      );
+    await new Promise<void>((resolve) => slotWaiters[kind].push(resolve));
+  } else slotActive[kind]++;
   try {
     return await fn();
   } finally {
-    processing = false;
+    const next = slotWaiters[kind].shift();
+    if (next) next();
+    else slotActive[kind]--;
   }
 }
 export async function registerMedia(
@@ -94,20 +121,24 @@ export async function registerMedia(
   const purpose = purposeSchema.parse(input.purpose),
     permission = writePermissions[purpose];
   requirePermission(principal, permission);
-  return mediaSlot(async () => {
-    const result =
-      purpose === "book"
-        ? await sanitizeBook(input.bytes, input.mime)
-        : await sanitizeImage(input.bytes, input.mime);
+  return mediaSlot("admin", async () => {
     const root = options.root || mediaRoot(),
       id = randomUUID(),
-      quarantine = join(root, "quarantine", id + ".bin"),
-      final = mediaPath(root, id, result.extension);
+      quarantine = join(root, "quarantine", id + ".bin");
     await mkdir(dirname(quarantine), { recursive: true, mode: 0o700 });
     let written = false;
+    let finalPath: string | undefined;
     try {
+      // Pindai berkas MENTAH di karantina sebelum di-decode:
+      // payload jahat tidak pernah diproses sharp/pdfjs terlebih dahulu.
       await writeFile(quarantine, input.bytes, { flag: "wx", mode: 0o600 });
       await scanMedia(quarantine, options.scan);
+      const result =
+        purpose === "book"
+          ? await sanitizeBook(input.bytes, input.mime)
+          : await sanitizeImage(input.bytes, input.mime);
+      const final = mediaPath(root, id, result.extension);
+      finalPath = final;
       await mkdir(dirname(final), { recursive: true, mode: 0o700 });
       await writeFile(final, result.bytes, { flag: "wx", mode: 0o600 });
       written = true;
@@ -145,18 +176,28 @@ export async function registerMedia(
         height: result.height,
       };
     } catch (e) {
-      if (written) await unlink(final).catch(() => {});
+      if (written && finalPath) await unlink(finalPath).catch(() => {});
       throw e;
     } finally {
       await unlink(quarantine).catch(() => {});
     }
   });
 }
-export async function readMedia(
+type MediaMeta = {
+  id: string;
+  mime: string;
+  extension: string;
+  checksum: string;
+  visibility: string;
+  width: number | null;
+  height: number | null;
+};
+// Resolusi otorisasi + metadata tanpa memuat isi berkas.
+async function readMediaMeta(
   id: string,
   principal: Principal | null,
   options: Pick<StorageOptions, "root"> = {},
-) {
+): Promise<{ media: MediaMeta; path: string }> {
   z.uuid().parse(id);
   const media = await getDb().$transaction(async (tx) => {
     const row = await tx.media.findUnique({ where: { id } });
@@ -164,7 +205,7 @@ export async function readMedia(
     if (row.visibility !== "public") {
       if (!principal) throw new DomainError("NOT_FOUND", 404);
       const permission = readPermissions[purposeSchema.parse(row.purpose)];
-      await assertFresh(tx, principal, permission);
+      await assertFreshRead(tx, principal, permission);
     }
     return row;
   });
@@ -173,6 +214,35 @@ export async function readMedia(
     media.id,
     media.extension as "webp" | "pdf" | "epub",
   );
+  await stat(path).catch(() => {
+    throw new DomainError("MEDIA_CORRUPT", 503);
+  });
+  return { media: media as unknown as MediaMeta, path };
+}
+// Serving HTTP: stream, tanpa memuat seluruh berkas ke memori.
+export async function readMediaStream(
+  id: string,
+  principal: Principal | null,
+  options: Pick<StorageOptions, "root"> = {},
+) {
+  const { media, path } = await readMediaMeta(id, principal, options);
+  const stream = Readable.toWeb(
+    createReadStream(path),
+  ) as unknown as ReadableStream<Uint8Array>;
+  return {
+    stream,
+    mime: media.mime,
+    checksum: media.checksum,
+    visibility: media.visibility,
+  };
+}
+// Untuk export/invoice: byte penuh dengan verifikasi checksum.
+export async function readMedia(
+  id: string,
+  principal: Principal | null,
+  options: Pick<StorageOptions, "root"> = {},
+) {
+  const { media, path } = await readMediaMeta(id, principal, options);
   const bytes = await readFile(path);
   if (hash(bytes) !== media.checksum)
     throw new DomainError("MEDIA_CORRUPT", 503);
