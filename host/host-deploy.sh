@@ -119,7 +119,7 @@ chown -R "$WAPALA_BUILDER:$WAPALA_BUILDER" "$RELEASE_DIR" "$CACHE_DIR"
 run_as_builder() {
   runuser -u "$WAPALA_BUILDER" -- env -u NODE_OPTIONS \
     UV_THREADPOOLSIZE=1 MALLOC_ARENA_MAX=2 npm_config_maxsockets=1 \
-    NEXT_TELEMETRY_DISABLED=1 "$@"
+    npm_config_update_notifier=false NEXT_TELEMETRY_DISABLED=1 "$@"
 }
 
 # ---------- Install + build (serial, hemat memori) ----------
