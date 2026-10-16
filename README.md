@@ -61,6 +61,39 @@ Aplikasi berjalan sebagai user non-root `wapala`, hanya listen `127.0.0.1:3000`;
 
 > NAT bukan "DNS forwarding". DNS hanya menerjemahkan nama → IP; rute port publik → port internal ditentukan panel provider (port forwarding). Di provider yang sama, pastikan HTTP publik (80) dan HTTPS publik (443 atau port khusus) diteruskan ke port internal yang benar.
 
+### Membaca panel provider (Domain Forwarding + DNS) → parameter provisioning
+
+Nilai di panel **berubah tergantung VPS** — selalu cek panel VPS yang akan dipakai, jangan asal pakai catatan lama. Pola penerjemahannya:
+
+| Baris di panel provider | Arti | Parameter provisioning |
+| --- | --- | --- |
+| `HTTP  domain:80  → IP_internal:33335` | Trafik HTTP publik masuk ke nginx internal `33335` | `WAPALA_NAT_HTTP_PORT=33335` |
+| `HTTPS domain:443 → IP_internal:33336` | Trafik HTTPS publik masuk ke nginx internal `33336` | `WAPALA_NAT_HTTPS_PORT=33336` |
+| Baris `HTTPS`, kolom **Source Port** | Port publik yang dipakai browser (`443` atau custom) | `WAPALA_NAT_PUBLIC_HTTPS_PORT=443` — isi hanya bila beda dari port internal; bila `443`, redirect otomatis bersih tanpa `:port` |
+| `TCP  IP_publik:33333 → IP_internal:22` | SSH dari luar | SSH manual: `ssh -p 33333 user@IP_publik`; (mode otomatis) secret `VPS_PORT=33333` |
+| DNS `A  domain → 185.x.x.x` | Domain sudah menunjuk IP publik provider | Syarat certbot — verifikasi `dig +short domain` |
+
+Contoh (**ilustrasi** — ganti dengan nilai panel VPS yang akan dipakai). Panel menampilkan:
+
+```text
+HTTP   mysite.com  80  → 10.x.x.x  33335
+HTTPS  mysite.com  443 → 10.x.x.x  33336
+TCP    185.x.x.x  33333 → 10.x.x.x  22
+DNS:   A  mysite.com → 185.x.x.x
+```
+
+Perintah provisioning-nya:
+
+```sh
+sudo WAPALA_NAT_MODE=1 \
+     WAPALA_NAT_HTTP_PORT=33335 \
+     WAPALA_NAT_HTTPS_PORT=33336 \
+     WAPALA_NAT_PUBLIC_HTTPS_PORT=443 \
+     bash host/host-provision.sh mysite.com email@kamu.com
+```
+
+Checklist sebelum jalan: (1) A record menunjuk IP publik provider, (2) domain terdaftar di baris forwarding HTTP **dan** HTTPS, (3) port internal di parameter sama persis dengan kolom Destination Port, (4) ini panel VPS tujuan — bukan VPS production lama yang masih hidup.
+
 ---
 
 ## Langkah 1 — Provisioning (sekali saja)
