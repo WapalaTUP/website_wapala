@@ -7,6 +7,8 @@ Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA —
 
 Satu alur untuk semua VPS: **clone branch `host` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
 
+> 📖 **Walkthrough nyata end-to-end** (InterServer KVM Slice 1 + domain hostdata.id/DirectAdmin, termasuk setting nameserver, ClamAV, dan semua jebakan yang kami temui): [host/deploy-walkthrough.md](host/deploy-walkthrough.md)
+
 ## Fitur aplikasi (ringkas)
 
 - Situs publik: profil/angkatan, divisi, berita, galeri, pembaca PDF/EPUB, kontak.
