@@ -208,6 +208,9 @@ if [ "$SKIP_CERTBOT" != "1" ]; then
         -e "s/33336/$NAT_PUBLIC_HTTPS_PORT/g" \
         -e "s/listen $NAT_PUBLIC_HTTPS_PORT ssl/listen $NAT_HTTPS_PORT ssl/" \
         "$(here)/nginx-wapala-nat.conf" > /etc/nginx/sites-available/wapala.conf
+    if [ "$NAT_PUBLIC_HTTPS_PORT" = "443" ]; then
+      sed -i "s|\$host:$NAT_PUBLIC_HTTPS_PORT|\$host|" /etc/nginx/sites-available/wapala.conf
+    fi
   else
     sed "s/wapala.example.org/$DOMAIN/g" "$(here)/nginx-wapala.conf" \
       > /etc/nginx/sites-available/wapala.conf
