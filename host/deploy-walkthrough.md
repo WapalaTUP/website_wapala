@@ -256,7 +256,7 @@ systemctl list-timers | grep -i certbot      # perpanjangan otomatis tiap 90 har
 | Log aplikasi | `journalctl -u wapala -f` |
 | Log maintenance | `journalctl -u wapala-maintenance.service -n 50` |
 | Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
-| Backup sebelum eksperimen | `sudo node scripts/release-backup.mjs backup /root/backup-$(date +%F)` |
+| Backup sebelum eksperimen | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; export WAPALA_WRITERS_STOPPED=yes; cd /srv/wapala/current; node scripts/release-backup.mjs backup /root/backup-$(date +%F)'` — stop `wapala` dulu, start setelahnya |
 | Pemulihan Super User | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:recover-superuser'` |
 
 ## 9. Jebakan yang kami temui (dan solusinya)

@@ -363,8 +363,8 @@ backup_flow() {
   confirm "Hentikan app -> backup -> nyalakan lagi?" y || return
   systemctl stop "$SERVICE" wapala-maintenance.timer 2>/dev/null || true
   local failed=0
-  run "node scripts/release-backup.mjs backup $dir"
-  sudo_and_env "node scripts/release-backup.mjs backup '$dir'" || failed=1
+  run "node scripts/release-backup.mjs backup $dir (WAPALA_WRITERS_STOPPED=yes)"
+  sudo_and_env "export WAPALA_WRITERS_STOPPED=yes; node scripts/release-backup.mjs backup '$dir'" || failed=1
   systemctl start "$SERVICE" wapala-maintenance.timer 2>/dev/null || true
   sleep 3
   if curl -fsS --max-time 5 "http://127.0.0.1:$(sed -n 's/^PORT=//p' "$ENV_FILE" | tail -n1)/api/health" >/dev/null 2>&1; then
