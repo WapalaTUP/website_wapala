@@ -304,7 +304,7 @@ manage_flow() {
   5) Backup database + media
   6) Prune maintenance manual
   7) Pasang ClamAV (jika belum)
-  8) Import Album awal (paket publik staging)
+  8) Import Album awal (paket publik import-packages)
   9) Info sertifikat TLS
   u) Update kode repo ini (git pull)
   0) Keluar
@@ -352,9 +352,15 @@ update_repo() {
 }
 
 deploy_again() {
-  run "WAPALA_REPO_URL=$REPO_URL WAPALA_BRANCH=$BRANCH bash $SCRIPT_DIR/host-deploy.sh"
-  WAPALA_REPO_URL="$REPO_URL" WAPALA_BRANCH="$BRANCH" bash "$SCRIPT_DIR/host-deploy.sh" &&
-    ok "Deploy selesai." || err "Deploy gagal — lihat output."
+  local deploy_branch="$BRANCH"
+  choose "Deploy dari branch mana?" "main — production" "staging — build uji"
+  case "$CHOSEN" in
+    staging*) deploy_branch="staging" ;;
+    *) deploy_branch="main" ;;
+  esac
+  run "WAPALA_REPO_URL=$REPO_URL WAPALA_BRANCH=$deploy_branch bash $SCRIPT_DIR/host-deploy.sh"
+  WAPALA_REPO_URL="$REPO_URL" WAPALA_BRANCH="$deploy_branch" bash "$SCRIPT_DIR/host-deploy.sh" &&
+    ok "Deploy selesai ($deploy_branch)." || err "Deploy gagal — lihat output."
 }
 
 show_status() {

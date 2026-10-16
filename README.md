@@ -255,19 +255,26 @@ src/ public/                # Source aplikasi
 
 ## Model branch
 
-```text
-main  ◄──────── production (deploy dari sini)
-  ▲
-  └── merge dari host setelah CI hijau
+**Repo utama: [WapalaTUP/website_wapala](https://github.com/WapalaTUP/website_wapala).**
 
-host  ──── development harian
+```text
+staging  ── development harian (perubahan baru; diuji di VPS testing)
+   │
+   └── uji di-ACC ──▶ merge ke main
+main     ◄── production (server men-deploy branch ini)
 ```
 
-- Perubahan dikerjakan di `host`, diverifikasi (CI dapat dijalankan manual via
-  **Actions → CI host → Run workflow**), lalu di-merge ke `main`.
-- Server men-deploy `main` (default `WAPALA_BRANCH=main` pada deploy script).
-- Branch ini sengaja hanya memuat kode deployment — tidak ada aset development
-  yang tidak diperlukan runtime.
+| Branch | Akun | Peran |
+| --- | --- | --- |
+| `staging` | WapalaTUP | Development — semua perubahan baru masuk sini, diuji di VPS testing |
+| `main` | WapalaTUP | Production — server men-deploy branch ini setelah uji di-ACC |
+| `main` | hulwanulazka-companion | Mirror produksi (disinkron setelah ACC) |
+| `host` | kedua akun | Arsip — pengembangan kini berpindah ke `staging` |
+| `import-packages` | hulwanulazka-companion | Arsip paket situs publik untuk `host/import-album.sh` |
+
+Alur: perubahan di `staging` → deploy uji ke VPS testing (`wapala.sh` → Deploy
+ulang → *staging — build uji*) → diuji → **di-ACC** → merge `staging` → `main`
+→ deploy production → mirror `main` ke akun companion.
 
 ---
 

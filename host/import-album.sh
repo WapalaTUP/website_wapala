@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${WAPALA_ENV_FILE:-/etc/wapala/production.env}"
 CURRENT_LINK="${WAPALA_BASE_DIR:-/srv/wapala}/current"
 DEFAULT_REPO="https://github.com/hulwanulazka-companion/wapala_dev.git"
-DEFAULT_BRANCH="staging"
+DEFAULT_BRANCH="import-packages"
 PACKAGE_PATH="import-packages/wapala-public-site"
 SERVICE_NAME="${WAPALA_SERVICE:-wapala}"
 
