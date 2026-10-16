@@ -1,0 +1,22 @@
+[Unit]
+Description=WAPALA email outbox worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+ConditionPathExists=/etc/wapala/production.env
+
+[Service]
+Type=oneshot
+User=wapala
+Group=wapala
+WorkingDirectory=/srv/wapala/current
+EnvironmentFile=/etc/wapala/production.env
+ExecStart=/usr/bin/npm --silent run email:worker
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/wapala/current/.next/cache
+MemoryAccounting=true
+MemoryMax=400M
+TasksMax=64

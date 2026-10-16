@@ -121,6 +121,12 @@ install_flow() {
   title "Alur Install — VPS baru"
 
   local mode nat_http nat_https nat_public_https domain email ufw clamav
+  local smtp=0 smtp_host="" smtp_port=587 smtp_user="" smtp_pass="" smtp_from=""
+
+  echo
+  warn "ClamAV menambah pemakaian RAM ~1-1.5 GB (signature penuh). Tanpa ClamAV, upload media ditolak (fail-closed)."
+  if confirm "Pasang ClamAV sekarang? (agar upload langsung bisa diuji setelah live)" y; then clamav=1; else clamav=0; fi
+
   choose "Mode VPS yang dipakai?" \
     "Dedicated IP — port standar 80/443" \
     "NAT VPS — port publik terbatas dari provider"
@@ -159,6 +165,20 @@ install_flow() {
     err "Format email tidak valid."
   done
 
+  # SMTP (opsional)
+  echo
+  warn "Banyak provider VPS memblokir/membatasi SMTP keluar — setelah live, wajib uji pengiriman nyata."
+  if confirm "Konfigurasi SMTP sekarang? (tidak = EMAIL_MODE disabled, pemulihan akun via SSH/panel)" n; then
+    smtp=1
+    while true; do ask "SMTP host" ; smtp_host="$REPLY"; [ -n "$smtp_host" ] && break; err "SMTP host wajib diisi."; done
+    while true; do ask "SMTP port" "587" ; smtp_port="$REPLY"; validate_port "$smtp_port" && break; err "Port tidak valid."; done
+    while true; do ask "SMTP user" ; smtp_user="$REPLY"; [ -n "$smtp_user" ] && break; err "SMTP user wajib diisi."; done
+    read -r -s -p "$(printf '%sSMTP password%s: ' "$C_BOLD" "$C_RESET")" smtp_pass; echo
+    [ -n "$smtp_pass" ] || { err "SMTP password wajib diisi."; exit 1; }
+    ask "Email pengirim (SMTP_FROM)" "$email" ; smtp_from="$REPLY"
+    validate_email "$smtp_from" || { err "Format email pengirim tidak valid."; exit 1; }
+  fi
+
   # Deteksi DNS
   local skip_certbot=0 server_ip resolved
   server_ip="$(curl -fsS --max-time 10 ifconfig.me 2>/dev/null || echo '')"
@@ -179,8 +199,6 @@ install_flow() {
   fi
 
   echo
-  warn "ClamAV menambah pemakaian RAM ~1-1.5 GB (signature penuh). Tanpa ClamAV, upload media ditolak (fail-closed)."
-  if confirm "Pasang ClamAV sekarang?" y; then clamav=1; else clamav=0; fi
   if confirm "Aktifkan firewall UFW (SSH + port web)?" y; then ufw=1; else ufw=0; fi
 
   title "Ringkasan"
@@ -190,17 +208,32 @@ install_flow() {
   echo "  Email       : $email"
   echo "  TLS         : $([ "$skip_certbot" = 1 ] && echo 'DITUNDA (DNS belum siap)' || echo "Let's Encrypt otomatis")"
   echo "  ClamAV      : $([ "$clamav" = 1 ] && echo ya || echo TIDAK — upload mati)"
+  if [ "$smtp" = 1 ]; then
+    echo "  SMTP        : aktif -> $smtp_host:$smtp_port (from $smtp_from; worker email tiap 5 menit)"
+  else
+    echo "  SMTP        : disabled — notifikasi email mati, pemulihan via SSH/panel"
+  fi
   echo "  UFW         : $([ "$ufw" = 1 ] && echo ya || echo tidak)"
   echo "  Repo/branch : $REPO_URL @ $BRANCH"
   echo "  Auto-start on boot: AKTIF (systemd enable)"
   confirm "Lanjut provisioning?" || { echo "Dibatalkan."; exit 0; }
 
-  local prov_env="WAPALA_FORCE_APP_URL=1 WAPALA_PROVISION_CLAMAV=$clamav"
-  [ "$ufw" = 1 ] && prov_env="$prov_env WAPALA_ENABLE_UFW=1"
-  [ "$skip_certbot" = 1 ] && prov_env="$prov_env WAPALA_SKIP_CERTBOT=1"
+  # Env dikirim via array: password SMTP dengan spasi/karakter khusus tetap aman.
+  local -a prov_env=(
+    WAPALA_FORCE_APP_URL=1
+    "WAPALA_PROVISION_CLAMAV=$clamav"
+    "WAPALA_EMAIL_MODE=$([ "$smtp" = 1 ] && echo smtp || echo disabled)"
+  )
+  [ "$smtp" = 1 ] && prov_env+=(
+    "WAPALA_SMTP_HOST=$smtp_host" "WAPALA_SMTP_PORT=$smtp_port"
+    "WAPALA_SMTP_USER=$smtp_user" "WAPALA_SMTP_PASSWORD=$smtp_pass"
+    "WAPALA_SMTP_FROM=$smtp_from"
+  )
+  [ "$ufw" = 1 ] && prov_env+=(WAPALA_ENABLE_UFW=1)
+  [ "$skip_certbot" = 1 ] && prov_env+=(WAPALA_SKIP_CERTBOT=1)
 
-  run "env $prov_env bash $SCRIPT_DIR/host-provision.sh $domain $email"
-  env $prov_env bash "$SCRIPT_DIR/host-provision.sh" "$domain" "$email" ||
+  run "env ${prov_env[*]} bash $SCRIPT_DIR/host-provision.sh $domain $email"
+  env "${prov_env[@]}" bash "$SCRIPT_DIR/host-provision.sh" "$domain" "$email" ||
     { err "Provisioning gagal — periksa output di atas."; exit 1; }
 
   title "Build & Deploy (10-20 menit di 1 vCPU — jangan tutup sesi; aman dijalankan ulang)"

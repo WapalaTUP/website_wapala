@@ -45,6 +45,18 @@ NAT_HTTPS_PORT="${WAPALA_NAT_HTTPS_PORT:-33336}"
 NAT_PUBLIC_HTTPS_PORT="${WAPALA_NAT_PUBLIC_HTTPS_PORT:-$NAT_HTTPS_PORT}"
 PROVISION_CLAMAV="${WAPALA_PROVISION_CLAMAV:-0}"
 SKIP_CERTBOT="${WAPALA_SKIP_CERTBOT:-0}"
+# Email: disabled (default, provider sering blokir SMTP) atau smtp lengkap.
+EMAIL_MODE_OPT="${WAPALA_EMAIL_MODE:-disabled}"
+SMTP_HOST_OPT="${WAPALA_SMTP_HOST:-}"
+SMTP_PORT_OPT="${WAPALA_SMTP_PORT:-587}"
+SMTP_USER_OPT="${WAPALA_SMTP_USER:-}"
+SMTP_PASSWORD_OPT="${WAPALA_SMTP_PASSWORD:-}"
+SMTP_FROM_OPT="${WAPALA_SMTP_FROM:-}"
+case "$EMAIL_MODE_OPT" in smtp|disabled) ;; *) die "WAPALA_EMAIL_MODE harus 'smtp' atau 'disabled'." ;; esac
+if [ "$EMAIL_MODE_OPT" = "smtp" ]; then
+  [ -n "$SMTP_HOST_OPT" ] && [ -n "$SMTP_USER_OPT" ] && [ -n "$SMTP_PASSWORD_OPT" ] && [ -n "$SMTP_FROM_OPT" ] ||
+    die "EMAIL_MODE=smtp butuh WAPALA_SMTP_HOST/USER/PASSWORD/FROM."
+fi
 
 command -v curl >/dev/null || { apt-get update; apt-get install -y curl; }
 
@@ -110,10 +122,13 @@ fi
 
 # ---------- Env file privat ----------
 if [ ! -f "$ENV_FILE" ]; then
-  log "Membuat $ENV_FILE (isi SMTP bila diperlukan)..."
+  log "Membuat $ENV_FILE (mode email: $EMAIL_MODE_OPT)..."
   security_key="$(openssl rand -base64 32)"
   media_scanner_line="# MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala"
   [ "$PROVISION_CLAMAV" = "1" ] && media_scanner_line="MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala"
+  # Bagian statis via heredoc (nilai aman: hex/base64/regex domain);
+  # nilai dari operator (SMTP) ditulis via printf %s agar karakter
+  # khusus pada password tidak diekspansikan shell.
   cat > "$ENV_FILE" <<EOF
 NODE_ENV=production
 WAPALA_MODE=backend
@@ -122,20 +137,18 @@ DATABASE_URL=postgresql://wapala_app:$DB_APP_PW@127.0.0.1:$PG_PORT/$DB_NAME
 MIGRATE_DATABASE_URL=postgresql://wapala:$DB_OWNER_PW@127.0.0.1:$PG_PORT/$DB_NAME
 SECURITY_KEY=$security_key
 TRUST_PROXY=true
-EMAIL_MODE=disabled
-# Provider memblokir SMTP? biarkan disabled. Bila SMTP nyata tersedia:
-# EMAIL_MODE=smtp lalu isi SMTP_* di bawah.
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM=
+EMAIL_MODE=$EMAIL_MODE_OPT
 MEDIA_ROOT=$MEDIA_ROOT
 $media_scanner_line
 HOSTNAME=127.0.0.1
 PORT=3000
 NODE_OPTIONS=--max-old-space-size=640
 EOF
+  printf 'SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_USER=%s\nSMTP_PASSWORD=%s\nSMTP_FROM=%s\n' \
+    "$SMTP_HOST_OPT" "$SMTP_PORT_OPT" "$SMTP_USER_OPT" "$SMTP_PASSWORD_OPT" "$SMTP_FROM_OPT" >> "$ENV_FILE"
+  if [ "$EMAIL_MODE_OPT" = "disabled" ]; then
+    printf '# EMAIL_MODE=disabled: notifikasi email mati; pemulihan akun via SSH/panel.\n' >> "$ENV_FILE"
+  fi
   chmod 0600 "$ENV_FILE"
   chown root:root "$ENV_FILE"
   log "Env template dibuat. EDIT $ENV_FILE untuk menyesuaikan."
@@ -168,6 +181,18 @@ chmod 0644 /etc/systemd/system/wapala-maintenance.service
 install -m 0644 "$(here)/wapala-maintenance.timer" /etc/systemd/system/wapala-maintenance.timer
 systemctl daemon-reload
 systemctl enable wapala.service >/dev/null 2>&1 || true
+
+# ---------- Worker email (hanya bila EMAIL_MODE=smtp) ----------
+if [ "$EMAIL_MODE_OPT" = "smtp" ]; then
+  sed "s|/usr/bin/npm|$NPM_BIN|" "$(here)/wapala-email.service" \
+    > /etc/systemd/system/wapala-email.service
+  install -m 0644 "$(here)/wapala-email.timer" /etc/systemd/system/wapala-email.timer
+  systemctl daemon-reload
+  systemctl enable --now wapala-email.timer >/dev/null 2>&1 || true
+  log "Worker email: timer 5 menit aktif (EMAIL_MODE=smtp)."
+else
+  log "Worker email tidak dipasang (EMAIL_MODE=disabled)."
+fi
 # Timer maintenance (prune throttle/session/token) — service akan gagal
 # tanpa bahaya sampai deploy pertama membuat /srv/wapala/current.
 systemctl enable wapala-maintenance.timer >/dev/null 2>&1 || true
@@ -275,6 +300,7 @@ Env file     : $ENV_FILE (mode 0600, EDIT sebelum deploy)
 Unit         : wapala.service (enabled; start otomatis oleh deploy pertama)
 Builder      : user non-root 'builder' (npm/build tidak pernah sebagai root)
 Maintenance  : wapala-maintenance.timer 03:17 (prune throttle/sesi/token)
+Email        : $EMAIL_MODE_OPT $([ "$EMAIL_MODE_OPT" = "smtp" ] && echo "(worker timer 5 menit aktif)")
 ClamAV       : $([ "$PROVISION_CLAMAV" = "1" ] && echo "terpasang" || echo "TIDAK (upload ditolak sampai dipasang)")
 
 LANGKAH BERIKUTNYA:

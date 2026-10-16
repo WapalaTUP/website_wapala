@@ -1,0 +1,10 @@
+[Unit]
+Description=WAPALA email outbox worker timer
+
+[Timer]
+# Proses outbox tiap 5 menit; EMAIL_MODE=disabled membuat worker keluar
+# seketika sehingga timer ini aman dibiarkan aktif.
+OnCalendar=*:0/5
+
+[Install]
+WantedBy=timers.target
