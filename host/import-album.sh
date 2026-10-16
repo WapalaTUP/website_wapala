@@ -23,8 +23,10 @@ PACKAGE_PATH="import-packages/wapala-public-site"
 if [ -t 1 ]; then
   C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'
   C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'; C_CYAN=$'\033[36m'
+  C_MAGENTA=$'\033[35m'
 else
   C_RESET=""; C_BOLD=""; C_DIM=""; C_GREEN=""; C_YELLOW=""; C_RED=""; C_CYAN=""
+  C_MAGENTA=""
 fi
 ok()   { printf '%s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
 warn() { printf '%s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
@@ -107,7 +109,9 @@ pkg="$paket_dir/repo/$PACKAGE_PATH"
 [ -f "$CURRENT_LINK/scripts/import-public-site.ts" ] ||
   { err "Importer tidak ada di release aktif."; exit 1; }
 # Paket hanya berisi data publik; service user perlu membacanya.
-chmod -R a+rX "$paket_dir/repo"
+# a+rX dari FOLDER INDUK: mktemp membuat dir 0700 milik root — tanpa izin
+# traverse di induknya, user wapala tidak bisa mencapai paket (EACCES).
+chmod -R a+rX "$paket_dir"
 ok "Paket siap: $pkg"
 warn "Isi paket: $(find "$pkg" -type f | wc -l) berkas."
 
