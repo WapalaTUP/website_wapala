@@ -31,6 +31,21 @@ warn() { printf '%s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
 err()  { printf '%s✗%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
 title(){ printf '\n%s%s── %s ──────────────────────────────%s\n' "$C_BOLD" "$C_CYAN" "$*" "$C_RESET"; }
 step() { printf '%s▸%s %s\n' "$C_MAGENTA" "$C_RESET" "$*"; }
+ask() { # ask PROMPT [DEFAULT] -> REPLY
+  local prompt="$1" default="${2:-}"
+  if [ -n "$default" ]; then
+    read -r -e -p "$(printf '%s%s%s [%s]: ' "$C_BOLD" "$prompt" "$C_RESET" "$default")" REPLY
+    REPLY="${REPLY:-$default}"
+  else
+    read -r -e -p "$(printf '%s%s%s: ' "$C_BOLD" "$prompt" "$C_RESET")" REPLY
+  fi
+}
+confirm() { # confirm PROMPT [default=y|n] -> 0 jika ya
+  local prompt="$1" def="${2:-y}" a
+  read -r -p "$(printf '%s%s%s [y/n, default %s]: ' "$C_BOLD" "$prompt" "$C_RESET" "$def")" a
+  a="${a:-$def}"
+  [[ "$a" =~ ^[Yy] ]]
+}
 
 # ---------- Guard ----------
 [ "$(id -u)" -eq 0 ] || { err "Jalankan sebagai root: sudo bash host/import-album.sh"; exit 1; }
