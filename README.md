@@ -2,7 +2,7 @@
 
 [![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
 
-Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif: [wapala.my.id](https://wapala.my.id).
+Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif development: [wapala.my.id](https://wapala.my.id).
 
 Satu alur untuk semua VPS: **clone branch `host` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
 
