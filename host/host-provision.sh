@@ -141,6 +141,15 @@ EOF
   log "Env template dibuat. EDIT $ENV_FILE untuk menyesuaikan."
 else
   log "$ENV_FILE sudah ada; tidak diubah."
+  # Re-provision dengan domain baru: APP_URL lama (mis. placeholder) ikut
+  # diperbarui bila WAPALA_FORCE_APP_URL=1 — tanpa menyentuh secret lain.
+  if [ "${WAPALA_FORCE_APP_URL:-0}" = "1" ] &&
+     [ "$(sed -n 's/^APP_URL=//p' "$ENV_FILE" | tail -n 1)" != "https://$DOMAIN" ]; then
+    sed -i "s|^APP_URL=.*|APP_URL=https://$DOMAIN|" "$ENV_FILE"
+    chmod 0600 "$ENV_FILE"
+    chown root:root "$ENV_FILE"
+    log "APP_URL diperbarui ke https://$DOMAIN (WAPALA_FORCE_APP_URL=1)."
+  fi
 fi
 
 # ---------- systemd unit ----------
@@ -168,11 +177,15 @@ systemctl start wapala-maintenance.timer >/dev/null 2>&1 || true
 if [ "$PROVISION_CLAMAV" = "1" ]; then
   log "Memasang ClamAV (unduhan signature besar, tunggu)..."
   apt-get install -y clamav clamav-daemon clamav-freshclam
+  # Buku app hingga 50 MB; default clamd 25M akan menolak scan-nya.
+  grep -q '^StreamMaxLength' /etc/clamav/clamd.conf 2>/dev/null ||
+    echo 'StreamMaxLength 60M' >> /etc/clamav/clamd.conf
   systemctl enable --now clamav-freshclam >/dev/null 2>&1 || true
   freshclam || log "freshclam gagal; jalankan ulang manual sebelum upload dipakai."
   systemctl enable --now clamav-daemon >/dev/null 2>&1 || true
+  systemctl restart clamav-daemon >/dev/null 2>&1 || true
   install -m 0755 "$(here)/clamdscan-wapala.sh" /usr/local/libexec/clamdscan-wapala
-  log "Scanner wrapper: /usr/local/libexec/clamdscan-wapala"
+  log "Scanner wrapper: /usr/local/libexec/clamdscan-wapala (StreamMaxLength 60M)"
 else
   log "ClamAV dilewati. TANPA scanner, upload media akan ditolak (fail-closed)."
 fi

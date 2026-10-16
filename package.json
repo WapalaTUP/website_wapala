@@ -18,7 +18,8 @@
     "loans:overdue": "tsx --conditions=react-server scripts/loan-overdue.ts",
     "media:cleanup-events": "tsx --conditions=react-server scripts/event-media-cleanup.ts",
     "backup": "node scripts/release-backup.mjs backup",
-    "backup:restore-stage": "node scripts/release-backup.mjs restore-stage"
+    "backup:restore-stage": "node scripts/release-backup.mjs restore-stage",
+    "import:public-site": "tsx --conditions=react-server scripts/import-public-site.ts"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.2.0",
