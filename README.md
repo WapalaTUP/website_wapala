@@ -1,11 +1,11 @@
-# Website WAPALA — Production Deploy (`host`)
+# Website WAPALA — Production Deploy (`main`)
 
-[![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
-[![CI host](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml/badge.svg?branch=host)](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml)
+[![Deploy host](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml/badge.svg?branch=main)](https://github.com/WapalaTUP/website_wapala/actions/workflows/deploy-host.yml)
+[![CI host](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WapalaTUP/website_wapala/actions/workflows/ci.yml)
 
-Branch `host` adalah **paket deployment siap otomatis** untuk Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Situs aktif development: [wapala.my.id](https://wapala.my.id).
+Branch **`main`** adalah sumber deployment production Website WAPALA — situs resmi unit kegiatan mahasiswa Wahana Pencinta Alam Telkom University (Gunung & Hutan, Rock Climbing, Caving, Rafting). Branch `host` dipakai sebagai **development**; rilis masuk `main` lewat merge. Situs aktif development: [wapala.my.id](https://wapala.my.id).
 
-Satu alur untuk semua VPS: **clone branch `host` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
+Satu alur untuk semua VPS: **clone branch `main` di server → jalankan satu perintah setup → jalankan satu perintah deploy → live.** Deploy ulang berikutnya cukup jalankan lagi perintah deploy. Deploy otomatis via GitHub Actions tersedia sebagai opsional (lihat [Langkah 4](#langkah-4--opsional-deploy-otomatis-dari-push)).
 
 > 📖 **Walkthrough nyata end-to-end** (InterServer KVM Slice 1 + domain hostdata.id/DirectAdmin, termasuk setting nameserver, ClamAV, dan semua jebakan yang kami temui): [host/deploy-walkthrough.md](host/deploy-walkthrough.md)
 
@@ -105,7 +105,7 @@ SSH ke VPS, lalu clone branch `host` dan jalankan provisioning:
 
 ```sh
 apt-get update && apt-get install -y git
-git clone --branch host --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
+git clone --branch main --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
 cd wapala-setup
 ```
 
@@ -297,7 +297,7 @@ Build sukses ditandai `.next/BUILD_ID` dan `.next/standalone/server.js`; script 
 | `413` saat unggah buku | Pastikan ≤ 50 MB dan nginx `client_max_body_size 60m` aktif |
 | Halaman terbuka tapi aset 404 | Pastikan deploy melalui script (menyalin `.next/static` + `public` ke standalone) |
 
-## Struktur branch `host`
+## Struktur repository (`main`)
 
 ```text
 .github/workflows/deploy-host.yml   # Opsional: Run workflow → SSH → host/host-deploy.sh
@@ -316,4 +316,4 @@ src/ public/                        # Source aplikasi (dibutuhkan build)
 README.md                           # Dokumen ini
 ```
 
-Branch ini sengaja **hanya berisi kode deployment**: test, dokumen pengembangan, dan script dev berada di branch lain (`main`/`staging`), tidak di sini.
+Branch ini sengaja **hanya berisi kode deployment**: test, dokumen pengembangan, dan script dev tidak dibawa ke sini. Pengembangan harian terjadi di branch `host`.

@@ -37,7 +37,7 @@ sudo -v                         # harus sukses
 
 ```sh
 sudo apt-get update && sudo apt-get install -y git
-git clone --branch host --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
+git clone --branch main --single-branch https://github.com/WapalaTUP/website_wapala.git wapala-setup
 cd wapala-setup
 ```
 

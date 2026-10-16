@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # WAPALA "host" provisioning — dijalankan SEKALI di VPS Ubuntu 22.04/24.04,
-# dari hasil git clone branch host. Sesuai mode VPS:
+# dari hasil git clone branch main. Sesuai mode VPS:
 #
 #   Dedicated IP : sudo bash deploy/host-provision.sh <domain> <email-certbot>
 #   NAT VPS      : sudo WAPALA_NAT_MODE=1 WAPALA_NAT_HTTP_PORT=33335 \
@@ -268,6 +268,6 @@ LANGKAH BERIKUTNYA:
 1. DNS: $dns_txt. Verifikasi: dig +short $DOMAIN
 2. Edit $ENV_FILE: verifikasi APP_URL/DB/SECURITY_KEY, isi SMTP bila perlu.
 3. Set GitHub secrets: VPS_HOST, VPS_PORT (SSH), VPS_USER, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
-4. Push ke branch 'host' -> GitHub Actions deploy otomatis.
+4. Push ke branch 'main' -> GitHub Actions deploy otomatis (opsional).
 ========================================================
 RINGKASAN

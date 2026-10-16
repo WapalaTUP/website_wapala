@@ -2,9 +2,9 @@ name: CI host
 
 on:
   push:
-    branches: [host]
+    branches: [main, host]
   pull_request:
-    branches: [host]
+    branches: [main, host]
   workflow_dispatch:
 
 concurrency:
