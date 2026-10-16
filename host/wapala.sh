@@ -256,6 +256,7 @@ manage_flow() {
   7) Pasang ClamAV (jika belum)
   8) Import Album awal (paket publik staging)
   9) Info sertifikat TLS
+  u) Update kode repo ini (git pull)
   0) Keluar
 MENU
     read -r -p "$(printf '%sPilih%s: ' "$C_BOLD" "$C_RESET")" REPLY
@@ -269,10 +270,35 @@ MENU
       7) clamav_flow ;;
       8) run "bash $SCRIPT_DIR/import-album.sh"; bash "$SCRIPT_DIR/import-album.sh" ;;
       9) tls_info ;;
+      u|U) update_repo ;;
       0) echo "Sampai jumpa."; exit 0 ;;
       *) warn "Pilihan tidak valid." ;;
     esac
   done
+}
+
+# Tarik kode terbaru untuk checkout repo ini (script installer + tool ops).
+# Dijalankan sebagai pemilik checkout agar tidak merusak kepemilikan berkas;
+# git sebagai root di repo milik user lain akan menolak (dubious ownership).
+update_repo() {
+  local repo_dir
+  repo_dir="$(dirname "$SCRIPT_DIR")"
+  [ -d "$repo_dir/.git" ] || { err "Bukan checkout git: $repo_dir"; return; }
+  local owner branch dirty head
+  owner="$(stat -c '%U' "$repo_dir")"
+  branch="$(sudo -u "$owner" git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  dirty="$(sudo -u "$owner" git -C "$repo_dir" status --porcelain 2>/dev/null)"
+  [ -n "$dirty" ] && warn "Ada perubahan lokal — akan di-stash sementara sebelum pull."
+  run "git -C $repo_dir pull --ff-only (user $owner, branch $branch)"
+  [ -n "$dirty" ] && sudo -u "$owner" git -C "$repo_dir" stash || true
+  if sudo -u "$owner" git -C "$repo_dir" pull --ff-only; then
+    head="$(sudo -u "$owner" git -C "$repo_dir" rev-parse --short HEAD)"
+    ok "Kode terbaru aktif: $head"
+    echo "  - Perubahan host/*.sh & scripts/*.sh : langsung aktif di menu ini"
+    echo "  - Perubahan kode aplikasi (src/)     : perlu '1) Deploy ulang'"
+  else
+    err "git pull gagal (konflik/koneksi) — selesaikan manual di $repo_dir"
+  fi
 }
 
 deploy_again() {
