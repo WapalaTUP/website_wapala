@@ -180,8 +180,36 @@ hitungan database. Anggota dan inventaris tidak termasuk dalam paket.
 
 Tiga release terakhir disimpan di `/srv/wapala/releases`; sisanya dibersihkan
 otomatis. Rollback otomatis terjadi bila health check gagal pasca-deploy.
-Catatan: migration sudah berjalan sebelum rollback — ikuti disiplin
-[expand/contract](https://openfresh.github.io/expand-contract/) untuk skema database.
+
+## Database & migration saat deploy
+
+Deploy ulang **tidak pernah menghapus atau mereset database**. Data
+(angkatan, album, anggota, pinjaman, dst.) persisten lintas deploy —
+tidak ada seed/reset di jalur ini.
+
+| Tahap deploy | Efek ke database |
+| --- | --- |
+| Clone + build | Tidak ada (murni kode baru) |
+| `prisma migrate deploy` | Hanya menjalankan **migration yang belum diterapkan**; tanpa migration baru = "No pending migrations to apply" |
+| Grant role runtime | Memastikan izin SELECT/INSERT/UPDATE/DELETE untuk tabel baru |
+| Restart aplikasi | Koneksi pool tersambung ulang ke database yang sama |
+
+**Dua disiplin yang wajib dipegang:**
+
+1. **Rollback ≠ rollback DB.** Bila deploy membawa migration baru lalu health
+   check gagal, kode kembali ke release lama tetapi **skema database tetap
+   versi baru**. Karena itu migration wajib mengikuti disiplin
+   [expand/contract](https://openfresh.github.io/expand-contract/): migration
+   baru bersifat *additive* (tabel/kolom baru; yang lama tetap ada) —
+   perubahan destruktif (DROP/RENAME) baru boleh beberapa rilis kemudian,
+   setelah kode lama pasti tidak dipakai lagi.
+2. **Staging dan main memakai database yang sama.** Deploy uji
+   `staging — build uji` yang membawa migration baru langsung
+   menerapkannya ke database produksi. Pastikan migration di staging selalu
+   *additive-safe* (tidak merusak `main` yang masih berjalan), atau merge ke
+   `main` segera setelah uji lulus.
+
+Untuk migration besar/berisiko: jalankan **menu 5 (Backup)** sebelum deploy.
 
 ## Model keamanan
 
