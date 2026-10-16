@@ -256,7 +256,7 @@ systemctl list-timers | grep -i certbot      # perpanjangan otomatis tiap 90 har
 | Log aplikasi | `journalctl -u wapala -f` |
 | Log maintenance | `journalctl -u wapala-maintenance.service -n 50` |
 | Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
-| Backup sebelum eksperimen | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; export WAPALA_WRITERS_STOPPED=yes; cd /srv/wapala/current; node scripts/release-backup.mjs backup /root/backup-$(date +%F)'` — stop `wapala` dulu, start setelahnya |
+| Backup sebelum eksperimen | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; export WAPALA_WRITERS_STOPPED=yes; export DATABASE_URL="${MIGRATE_DATABASE_URL:-$DATABASE_URL}"; cd /srv/wapala/current; node scripts/release-backup.mjs backup /root/backup-$(date +%F)'` — stop `wapala` dulu; pg_dump memakai role owner karena membaca semua tabel |
 | Pemulihan Super User | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:recover-superuser'` |
 
 ## 9. Jebakan yang kami temui (dan solusinya)

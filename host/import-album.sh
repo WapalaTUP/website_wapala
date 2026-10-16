@@ -92,7 +92,9 @@ if confirm "Jalankan backup database + media sekarang?" y; then
   fi
   step "Menjalankan backup ke $backup_dir ..."
   backup_failed=0
-  sudo sh -c "set -a; . $ENV_FILE; set +a; export WAPALA_WRITERS_STOPPED=yes; cd $CURRENT_LINK; node scripts/release-backup.mjs backup '$backup_dir'" ||
+  # pg_dump membaca semua tabel (termasuk _prisma_migrations yang ditolak
+  # dari role runtime) — backup memakai role owner.
+  sudo sh -c "set -a; . $ENV_FILE; set +a; export WAPALA_WRITERS_STOPPED=yes; export DATABASE_URL=\"\${MIGRATE_DATABASE_URL:-\$DATABASE_URL}\"; cd $CURRENT_LINK; node scripts/release-backup.mjs backup '$backup_dir'" ||
     backup_failed=1
   systemctl start "$SERVICE_NAME" wapala-maintenance.timer 2>/dev/null || true
   sleep 3

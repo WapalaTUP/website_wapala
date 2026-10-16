@@ -144,7 +144,7 @@ hitungan database. Anggota dan inventaris tidak termasuk dalam paket.
 | Deploy manual non-interaktif | `sudo WAPALA_REPO_URL=... bash host/host-deploy.sh` |
 | Log aplikasi | `journalctl -u wapala -f` |
 | Rollback manual | `sudo ln -sfn /srv/wapala/releases/ID_LAMA /srv/wapala/current && sudo systemctl restart wapala` |
-| Backup | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; export WAPALA_WRITERS_STOPPED=yes; cd /srv/wapala/current; node scripts/release-backup.mjs backup /root/backup-$(date +%F)'` (hentikan `wapala` dulu, nyalakan setelahnya) |
+| Backup | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; export WAPALA_WRITERS_STOPPED=yes; export DATABASE_URL="${MIGRATE_DATABASE_URL:-$DATABASE_URL}"; cd /srv/wapala/current; node scripts/release-backup.mjs backup /root/backup-$(date +%F)'` (hentikan `wapala` dulu — pg_dump butuh role owner karena membaca semua tabel) |
 | Migration manual | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run db:migrate'` |
 | Prune manual | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run maintenance:prune'` |
 | Bootstrap Super User | `sudo sh -c 'set -a; . /etc/wapala/production.env; set +a; cd /srv/wapala/current; npm run auth:bootstrap-token'` |
