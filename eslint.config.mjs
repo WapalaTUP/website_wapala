@@ -13,6 +13,7 @@ export default defineConfig([
     "docs/**",
     "src/generated/**",
     ".local/**",
+    "backups/**",
     "output/**",
     "tmp/**",
     "Vercel/**",
