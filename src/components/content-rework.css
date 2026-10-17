@@ -6,11 +6,27 @@
   border-bottom: 3px double var(--border, #ccc);
   padding-bottom: 32px;
 }
+.news-index > header > p {
+  margin-inline: auto;
+}
 .news-index > header h1 {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   letter-spacing: -0.055em;
   margin: 8px 0;
+}
+.news-index > .empty {
+  min-height: 220px;
+  padding: 40px 24px;
+  background: transparent;
+  border-block: 1px solid var(--border, #ccc);
+}
+.news-index > .empty h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+.news-index > .empty p {
+  margin-inline: auto;
 }
 .news-eyebrow {
   text-transform: uppercase;
@@ -255,6 +271,9 @@
 }
 .division-next {
   text-align: center;
+}
+.division-next > p {
+  margin-inline: auto;
 }
 .division-next .button-row {
   justify-content: center;
