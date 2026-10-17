@@ -100,6 +100,9 @@ export async function publicState() {
     items.map((r) => ({ id: r.id, fields: strings(r.fields) }));
   state.records.konten = rows(posts);
   state.records.galeri = rows(galleries);
+  state.contentTags = (
+    await db.tag.findMany({ orderBy: { name: "asc" }, select: { name: true } })
+  ).map((tag) => tag.name);
   state.records.buku = rows(books);
   state.campaigns = campaigns.map((c) => ({ ...c, bank: "", account: "" }));
   state.campaignTotals = Object.fromEntries(campaigns.map((c) => [c.id, c.total]));

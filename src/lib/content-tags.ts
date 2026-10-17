@@ -1,4 +1,6 @@
-export const CONTENT_TAGS = [
+// Kosakata bawaan saat backend/demo belum menyediakan tag terkelola.
+// Tag sebenarnya dikelola admin (tabel Tag) dan dibaca dinamis.
+export const DEFAULT_CONTENT_TAGS = [
   "Gunung Hutan",
   "SAR",
   "Rock Climbing",
@@ -18,12 +20,12 @@ export function parseContentTags(value: unknown): string[] {
   return Array.isArray(values)
     ? [
         ...new Set(
-          values.filter(
-            (v): v is string =>
-              typeof v === "string" && CONTENT_TAGS.includes(v as (typeof CONTENT_TAGS)[number]),
-          ),
+          values
+            .filter((v): v is string => typeof v === "string")
+            .map((v) => v.trim())
+            .filter((v) => v.length > 0 && v.length <= 60),
         ),
-      ]
+      ].slice(0, 12)
     : [];
 }
 export function hasContentTag(fields: Record<string, unknown>, tag: string) {

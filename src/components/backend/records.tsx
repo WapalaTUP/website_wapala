@@ -7,7 +7,8 @@ import { contentSlug } from "@/lib/content-slug";
 import { DataReset } from "./data-reset";
 import { ArticleEditor } from "../articles/article-editor";
 import { AlbumMediaEditor } from "../album-editor";
-import { CONTENT_TAGS, parseContentTags } from "@/lib/content-tags";
+import { TagManager, TagPicker, useManagedTags } from "./tag-picker";
+import { parseContentTags } from "@/lib/content-tags";
 export type BackendRecord = {
   id: string;
   version: number;
@@ -80,6 +81,7 @@ export function BackendRecords({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [archive, setArchive] = useState<BackendRecord | null>(null);
+  const managedTags = useManagedTags(csrfToken);
   const rows = records.filter(
     (r) =>
       !r.archived && Object.values(r.fields).join(" ").toLowerCase().includes(search.toLowerCase()),
@@ -137,6 +139,12 @@ export function BackendRecords({
   }
   return (
     <>
+      {(kind === "konten" || kind === "galeri") && !memberMode && (
+        <details className="admin-tag-manager">
+          <summary>Kelola tag</summary>
+          <TagManager csrfToken={csrfToken} />
+        </details>
+      )}
       <div className="admin-toolbar">
         {kind === "anggota" && canReset && (
           <DataReset target="members" csrfToken={csrfToken} onReset={refresh} />
@@ -360,31 +368,18 @@ export function BackendRecords({
               <>
                 <fieldset>
                   <legend>Tag album</legend>
-                  <div className="button-row">
-                    {CONTENT_TAGS.map((tag) => (
-                      <label key={tag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          style={{ width: "auto" }}
-                          checked={parseContentTags(draft.fields.tags).includes(tag)}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              fields: {
-                                ...draft.fields,
-                                tags: event.target.checked
-                                  ? [...parseContentTags(draft.fields.tags), tag]
-                                  : parseContentTags(draft.fields.tags).filter(
-                                      (value) => value !== tag,
-                                    ),
-                              },
-                            })
-                          }
-                        />
-                        {tag}
-                      </label>
-                    ))}
-                  </div>
+                  <TagPicker
+                    tags={managedTags.tags}
+                    selected={parseContentTags(draft.fields.tags)}
+                    onChange={(next) =>
+                      setDraft({
+                        ...draft,
+                        fields: { ...draft.fields, tags: next },
+                      })
+                    }
+                    onCreated={managedTags.refresh}
+                    csrfToken={csrfToken}
+                  />
                 </fieldset>
                 <AlbumMediaEditor
                   fields={draft.fields}

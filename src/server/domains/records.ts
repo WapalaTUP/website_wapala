@@ -10,7 +10,6 @@ import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
 import { assertMediaReferences } from "../media/storage";
 import { memberFields } from "../../lib/operational-schema";
-import { CONTENT_TAGS } from "../../lib/content-tags";
 import { editorialTransition, type EditorialAction } from "../../lib/editorial-workflow";
 import { articleBlocksSchema } from "../../lib/article-content";
 import { albumMediaItemsSchema } from "../../lib/album-media";
@@ -152,7 +151,7 @@ const date = z
   .optional()
   .default("");
 const status = z.enum(["Draft", "Publik"]).optional().default("Draft");
-const tags = z.array(z.enum(CONTENT_TAGS)).max(6).optional().default([]);
+const tags = z.array(z.string().trim().min(1).max(60)).max(12).optional().default([]);
 export const contentFields = {
   konten: z
     .object({

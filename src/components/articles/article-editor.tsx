@@ -5,8 +5,9 @@ import { backendApi, uploadMedia } from "../backend/api";
 import { Field, Notice, Textarea } from "../ui";
 import { articleBlocksSchema, parseArticleBlocks, type ArticleBlock } from "@/lib/article-content";
 import { contentSlug } from "@/lib/content-slug";
-import { CONTENT_TAGS, parseContentTags } from "@/lib/content-tags";
+import { parseContentTags } from "@/lib/content-tags";
 import { ArticleBody } from "./article-body";
+import { TagPicker, useManagedTags } from "../backend/tag-picker";
 import styles from "./articles.module.css";
 
 const blockNames: Record<ArticleBlock["type"], string> = {
@@ -102,6 +103,7 @@ export function ArticleEditor({
     [note, setNote] = useState("");
   const [initialSnapshot] = useState(() => JSON.stringify({ fields, blocks }));
   const dirty = JSON.stringify({ fields, blocks }) !== initialSnapshot;
+  const managedTags = useManagedTags(csrfToken);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -437,23 +439,14 @@ export function ArticleEditor({
                 <div className={styles.panel}>
                   <fieldset className={styles.tagChoices}>
                     <legend>Tag</legend>
-                    {CONTENT_TAGS.map((tag) => (
-                      <label key={tag}>
-                        <input
-                          type="checkbox"
-                          checked={parseContentTags(fields.tags).includes(tag)}
-                          onChange={(event) =>
-                            change(
-                              "tags",
-                              event.target.checked
-                                ? [...parseContentTags(fields.tags), tag]
-                                : parseContentTags(fields.tags).filter((entry) => entry !== tag),
-                            )
-                          }
-                        />
-                        {tag}
-                      </label>
-                    ))}
+                    <TagPicker
+                      tags={managedTags.tags}
+                      selected={parseContentTags(fields.tags)}
+                      onChange={(next) => change("tags", next)}
+                      onCreated={managedTags.refresh}
+                      csrfToken={csrfToken}
+                      allowCreate={!memberMode}
+                    />
                   </fieldset>
                 </div>
                 <div className={styles.panel}>

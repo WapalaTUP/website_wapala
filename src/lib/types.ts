@@ -173,6 +173,7 @@ export interface DemoState {
   }>;
   events?: import("./event-types").EventPublicDto[];
   backend?: boolean;
+  contentTags?: string[];
   publicEquipment?: PublicEquipment[];
   campaignTotals?: Record<string, number>;
   campaigns: Campaign[];

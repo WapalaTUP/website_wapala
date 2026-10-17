@@ -1,7 +1,9 @@
 import type { DemoState } from "./types";
+import { DEFAULT_CONTENT_TAGS } from "./content-tags";
 export function emptyState(): DemoState {
   return {
     backend: true,
+    contentTags: [...DEFAULT_CONTENT_TAGS],
     campaigns: [],
     publicEquipment: [],
     equipment: [],
