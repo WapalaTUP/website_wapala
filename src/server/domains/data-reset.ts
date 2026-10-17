@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { dataResetSnapshot } from "./reset-snapshot";
 import { z } from "zod";
 import type { Prisma } from "../../generated/prisma/client";
 import { getDb } from "../db";
@@ -173,9 +173,7 @@ async function inspect(tx: Prisma.TransactionClient, v: Selection, actorId: stri
     blockReasons,
     effects,
     confirmation,
-    snapshot: createHash("sha256")
-      .update(JSON.stringify({ ...v, rows, blocked, dependencies }))
-      .digest("hex"),
+    snapshot: dataResetSnapshot(v, rows, blocked, dependencies),
   };
 }
 

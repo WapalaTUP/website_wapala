@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Field, Modal, Notice } from "../ui";
 import { backendApi } from "./api";
 type Preview = {
@@ -23,6 +23,7 @@ export function DataReset({
   csrfToken: string;
   onReset: () => Promise<void>;
 }) {
+  const confirmationId = useId();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"archive" | "delete">(id ? "delete" : "archive");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -119,6 +120,8 @@ export function DataReset({
       <Modal open={open} title={`${id ? "Hapus" : "Reset"} ${label}`} onClose={close}>
         {id && (
           <p>
+            Target penghapusan:
+            <br />
             <strong>{selectionLabel || id}</strong>
           </p>
         )}
@@ -183,15 +186,28 @@ export function DataReset({
                   {reason}
                 </Notice>
               ))}
+              <div className="field">
+                <label htmlFor={confirmationId}>Ketik: {preview.confirmation}</label>
+                <textarea
+                  id={confirmationId}
+                  name="destructive-action-confirmation"
+                  rows={2}
+                  value={confirmation}
+                  onChange={(e) => setConfirmation(e.target.value)}
+                  placeholder={preview.confirmation}
+                  autoComplete="off"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  maxLength={100}
+                  required
+                  disabled={busy}
+                />
+              </div>
               <Field
-                label={`Ketik: ${preview.confirmation}`}
-                value={confirmation}
-                onChange={(e) => setConfirmation(e.target.value)}
-                autoComplete="off"
-                disabled={busy}
-              />
-              <Field
-                label="Password Super User saat ini"
+                label="Password Anda sebagai Super User (otorisasi tindakan)"
+                hint="Ini password akun yang sedang Anda gunakan, bukan akun yang akan dihapus. Target penghapusan tetap data yang tercantum di atas."
+                name="operator-password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
