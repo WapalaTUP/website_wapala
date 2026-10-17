@@ -225,6 +225,15 @@ export function BackendInventory({
                       >
                         Arsipkan
                       </button>
+                      {canReset && (
+                        <DataReset
+                          target="inventory"
+                          id={row.id}
+                          selectionLabel={`${row.code} · ${row.name} · ${row.typeColor || "Jenis belum dicatat"}`}
+                          csrfToken={csrfToken}
+                          onReset={refresh}
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>

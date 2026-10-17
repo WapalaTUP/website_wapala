@@ -5,6 +5,7 @@ import type { listUsers } from "@/server/auth/users";
 import type { Role } from "@/server/auth/policy";
 import { Badge, Empty, Field, Modal, Notice } from "../ui";
 import { backendApi } from "./api";
+import { DataReset } from "./data-reset";
 
 type User = Awaited<ReturnType<typeof listUsers>>[number];
 const roles: Record<Role, string> = {
@@ -189,6 +190,15 @@ export function BackendUsers({
                         <button className="text-link" onClick={() => choose(user, "unlock")}>
                           Buka kunci
                         </button>
+                      )}
+                      {user.id !== currentUserId && (
+                        <DataReset
+                          target="users"
+                          id={user.id}
+                          selectionLabel={`${user.name} (${user.email})`}
+                          csrfToken={csrfToken}
+                          onReset={refresh}
+                        />
                       )}
                       {user.id === currentUserId && (
                         <Link className="text-link" href="/wapala/password">

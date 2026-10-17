@@ -230,6 +230,15 @@ export function BackendRecords({
                           Arsipkan
                         </button>
                       )}
+                      {kind === "anggota" && canReset && (
+                        <DataReset
+                          target="members"
+                          id={row.id}
+                          selectionLabel={`${row.fields.nama || "Anggota"} · ${row.fields.nia || ""}`}
+                          csrfToken={csrfToken}
+                          onReset={refresh}
+                        />
+                      )}
                     </div>
                   </td>
                   {kind === "konten" && (
