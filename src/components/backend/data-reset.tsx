@@ -6,6 +6,7 @@ type Preview = {
   count: number;
   blocked: number;
   blockReasons?: string[];
+  effects?: string[];
   snapshot: string;
   confirmation: string;
 };
@@ -16,7 +17,7 @@ export function DataReset({
   csrfToken,
   onReset,
 }: {
-  target: "members" | "inventory" | "users";
+  target: "members" | "inventory" | "users" | "loans";
   id?: string;
   selectionLabel?: string;
   csrfToken: string;
@@ -30,7 +31,14 @@ export function DataReset({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const label = target === "members" ? "anggota" : target === "users" ? "pengguna" : "inventaris";
+  const label =
+    target === "members"
+      ? "anggota"
+      : target === "users"
+        ? "pengguna"
+        : target === "loans"
+          ? "peminjaman"
+          : "inventaris";
   function close() {
     if (busy) return;
     setOpen(false);
@@ -118,8 +126,12 @@ export function DataReset({
           {id
             ? target === "users"
               ? "Hapus permanen akun ini beserta sesi login dan token reset password. Profil anggota, konten, dan catatan audit tetap tersimpan."
-              : "Hapus permanen hanya data yang dipilih. Foto tersimpan dan riwayat peminjaman tetap dipertahankan."
-            : "Tindakan massal khusus Super User. Ekspor/backup data sebelum melanjutkan. Akun login, foto tersimpan, dan riwayat peminjaman tidak ikut dihapus."}
+              : target === "members"
+                ? "Hapus permanen profil anggota beserta akun pengguna terkait, sesi login, token reset, dan riwayat koreksinya."
+                : target === "loans"
+                  ? "Hapus permanen data peminjaman beserta item alat dan catatan statusnya. Master inventaris tetap ada; reservasi dilepas."
+                  : "Hapus alat yang dipilih. Item pada semua peminjaman, termasuk yang aktif, dipertahankan sebagai arsip bertanda alat telah dihapus."
+            : "Tindakan massal khusus Super User. Penghapusan anggota ikut menghapus akun terkait dan riwayat koreksi. Penghapusan inventaris mempertahankan arsip item pada peminjaman. Periksa rincian dampak sebelum melanjutkan."}
         </Notice>
         <form
           onSubmit={(e) => {
@@ -153,17 +165,19 @@ export function DataReset({
               : target === "users"
                 ? "Akun sendiri dan Super User aktif terakhir tidak dapat dihapus."
                 : target === "inventory"
-                  ? "Tidak bisa dibatalkan dari aplikasi. Alat dari peminjaman yang sudah dikembalikan/ditolak boleh dihapus; detail alat tetap disimpan di riwayat dan invoice. Peminjaman yang belum selesai memblokir seluruh penghapusan."
-                  : "Tidak bisa dibatalkan dari aplikasi. Seluruh proses ditolak jika ada anggota yang masih terkait akun atau riwayat koreksi."}
+                  ? "Tidak bisa dibatalkan dari aplikasi. Data peminjam dan alat lain tetap ada; alat yang dihapus ditandai pada riwayat dan invoice."
+                  : target === "loans"
+                    ? "Tidak bisa dibatalkan dari aplikasi. Relasi alat ikut dilepas agar tidak menghalangi pengelolaan inventaris."
+                    : "Tidak bisa dibatalkan dari aplikasi. Akun terkait ikut dihapus; akun yang sedang dipakai dan Super User aktif terakhir tetap dilindungi."}
           </p>
           {preview && (
             <>
               <Notice>
                 {preview.count} data terdampak; {preview.blocked} data menghalangi reset.{" "}
-                {target === "inventory" &&
-                  mode === "archive" &&
-                  "Peminjaman yang belum selesai/ditolak harus diselesaikan dahulu."}
               </Notice>
+              {preview.effects?.map((effect) => (
+                <Notice key={effect}>{effect}</Notice>
+              ))}
               {preview.blockReasons?.map((reason) => (
                 <Notice key={reason} tone="error">
                   {reason}

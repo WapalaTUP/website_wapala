@@ -26,6 +26,7 @@ test("archiving and removing inventory keeps variant and code available for invo
   const [history] = loanItemsForHistory({ items: [], archivedItems });
   assert.equal(history.name, "Carabiner — Autolock");
   assert.equal(history.code, "CB-001");
+  assert.equal(history.equipmentDeleted, true);
 });
 test("legacy requests fall back to existing inventory identity without inventing a variant", () => {
   assert.equal(

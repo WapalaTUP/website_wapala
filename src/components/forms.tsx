@@ -354,7 +354,13 @@ type LookupRecord = {
   end?: string;
   notes?: string;
   penalty?: number;
-  items?: Array<{ name: string; code?: string; requested: number; approved: number }>;
+  items?: Array<{
+    name: string;
+    code?: string;
+    equipmentDeleted?: boolean;
+    requested: number;
+    approved: number;
+  }>;
   history?: Array<{ status: string; note: string; at: string }>;
   fields?: Record<string, string>;
   revisions?: number;
@@ -441,6 +447,7 @@ export function LoanTracking({ initialCode = "" }: { initialCode?: string }) {
                     <tr key={i}>
                       <td>
                         {item.name}
+                        {item.equipmentDeleted && <p>Alat telah dihapus dari inventaris</p>}
                         {item.code && (
                           <>
                             <br />

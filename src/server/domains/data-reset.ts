@@ -14,7 +14,7 @@ import { archivedLoanItems, snapshotLoanItems } from "./loan-history-items";
 
 export const resetSelection = z
   .object({
-    target: z.enum(["members", "inventory", "users"]),
+    target: z.enum(["members", "inventory", "users", "loans"]),
     id: z.uuid().optional(),
     mode: z.enum(["archive", "delete"]),
   })
@@ -29,11 +29,11 @@ export const resetSchema = resetSelection
 type Selection = z.infer<typeof resetSelection>;
 
 async function inspect(tx: Prisma.TransactionClient, v: Selection, actorId: string) {
-  if (v.target === "users" && (!v.id || v.mode !== "delete"))
+  if ((v.target === "users" || v.target === "loans") && (!v.id || v.mode !== "delete"))
     throw new DomainError(
       "INVALID_INPUT",
       400,
-      "Pengguna hanya dapat dihapus satu akun per tindakan.",
+      "Pengguna dan peminjaman hanya dapat dihapus satu data per tindakan.",
     );
   const where = {
     ...(v.id ? { id: v.id } : {}),
@@ -55,22 +55,30 @@ async function inspect(tx: Prisma.TransactionClient, v: Selection, actorId: stri
           },
           orderBy: { id: "asc" },
         })
-      : v.target === "members"
-        ? await tx.member.findMany({
+      : v.target === "loans"
+        ? await tx.loan.findMany({
             where,
-            select: { id: true, version: true },
+            select: { id: true, updatedAt: true, status: true },
             orderBy: { id: "asc" },
           })
-        : await tx.equipment.findMany({
-            where,
-            select: { id: true, version: true },
-            orderBy: { id: "asc" },
-          });
+        : v.target === "members"
+          ? await tx.member.findMany({
+              where,
+              select: { id: true, version: true },
+              orderBy: { id: "asc" },
+            })
+          : await tx.equipment.findMany({
+              where,
+              select: { id: true, version: true },
+              orderBy: { id: "asc" },
+            });
   if (v.id && !rows.length)
     throw new DomainError("NOT_FOUND", 404, "Data yang dipilih sudah tidak tersedia.");
   const ids = rows.map((r) => r.id);
   let blocked = 0;
   const blockReasons: string[] = [];
+  const effects: string[] = [];
+  let dependencies: unknown = null;
   if (v.target === "users") {
     if (v.id === actorId) {
       blocked = 1;
@@ -88,37 +96,85 @@ async function inspect(tx: Prisma.TransactionClient, v: Selection, actorId: stri
     }
   }
   if (v.target === "members" && v.mode === "delete") {
-    blocked = await tx.member.count({
-      where: {
-        id: { in: ids },
-        OR: [{ user: { isNot: null } }, { corrections: { some: {} } }],
+    const users = await tx.user.findMany({
+      where: { memberId: { in: ids } },
+      select: {
+        id: true,
+        role: true,
+        active: true,
+        archivedAt: true,
+        credentialVersion: true,
+        updatedAt: true,
       },
+      orderBy: { id: "asc" },
     });
-  }
-  if (blocked && v.target === "members")
-    blockReasons.push(
-      "Anggota masih terkait akun login atau riwayat koreksi. Hapus atau lepaskan tautan akun terlebih dahulu; anggota dengan riwayat koreksi tetap dapat diarsipkan.",
+    const corrections = await tx.memberCorrection.findMany({
+      where: { memberId: { in: ids } },
+      select: { id: true, status: true },
+      orderBy: { id: "asc" },
+    });
+    dependencies = { users, corrections };
+    const activeSupers = await tx.user.count({
+      where: { role: "SUPER_USER", active: true, archivedAt: null },
+    });
+    if (
+      users.some((user) => user.id === actorId) ||
+      users.filter((user) => user.role === "SUPER_USER" && user.active && !user.archivedAt)
+        .length >= activeSupers
+    ) {
+      blocked = 1;
+      blockReasons.push(
+        "Profil ini terkait akun yang sedang dipakai atau Super User aktif terakhir.",
+      );
+    }
+    effects.push(
+      `${users.length} akun pengguna terkait beserta sesi/token login dan ${corrections.length} riwayat koreksi ikut dihapus.`,
     );
-  if (v.target === "inventory") {
-    blocked = await tx.equipment.count({
-      where: {
-        id: { in: ids },
-        loanItems: {
-          some: { loan: { status: { notIn: ["returned", "rejected"] } } },
-        },
-      },
-    });
   }
-  if (blocked && v.target === "inventory")
-    blockReasons.push("Alat masih berada pada peminjaman yang belum selesai atau ditolak.");
-  const confirmation = `${v.mode === "delete" ? "HAPUS PERMANEN" : "ARSIPKAN"} ${v.target === "members" ? "ANGGOTA" : v.target === "users" ? "PENGGUNA" : "INVENTARIS"}`;
+  if (v.target === "inventory") {
+    const items = await tx.loanItem.findMany({
+      where: { equipmentId: { in: ids } },
+      select: {
+        id: true,
+        loanId: true,
+        requested: true,
+        approved: true,
+        returnCondition: true,
+        loan: { select: { status: true, updatedAt: true } },
+      },
+      orderBy: { id: "asc" },
+    });
+    dependencies = items;
+    if (v.mode === "delete")
+      effects.push(
+        `${items.length} item pada data peminjaman akan disimpan sebagai arsip dan ditandai alat telah dihapus. Data peminjam dan item lain tetap ada.`,
+      );
+  }
+  if (v.target === "loans") {
+    const items = await tx.loanItem.findMany({
+      where: { loanId: v.id! },
+      select: { id: true, equipmentId: true },
+      orderBy: { id: "asc" },
+    });
+    const history = await tx.loanHistory.findMany({
+      where: { loanId: v.id! },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+    dependencies = { items, history };
+    effects.push(
+      `Data peminjaman, ${items.length} relasi alat, dan ${history.length} catatan status dihapus. Reservasi alat dilepas; master inventaris tetap ada.`,
+    );
+  }
+  const confirmation = `${v.mode === "delete" ? "HAPUS PERMANEN" : "ARSIPKAN"} ${v.target === "members" ? "ANGGOTA" : v.target === "users" ? "PENGGUNA" : v.target === "loans" ? "PEMINJAMAN" : "INVENTARIS"}`;
   return {
     count: rows.length,
     blocked,
     blockReasons,
+    effects,
     confirmation,
     snapshot: createHash("sha256")
-      .update(JSON.stringify({ ...v, rows, blocked }))
+      .update(JSON.stringify({ ...v, rows, blocked, dependencies }))
       .digest("hex"),
   };
 }
@@ -153,6 +209,10 @@ export async function resetData(p: Principal, input: unknown, ctx: RequestContex
       if (v.target === "users") {
         if (!v.id || v.mode !== "delete") throw new DomainError("INVALID_INPUT", 400);
         await tx.$queryRaw`SELECT id FROM "User" WHERE id=${v.id}::uuid FOR UPDATE`;
+      } else if (v.target === "loans") {
+        if (!v.id || v.mode !== "delete") throw new DomainError("INVALID_INPUT", 400);
+        await tx.$executeRaw`LOCK TABLE "Loan" IN EXCLUSIVE MODE`;
+        await tx.$executeRaw`LOCK TABLE "Equipment", "LoanItem", "LoanHistory" IN EXCLUSIVE MODE`;
       } else if (v.target === "members")
         await tx.$executeRaw`LOCK TABLE "Member", "MemberCorrection" IN EXCLUSIVE MODE`;
       else {
@@ -193,7 +253,22 @@ export async function resetData(p: Principal, input: unknown, ctx: RequestContex
         await tx.session.deleteMany({ where: { userId: v.id! } });
         await tx.passwordResetToken.deleteMany({ where: { userId: v.id! } });
         affected = (await tx.user.deleteMany({ where: { id: v.id! } })).count;
+      } else if (v.target === "loans") {
+        await tx.loanHistory.deleteMany({ where: { loanId: v.id! } });
+        await tx.loanItem.deleteMany({ where: { loanId: v.id! } });
+        affected = (await tx.loan.deleteMany({ where: { id: v.id! } })).count;
       } else if (v.target === "members") {
+        if (v.mode === "delete") {
+          const users = await tx.user.findMany({
+            where: { memberId: v.id ? v.id : { not: null } },
+            select: { id: true },
+          });
+          const userIds = users.map((user) => user.id);
+          await tx.session.deleteMany({ where: { userId: { in: userIds } } });
+          await tx.passwordResetToken.deleteMany({ where: { userId: { in: userIds } } });
+          await tx.user.deleteMany({ where: { id: { in: userIds } } });
+          await tx.memberCorrection.deleteMany({ where: v.id ? { memberId: v.id } : {} });
+        }
         affected =
           v.mode === "delete"
             ? (await tx.member.deleteMany({ where })).count
@@ -205,8 +280,8 @@ export async function resetData(p: Principal, input: unknown, ctx: RequestContex
               ).count;
       } else {
         if (v.mode === "delete") {
-          // Tables are exclusively locked above, and inspect established every
-          // linked loan is terminal. Copy before detaching, in this transaction.
+          // Copy selected items from every linked loan, including active loans,
+          // before detaching the inventory reference in the same transaction.
           const loans = await tx.loan.findMany({
             where: { items: { some: v.id ? { equipmentId: v.id } : {} } },
             include: {

@@ -47,13 +47,16 @@ export function snapshotLoanItems(items: LiveItem[]) {
     };
   });
 }
-// The DTO remains unchanged: every history/invoice consumer sees the same item
-// fields whether its inventory master still exists or was permanently deleted.
+// Preserve the stored archive format for older releases sharing this database.
+// Derive deletion status in the DTO rather than adding fields to archived JSON.
 export function loanItemsForHistory(row: { items: LiveItem[]; archivedItems?: unknown }) {
-  return [...archivedLoanItems.parse(row.archivedItems ?? []), ...snapshotLoanItems(row.items)].map(
-    ({ itemId: _itemId, ...item }) => {
-      void _itemId;
-      return item;
-    },
-  );
+  return [
+    ...archivedLoanItems
+      .parse(row.archivedItems ?? [])
+      .map((item) => ({ ...item, equipmentDeleted: true })),
+    ...snapshotLoanItems(row.items).map((item) => ({ ...item, equipmentDeleted: false })),
+  ].map(({ itemId: _itemId, ...item }) => {
+    void _itemId;
+    return item;
+  });
 }

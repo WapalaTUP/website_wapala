@@ -109,7 +109,7 @@ export async function renderLoanInvoice(row: InvoiceLoanRow, origin: string) {
   state.equipment = loanItemsForHistory(row).map((item) => ({
     id: item.equipmentId,
     code: item.code,
-    name: item.name,
+    name: item.name + (item.equipmentDeleted ? " [Alat telah dihapus]" : ""),
     category: "",
     brand: "",
     total: 0,

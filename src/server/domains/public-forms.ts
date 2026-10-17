@@ -246,6 +246,7 @@ export async function lookupPublicForm(input: unknown, owner: string, ctx: Reque
           items: loanItemsForHistory(row).map((i) => ({
             name: i.name,
             code: i.code,
+            equipmentDeleted: i.equipmentDeleted,
             requested: i.requested,
             approved: i.approved,
             reason: i.reason,

@@ -142,7 +142,13 @@ export default async function AdminPage({ params }: { params: Promise<{ module?:
     const csrfToken = csrfForSession(token);
     let view;
     if (module[0] === "peminjaman")
-      view = <BackendLoans initialLoans={await listLoans(principal)} csrfToken={csrfToken} />;
+      view = (
+        <BackendLoans
+          initialLoans={await listLoans(principal)}
+          csrfToken={csrfToken}
+          canDelete={principal.role === "SUPER_USER"}
+        />
+      );
     else if (module[0] === "pengaturan") {
       const settings = await getSettings(principal),
         config: Record<string, string> = {};

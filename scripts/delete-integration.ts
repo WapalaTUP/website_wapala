@@ -75,7 +75,7 @@ async function main() {
   };
   const rejected = (code: string) => (e: unknown) =>
     !!e && typeof e === "object" && "code" in e && e.code === code;
-  async function remove(target: "members" | "inventory" | "users", id: string) {
+  async function remove(target: "members" | "inventory" | "users" | "loans", id: string) {
     const preview = await previewDataReset(p, { target, id, mode: "delete" });
     assert.equal(preview.count, 1);
     assert.equal(preview.blocked, 0);
@@ -140,7 +140,7 @@ async function main() {
     });
     assert.equal(
       (await previewDataReset(p, { target: "members", id: member.id, mode: "delete" })).blocked,
-      1,
+      0,
     );
     await remove("users", linked.id);
     assert.equal(await db.user.count({ where: { id: linked.id } }), 0);
@@ -171,6 +171,31 @@ async function main() {
         ),
       rejected("CONFLICT"),
     );
+    const cascadeMember = await db.member.create({
+      data: { nia: "cascade-member", fields: { nama: "Cascade" } },
+    });
+    const cascadeUser = await db.user.create({
+      data: {
+        name: "Cascade",
+        email: "cascade@local.test",
+        role: "ANGGOTA",
+        memberId: cascadeMember.id,
+        passwordHash,
+      },
+    });
+    await db.memberCorrection.create({
+      data: {
+        memberId: cascadeMember.id,
+        requesterId: cascadeUser.id,
+        baseVersion: 1,
+        proposed: { nama: "Updated" },
+      },
+    });
+    await remove("members", cascadeMember.id);
+    assert.equal(await db.user.count({ where: { id: cascadeUser.id } }), 0);
+    assert.equal(await db.memberCorrection.count({ where: { memberId: cascadeMember.id } }), 0);
+    // Separate scenario; throttle cleanup is restricted to this isolated test DB.
+    await db.securityThrottle.deleteMany({});
     const eq = (code: string) =>
       db.equipment.create({
         data: {
@@ -212,9 +237,8 @@ async function main() {
     });
     assert.equal(
       (await previewDataReset(p, { target: "inventory", id: first.id, mode: "delete" })).blocked,
-      1,
+      0,
     );
-    await db.loan.update({ where: { id: loan.id }, data: { status: "returned" } });
     await remove("inventory", first.id);
     assert.equal(await db.equipment.count({ where: { id: first.id } }), 0);
     assert.equal(await db.equipment.count({ where: { id: second.id } }), 1);
@@ -227,8 +251,18 @@ async function main() {
     const history = loanItemsForHistory(remaining);
     assert.equal(history.length, 2);
     assert.equal(history.find((i) => i.equipmentId === first.id)?.code, "EQ-1");
+    assert.equal(history.find((i) => i.equipmentId === first.id)?.equipmentDeleted, true);
+    assert.equal(history.find((i) => i.equipmentId === second.id)?.equipmentDeleted, false);
+    const { reservedPeak } = await import("../src/server/domains/stock");
+    assert.equal(await db.$transaction((tx) => reservedPeak(tx, second.id)), 1);
+    await remove("loans", loan.id);
+    assert.equal(await db.loanItem.count({ where: { loanId: loan.id } }), 0);
+    assert.equal(await db.loanHistory.count({ where: { loanId: loan.id } }), 0);
+    assert.equal(await db.$transaction((tx) => reservedPeak(tx, second.id)), 0);
+    await remove("inventory", second.id);
+    assert.equal(await db.member.count({ where: { id: untouched.id } }), 1);
     console.log(
-      "PASS: permissions, self-delete protection, linked-member block, session/token cleanup, selected-only deletion, stale preview, active loan block, invoice history preservation",
+      "PASS: permissions, self-delete protection, member/account/correction cascade, session/token cleanup, selected-only deletion, stale preview, active-loan equipment snapshots, borrower deletion releases reservations, invoice history preservation",
     );
   } finally {
     await db.$disconnect();

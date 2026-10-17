@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { listLoans } from "@/server/domains/loans";
 import { Badge, Empty, Field, Modal, Notice, Textarea } from "../ui";
 import { backendApi } from "./api";
+import { DataReset } from "./data-reset";
 import { initialReturnCondition } from "@/lib/operational-schema";
 type Loan = Awaited<ReturnType<typeof listLoans>>[number];
 type Status = Loan["status"];
@@ -37,8 +38,10 @@ type Draft = {
 export function BackendLoans({
   initialLoans,
   csrfToken,
+  canDelete = false,
 }: {
   initialLoans: Loan[];
+  canDelete?: boolean;
   csrfToken: string;
 }) {
   const [loans, setLoans] = useState(initialLoans),
@@ -48,6 +51,12 @@ export function BackendLoans({
     [draft, setDraft] = useState<Draft | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  async function refresh() {
+    const data = await backendApi<{ loans: Loan[] }>("/api/admin/loans", csrfToken);
+    setLoans(data.loans);
+    setDetail(null);
+    setDraft(null);
+  }
   const rows = loans.filter(
     (l) =>
       !l.archived &&
@@ -61,11 +70,13 @@ export function BackendLoans({
       loan,
       status: next,
       note: "",
-      quantities: Object.fromEntries(loan.items.map((i) => [i.equipmentId, i.requested])),
+      quantities: Object.fromEntries(
+        loan.items.filter((i) => !i.equipmentDeleted).map((i) => [i.equipmentId, i.requested]),
+      ),
       reasons: {},
       conditions: Object.fromEntries(
         loan.items
-          .filter((i) => i.approved > 0)
+          .filter((i) => !i.equipmentDeleted && i.approved > 0)
           .map((i) => [i.equipmentId, initialReturnCondition(i.outCondition)]),
       ),
       penalty: loan.penalty,
@@ -82,17 +93,19 @@ export function BackendLoans({
         note: draft.note,
         ...(draft.status === "approved"
           ? {
-              items: draft.loan.items.map((i) => ({
-                equipmentId: i.equipmentId,
-                approved: draft.quantities[i.equipmentId] || 0,
-                reason: draft.reasons[i.equipmentId] || "",
-              })),
+              items: draft.loan.items
+                .filter((i) => !i.equipmentDeleted)
+                .map((i) => ({
+                  equipmentId: i.equipmentId,
+                  approved: draft.quantities[i.equipmentId] || 0,
+                  reason: draft.reasons[i.equipmentId] || "",
+                })),
             }
           : {}),
         ...(draft.status === "returned"
           ? {
               returns: draft.loan.items
-                .filter((i) => i.approved > 0)
+                .filter((i) => !i.equipmentDeleted && i.approved > 0)
                 .map((i) => ({
                   equipmentId: i.equipmentId,
                   condition: draft.conditions[i.equipmentId],
@@ -168,9 +181,20 @@ export function BackendLoans({
                   </td>
                   <td>{l.managementYear}</td>
                   <td>
-                    <button className="btn secondary" onClick={() => setDetail(l)}>
-                      Lihat
-                    </button>
+                    <div className="button-row">
+                      <button className="btn secondary" onClick={() => setDetail(l)}>
+                        Lihat
+                      </button>
+                      {canDelete && (
+                        <DataReset
+                          target="loans"
+                          id={l.id}
+                          selectionLabel={`${l.code} · ${l.pic} · ${l.institution}`}
+                          csrfToken={csrfToken}
+                          onReset={refresh}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -219,6 +243,11 @@ export function BackendLoans({
                     <tr key={i.equipmentId}>
                       <td>
                         {i.name}
+                        {i.equipmentDeleted && (
+                          <p>
+                            <Badge>Alat telah dihapus</Badge>
+                          </p>
+                        )}
                         <br />
                         <small>{i.code}</small>
                       </td>
@@ -286,41 +315,43 @@ export function BackendLoans({
                   Jumlah yang dikurangi wajib disertai alasan. Jadwal yang tumpang tindih diperiksa
                   otomatis saat disimpan.
                 </Notice>
-                {draft.loan.items.map((i) => (
-                  <div className="form-grid" key={i.equipmentId}>
-                    <Field
-                      label={i.name + " [" + i.code + "] (diminta " + i.requested + ")"}
-                      type="number"
-                      min={0}
-                      max={i.requested}
-                      required
-                      value={draft.quantities[i.equipmentId]}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          quantities: {
-                            ...draft.quantities,
-                            [i.equipmentId]: Number(e.target.value),
-                          },
-                        })
-                      }
-                    />
-                    <Field
-                      label="Alasan penyesuaian"
-                      required={draft.quantities[i.equipmentId] !== i.requested}
-                      value={draft.reasons[i.equipmentId] || ""}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          reasons: {
-                            ...draft.reasons,
-                            [i.equipmentId]: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                ))}
+                {draft.loan.items
+                  .filter((i) => !i.equipmentDeleted)
+                  .map((i) => (
+                    <div className="form-grid" key={i.equipmentId}>
+                      <Field
+                        label={i.name + " [" + i.code + "] (diminta " + i.requested + ")"}
+                        type="number"
+                        min={0}
+                        max={i.requested}
+                        required
+                        value={draft.quantities[i.equipmentId]}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            quantities: {
+                              ...draft.quantities,
+                              [i.equipmentId]: Number(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                      <Field
+                        label="Alasan penyesuaian"
+                        required={draft.quantities[i.equipmentId] !== i.requested}
+                        value={draft.reasons[i.equipmentId] || ""}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            reasons: {
+                              ...draft.reasons,
+                              [i.equipmentId]: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
               </>
             )}
             {draft.status === "returned" && (
@@ -330,7 +361,7 @@ export function BackendLoans({
                   rusak/hilang mengurangi jumlah layak inventaris.
                 </Notice>
                 {draft.loan.items
-                  .filter((i) => i.approved > 0)
+                  .filter((i) => !i.equipmentDeleted && i.approved > 0)
                   .map((i) => (
                     <label key={i.equipmentId}>
                       Kondisi {i.name} [{i.code}]
