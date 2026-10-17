@@ -3,9 +3,63 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { visibleBookPages, nextBookPage } from "@/lib/reader-pages";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, Minimize, LayoutGrid } from "lucide-react";
 import { Empty, Notice } from "./ui";
 import { EpubReader } from "./epub-reader";
+import "./reader.css";
+
+function PageThumbnail({
+  doc,
+  number,
+  selected,
+  onSelect,
+}: {
+  doc: PDFDocumentProxy;
+  number: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    let task: { cancel: () => void } | undefined;
+    void (async () => {
+      try {
+        const page = await doc.getPage(number);
+        if (cancelled || !canvas.current) return;
+        const viewport = page.getViewport({ scale: 88 / page.getViewport({ scale: 1 }).width });
+        canvas.current.width = Math.ceil(viewport.width);
+        canvas.current.height = Math.ceil(viewport.height);
+        const render = page.render({ canvas: canvas.current, viewport });
+        task = render;
+        await render.promise;
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      task?.cancel();
+    };
+  }, [doc, number]);
+  return (
+    <button
+      type="button"
+      className="reader-thumbnail"
+      aria-label={"Buka halaman " + number}
+      aria-current={selected ? "page" : undefined}
+      onClick={onSelect}
+    >
+      {failed ? (
+        <span className="reader-thumbnail-fallback">Halaman {number}</span>
+      ) : (
+        <canvas ref={canvas} aria-hidden="true" />
+      )}
+      <span>{number}</span>
+    </button>
+  );
+}
 export function BookReader({ id }: { id: string }) {
   const [book, setBook] = useState<{
     title: string;
@@ -22,7 +76,35 @@ export function BookReader({ id }: { id: string }) {
   const stage = useRef<HTMLDivElement>(null);
   const [two, setTwo] = useState(false);
   const [stageWidth, setStageWidth] = useState(0);
+  const reader = useRef<HTMLElement>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const [thumbnails, setThumbnails] = useState(true);
+  const [thumbnailGroup, setThumbnailGroup] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [direction, setDirection] = useState(1);
   const pages = useMemo(() => visibleBookPages(page, doc?.numPages || 0, two), [page, doc, two]);
+  function goTo(number: number) {
+    const selected = Math.max(1, Math.min(doc?.numPages || 1, number));
+    setDirection(selected >= page ? 1 : -1);
+    setPage(selected);
+    setThumbnailGroup(Math.floor((selected - 1) / 12));
+  }
+  function turn(direction: number) {
+    goTo(nextBookPage(page, doc?.numPages || 1, two, direction));
+  }
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await reader.current?.requestFullscreen();
+    } catch {
+      setError("Layar penuh belum tersedia di browser ini.");
+    }
+  }
+  useEffect(() => {
+    const changed = () => setFullscreen(document.fullscreenElement === reader.current);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/books/" + encodeURIComponent(id), {
@@ -56,7 +138,7 @@ export function BookReader({ id }: { id: string }) {
       observer.disconnect();
       media.removeEventListener("change", resize);
     };
-  }, [book]);
+  }, [book, loading]);
   useEffect(() => {
     let stop = false;
     let destroy: (() => void) | undefined;
@@ -112,7 +194,7 @@ export function BookReader({ id }: { id: string }) {
           const target = canvases.current[index];
           if (cancelled || !target) return;
           const base = p.getViewport({ scale: 1 });
-          const width = Math.min(two ? 520 : 820, stageWidth / (two ? 2 : 1));
+          const width = Math.min(two ? 520 : 820, Math.max(1, stageWidth - 40) / (two ? 2 : 1));
           const density = Math.min(window.devicePixelRatio || 1, 1.75);
           const view = p.getViewport({
             scale: (width / base.width) * zoom * density,
@@ -152,15 +234,23 @@ export function BookReader({ id }: { id: string }) {
     );
   if (book.mime === "application/epub+zip") return <EpubReader title={book.title} url={book.url} />;
   return (
-    <section className="book-reader">
+    <section className="book-reader flipbook-reader" ref={reader}>
       <div className="container">
         <div className="reader-toolbar">
           <h2>{book.title}</h2>
           <div className="reader-controls">
             <button
               className="icon-btn"
+              aria-label="Tampilkan thumbnail halaman"
+              aria-expanded={thumbnails}
+              onClick={() => setThumbnails(!thumbnails)}
+            >
+              <LayoutGrid />
+            </button>
+            <button
+              className="icon-btn"
               disabled={page <= 1}
-              onClick={() => setPage(nextBookPage(page, doc?.numPages || 1, two, -1))}
+              onClick={() => turn(-1)}
               aria-label="Halaman sebelumnya"
             >
               <ChevronLeft />
@@ -173,16 +263,14 @@ export function BookReader({ id }: { id: string }) {
                 min={1}
                 max={doc?.numPages || 1}
                 value={page}
-                onChange={(e) =>
-                  setPage(Math.max(1, Math.min(doc?.numPages || 1, Number(e.target.value) || 1)))
-                }
+                onChange={(e) => goTo(Number(e.target.value) || 1)}
               />
             </label>
             <span>/ {doc?.numPages || "…"}</span>
             <button
               className="icon-btn"
               disabled={!doc || (pages.at(-1) || 1) >= doc.numPages}
-              onClick={() => setPage(nextBookPage(page, doc?.numPages || 1, two, 1))}
+              onClick={() => turn(1)}
               aria-label="Halaman berikutnya"
             >
               <ChevronRight />
@@ -192,68 +280,144 @@ export function BookReader({ id }: { id: string }) {
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
             >
-              {[0.75, 1, 1.25, 1.5].map((z) => (
+              {[0.75, 1, 1.25, 1.5, 2].map((z) => (
                 <option value={z} key={z}>
                   {z * 100}%
                 </option>
               ))}
             </select>
+            <button
+              className="icon-btn"
+              onClick={toggleFullscreen}
+              aria-label={fullscreen ? "Keluar layar penuh" : "Layar penuh"}
+            >
+              {fullscreen ? <Minimize /> : <Expand />}
+            </button>
             <Link className="btn secondary" href="/buku">
               Tutup buku
             </Link>
           </div>
         </div>
-        {error ? (
-          <Notice tone="error">{error}</Notice>
-        ) : (
-          <div className="reader-layout">
-            <aside className="reader-toc">
-              <h3>Daftar isi</h3>
+        {error && <Notice tone="error">{error}</Notice>}
+        <div className={"reader-layout" + (thumbnails ? " has-thumbnails" : "")}>
+          {thumbnails && (
+            <aside className="reader-toc reader-navigation" aria-label="Navigasi buku">
+              <h3>Halaman buku</h3>
               <p className="reader-page-range">{two ? "Dua halaman" : "Satu halaman"}</p>
-              {outline.length ? (
+              {doc && (
+                <>
+                  <div className="reader-thumbnail-grid">
+                    {Array.from(
+                      { length: Math.min(12, doc.numPages - thumbnailGroup * 12) },
+                      (_, index) => {
+                        const number = thumbnailGroup * 12 + index + 1;
+                        return (
+                          <PageThumbnail
+                            key={number}
+                            doc={doc}
+                            number={number}
+                            selected={pages.includes(number)}
+                            onSelect={() => goTo(number)}
+                          />
+                        );
+                      },
+                    )}
+                  </div>
+                  <div className="reader-thumbnail-paging">
+                    <button
+                      className="icon-btn"
+                      disabled={thumbnailGroup === 0}
+                      aria-label="Thumbnail sebelumnya"
+                      onClick={() => setThumbnailGroup(thumbnailGroup - 1)}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span>
+                      {thumbnailGroup * 12 + 1}–{Math.min(doc.numPages, (thumbnailGroup + 1) * 12)}
+                    </span>
+                    <button
+                      className="icon-btn"
+                      disabled={(thumbnailGroup + 1) * 12 >= doc.numPages}
+                      aria-label="Thumbnail berikutnya"
+                      onClick={() => setThumbnailGroup(thumbnailGroup + 1)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
+              {outline.length > 0 && <h3>Daftar isi</h3>}
+              {outline.length > 0 &&
                 outline.map((n, i) => (
-                  <button key={i} onClick={() => setPage(n.page)}>
+                  <button className="reader-outline-link" key={i} onClick={() => goTo(n.page)}>
                     {n.title}
                   </button>
-                ))
-              ) : (
-                <p className="field-hint">Gunakan kontrol halaman untuk menelusuri buku ini.</p>
-              )}
-            </aside>
-            <div
-              className="reader-canvas book-stage"
-              ref={stage}
-              tabIndex={0}
-              aria-label="Area baca buku"
-              onKeyDown={(e) => {
-                if (e.key === "ArrowRight") {
-                  e.preventDefault();
-                  setPage((p) => nextBookPage(p, doc?.numPages || 1, two, 1));
-                }
-                if (e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  setPage((p) => nextBookPage(p, doc?.numPages || 1, two, -1));
-                }
-              }}
-            >
-              {!doc && <div className="reader-loading">Memuat bahan bacaan…</div>}
-              <div className={"book-spread" + (two ? " is-double" : "")} aria-live="polite">
-                {pages.map((number, index) => (
-                  <figure className="book-sheet" key={number}>
-                    <canvas
-                      ref={(element) => {
-                        canvases.current[index] = element;
-                      }}
-                      role="img"
-                      aria-label={book.title + ", halaman " + number}
-                    />
-                    <figcaption>{number}</figcaption>
-                  </figure>
                 ))}
-              </div>
+            </aside>
+          )}
+          <div
+            className="reader-canvas book-stage"
+            ref={stage}
+            tabIndex={0}
+            aria-label="Area baca buku"
+            onTouchStart={(e) => {
+              touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }}
+            onTouchEnd={(e) => {
+              const start = touch.current;
+              touch.current = null;
+              if (!start || zoom > 1) return;
+              const dx = e.changedTouches[0].clientX - start.x;
+              const dy = e.changedTouches[0].clientY - start.y;
+              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") {
+                e.preventDefault();
+                turn(1);
+              }
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                turn(-1);
+              }
+              if (e.key === "Home") {
+                e.preventDefault();
+                goTo(1);
+              }
+              if (e.key === "End") {
+                e.preventDefault();
+                goTo(doc?.numPages || 1);
+              }
+            }}
+          >
+            {!doc && <div className="reader-loading">Memuat bahan bacaan…</div>}
+            <div
+              className={
+                "book-spread" +
+                (pages.length === 2 ? " is-double" : "") +
+                (direction < 0 ? " turn-back" : "")
+              }
+              aria-live="polite"
+            >
+              {pages.map((number, index) => (
+                <figure className="book-sheet" key={number}>
+                  <canvas
+                    ref={(element) => {
+                      canvases.current[index] = element;
+                    }}
+                    role="img"
+                    aria-label={book.title + ", halaman " + number}
+                  />
+                  <figcaption>{number}</figcaption>
+                </figure>
+              ))}
             </div>
           </div>
-        )}
+          <p className="reader-instructions">
+            {pages.length ? "Halaman " + pages.join("–") + " dari " + doc?.numPages + ". " : ""}
+            Gunakan tombol panah atau geser untuk membalik halaman.
+          </p>
+        </div>
       </div>
     </section>
   );

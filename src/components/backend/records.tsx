@@ -5,11 +5,18 @@ import { backendApi, uploadMedia } from "./api";
 import { BackendImport } from "./import";
 import { contentSlug } from "@/lib/content-slug";
 import { DataReset } from "./data-reset";
+import { ArticleEditor } from "../articles/article-editor";
+import { AlbumMediaEditor } from "../album-editor";
+import { CONTENT_TAGS, parseContentTags } from "@/lib/content-tags";
 export type BackendRecord = {
   id: string;
   version: number;
   fields: Record<string, string | string[]>;
   archived: boolean;
+  workflowStatus?: string;
+  published?: boolean;
+  reviewNote?: string | null;
+  authorId?: string | null;
 };
 type Kind = "anggota" | "konten" | "galeri" | "buku";
 export const recordFields: Record<Kind, Array<[string, string, string[]?]>> = {
@@ -57,11 +64,13 @@ export function BackendRecords({
   initialRecords,
   csrfToken,
   canReset = false,
+  memberMode = false,
 }: {
   kind: Kind;
   initialRecords: BackendRecord[];
   csrfToken: string;
   canReset?: boolean;
+  memberMode?: boolean;
 }) {
   const [records, setRecords] = useState(initialRecords),
     [draft, setDraft] = useState<
@@ -77,7 +86,7 @@ export function BackendRecords({
   );
   async function refresh() {
     const data = await backendApi<{ records: BackendRecord[] }>(
-      "/api/admin/records/" + kind,
+      memberMode ? "/api/member/articles" : "/api/admin/records/" + kind,
       csrfToken,
     );
     setRecords(data.records);
@@ -93,10 +102,15 @@ export function BackendRecords({
               slug: contentSlug(String(value.fields.slug || value.fields.judul || "")),
             }
           : value.fields;
-      await backendApi("/api/admin/records/" + kind, csrfToken, {
-        ...value,
-        fields,
-      });
+      await backendApi(
+        memberMode ? "/api/member/articles" : "/api/admin/records/" + kind,
+        csrfToken,
+        {
+          ...(value.id ? { id: value.id, version: value.version } : {}),
+          ...(value.archived !== undefined ? { archived: value.archived } : {}),
+          fields,
+        },
+      );
       await refresh();
       setDraft(null);
       setArchive(null);
@@ -105,6 +119,21 @@ export function BackendRecords({
     } finally {
       setBusy(false);
     }
+  }
+  if (kind === "konten" && draft) {
+    return (
+      <ArticleEditor
+        key={draft.id || "new"}
+        initial={draft.id ? (draft as BackendRecord) : null}
+        csrfToken={csrfToken}
+        memberMode={memberMode}
+        onClose={() => setDraft(null)}
+        onSaved={async () => {
+          await refresh();
+          setDraft(null);
+        }}
+      />
+    );
   }
   return (
     <>
@@ -162,6 +191,7 @@ export function BackendRecords({
                   <th key={key}>{label}</th>
                 ))}
                 <th>Aksi</th>
+                {kind === "konten" && <th>Status redaksi</th>}
               </tr>
             </thead>
             <tbody>
@@ -181,17 +211,34 @@ export function BackendRecords({
                       >
                         Edit
                       </button>
-                      <button
-                        className="text-link"
-                        onClick={() => {
-                          setError("");
-                          setArchive(row);
-                        }}
-                      >
-                        Arsipkan
-                      </button>
+                      {!memberMode && (
+                        <button
+                          className="text-link"
+                          onClick={() => {
+                            setError("");
+                            setArchive(row);
+                          }}
+                        >
+                          Arsipkan
+                        </button>
+                      )}
                     </div>
                   </td>
+                  {kind === "konten" && (
+                    <td>
+                      {(
+                        {
+                          draft: "Draf",
+                          submitted: "Menunggu tinjauan",
+                          returned: "Perlu revisi",
+                          published: "Terbit",
+                        } as Record<string, string>
+                      )[row.workflowStatus || ""] ||
+                        row.fields.status ||
+                        "Draf"}
+                      {row.reviewNote && <p className="field-hint">{row.reviewNote}</p>}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -266,88 +313,84 @@ export function BackendRecords({
                 ),
               )}
             </div>
-            <Upload
-              label={
-                kind === "anggota"
-                  ? "Foto anggota (opsional, privat)"
-                  : kind === "buku"
-                    ? "Berkas buku"
-                    : "Foto sampul"
-              }
-              kind={kind === "buku" ? "book" : "photo"}
-              names={
-                draft.fields[kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul"]
-                  ? ["Berkas tersimpan"]
-                  : []
-              }
-              setError={setError}
-              onFiles={async (files) => {
-                if (!files[0] || busy) return;
-                setBusy(true);
-                setError("");
-                try {
-                  const url = await uploadMedia(
-                    files[0],
-                    kind === "anggota" ? "member-photo" : kind === "buku" ? "book" : "content",
-                    csrfToken,
-                  );
-                  const key = kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul";
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          fields: { ...current.fields, [key]: url },
-                        }
-                      : current,
-                  );
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : "Upload gagal.");
-                } finally {
-                  setBusy(false);
+            {kind !== "galeri" && (
+              <Upload
+                label={
+                  kind === "anggota"
+                    ? "Foto anggota (opsional, privat)"
+                    : kind === "buku"
+                      ? "Berkas buku"
+                      : "Foto sampul"
                 }
-              }}
-            />
+                kind={kind === "buku" ? "book" : "photo"}
+                names={
+                  draft.fields[kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul"]
+                    ? ["Berkas tersimpan"]
+                    : []
+                }
+                setError={setError}
+                onFiles={async (files) => {
+                  if (!files[0] || busy) return;
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const url = await uploadMedia(
+                      files[0],
+                      kind === "anggota" ? "member-photo" : kind === "buku" ? "book" : "content",
+                      csrfToken,
+                    );
+                    const key = kind === "anggota" ? "foto" : kind === "buku" ? "file" : "sampul";
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            fields: { ...current.fields, [key]: url },
+                          }
+                        : current,
+                    );
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Upload gagal.");
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            )}
             {kind === "galeri" && (
               <>
-                <Upload
-                  label="Foto-foto album"
-                  multiple
-                  names={
-                    Array.isArray(draft.fields.gambar)
-                      ? draft.fields.gambar.map((_, index) => "Foto " + (index + 1))
-                      : []
-                  }
-                  setError={setError}
-                  onFiles={async (files) => {
-                    if (busy) return;
-                    setBusy(true);
-                    setError("");
-                    try {
-                      for (const file of files) {
-                        const url = await uploadMedia(file, "content", csrfToken);
-                        setDraft((current) =>
-                          current
-                            ? {
-                                ...current,
-                                fields: {
-                                  ...current.fields,
-                                  gambar: [
-                                    ...(Array.isArray(current.fields.gambar)
-                                      ? current.fields.gambar
-                                      : []),
-                                    url,
-                                  ],
-                                },
-                              }
-                            : current,
-                        );
-                      }
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : "Upload gagal.");
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
+                <fieldset>
+                  <legend>Tag album</legend>
+                  <div className="button-row">
+                    {CONTENT_TAGS.map((tag) => (
+                      <label key={tag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          style={{ width: "auto" }}
+                          checked={parseContentTags(draft.fields.tags).includes(tag)}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              fields: {
+                                ...draft.fields,
+                                tags: event.target.checked
+                                  ? [...parseContentTags(draft.fields.tags), tag]
+                                  : parseContentTags(draft.fields.tags).filter(
+                                      (value) => value !== tag,
+                                    ),
+                              },
+                            })
+                          }
+                        />
+                        {tag}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <AlbumMediaEditor
+                  fields={draft.fields}
+                  onChange={(fields) => setDraft({ ...draft, fields })}
+                  csrfToken={csrfToken}
+                  onBusyChange={setBusy}
                 />
                 <Notice>
                   Tanggal boleh kosong bila sumber tidak menyediakannya. Waktu impor tidak dianggap

@@ -15,6 +15,7 @@ import { Notice, Empty } from "../ui";
 import { PageIntro } from "../page-intro";
 import { EventFormRenderer } from "./form-renderer";
 import { eventFailureAction, retainedEventAnswers } from "@/lib/event-submit";
+import "./event-media.css";
 const time = (s: string) =>
   s
     ? new Intl.DateTimeFormat("id-ID", {
@@ -26,11 +27,11 @@ const time = (s: string) =>
 export function EventCard({ event }: { event: EventPublicDto }) {
   return (
     <article className="event-public-card">
-      {(event.poster || event.cover) && (
+      {event.poster && (
         <Link href={"/event/" + event.id}>
           <Image
             className="event-poster"
-            src={event.poster || event.cover}
+            src={event.poster}
             width={600}
             height={750}
             alt={"Poster " + event.title}
@@ -270,10 +271,10 @@ function EventDetail({ initial }: { initial: { event: EventPublicDto; token: str
   }
   return (
     <>
-      <div className="event-detail-intro">
-        {(event.poster || event.cover) && (
+      <div className={"event-detail-intro" + (!event.poster ? " without-poster" : "")}>
+        {event.poster && (
           <Image
-            src={event.poster || event.cover}
+            src={event.poster}
             width={700}
             height={900}
             className="event-poster"
@@ -309,6 +310,16 @@ function EventDetail({ initial }: { initial: { event: EventPublicDto; token: str
           }}
           noValidate
         >
+          {event.cover && (
+            <Image
+              src={event.cover}
+              width={1600}
+              height={560}
+              className="event-registration-cover"
+              alt={"Sampul pendaftaran " + event.title}
+              unoptimized
+            />
+          )}
           <div className="event-form-heading">
             <h2>{event.form.title}</h2>
             <p>{event.form.description}</p>

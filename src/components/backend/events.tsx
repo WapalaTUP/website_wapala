@@ -1,11 +1,12 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { EventAdminDto } from "@/lib/event-types";
 import { backendApi } from "./api";
 import { Empty, Notice, Badge } from "../ui";
 import { EventEditor } from "../events/event-editor";
-import { MediaPreview } from "./media-preview";
+import "../events/event-media.css";
 const status = {
   draft: "Draft",
   active: "Aktif",
@@ -91,8 +92,29 @@ export function BackendEvents({
             <div>
               <Badge>{status[e.status]}</Badge>
               <h2>{e.draft.title}</h2>
-              {e.draft.cover && <MediaPreview src={e.draft.cover} label="Sampul event" />}
-              {e.draft.poster && <MediaPreview src={e.draft.poster} label="Poster event" />}
+              <div className="event-admin-media">
+                {(["cover", "poster"] as const).map(
+                  (key) =>
+                    e.draft[key] && (
+                      <a
+                        key={key}
+                        href={e.draft[key]}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={"event-media-preview is-" + key}
+                      >
+                        <Image
+                          src={e.draft[key]}
+                          width={180}
+                          height={100}
+                          alt={key === "cover" ? "Sampul event" : "Poster event"}
+                          unoptimized
+                        />
+                        <span>{key === "cover" ? "Sampul formulir" : "Poster kegiatan"}</span>
+                      </a>
+                    ),
+                )}
+              </div>
               <p>{e.draft.description.slice(0, 200)}</p>
               <p>
                 {e.registrationCount} pendaftar.{" "}

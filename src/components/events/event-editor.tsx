@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Plus, Eye, Save, Upload, ArrowLeft, GripVertical } from "lucide-react";
 import {
   eventDraftSchema,
@@ -19,7 +20,7 @@ import { Notice } from "../ui";
 import { QuestionEditor } from "./question-editor";
 import { EventFormRenderer } from "./form-renderer";
 import { EventResponses } from "./event-responses";
-import { MediaPreview } from "../backend/media-preview";
+import "./event-media.css";
 const localTime = (iso: string) =>
   iso ? new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 16) : "";
 export function EventEditor({
@@ -207,6 +208,16 @@ export function EventEditor({
                 {mobile ? "Desktop" : "Mobile"}
               </button>
             </div>
+            {draft.cover && (
+              <Image
+                src={draft.cover}
+                width={1600}
+                height={560}
+                className="event-registration-cover"
+                alt="Sampul formulir pendaftaran"
+                unoptimized
+              />
+            )}
             <h2>{draft.form.title}</h2>
             <p>{draft.form.description}</p>
             <EventFormRenderer
@@ -333,13 +344,28 @@ export function EventEditor({
                       }}
                     />
                   </label>
+                  <p className="field-hint">
+                    {key === "poster"
+                      ? "Poster tampil pada informasi kegiatan."
+                      : "Banner lebar di atas formulir pendaftaran. Disarankan rasio 3:1."}
+                  </p>
                   {draft[key] && (
                     <>
-                      <MediaPreview
-                        key={draft[key]}
-                        src={draft[key]}
-                        label={key === "poster" ? "Poster event" : "Sampul event"}
-                      />
+                      <a
+                        className={"event-media-preview is-" + key}
+                        href={draft[key]}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Image
+                          src={draft[key]}
+                          width={320}
+                          height={180}
+                          alt={key === "poster" ? "Poster event" : "Sampul event"}
+                          unoptimized
+                        />
+                        <span>Lihat ukuran penuh</span>
+                      </a>
                       <button className="text-link" onClick={() => patch({ [key]: "" })}>
                         Hapus gambar
                       </button>

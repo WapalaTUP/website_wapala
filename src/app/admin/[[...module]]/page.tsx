@@ -64,7 +64,7 @@ export default async function AdminPage({ params }: { params: Promise<{ module?:
     angkatan: "generations:write",
     koreksi: "corrections:review",
     anggota: principal.role === "ANGGOTA" ? "members:directory" : "members:read",
-    konten: "content:write",
+    konten: principal.role === "ANGGOTA" ? "articles:submit" : "content:write",
     galeri: "content:write",
     buku: "content:write",
     or: "recruitment:read",
@@ -311,6 +311,14 @@ export default async function AdminPage({ params }: { params: Promise<{ module?:
         version: row.version,
         archived: row.archived,
         fields,
+        ...("workflowStatus" in row
+          ? {
+              published: row.published,
+              workflowStatus: row.workflowStatus,
+              reviewNote: row.reviewNote,
+              authorId: row.authorId,
+            }
+          : {}),
       };
     });
     const csrfToken = csrfForSession(token);
@@ -318,6 +326,7 @@ export default async function AdminPage({ params }: { params: Promise<{ module?:
       <BackendAdminShell role={principal.role} name={user.name} module={kind} csrfToken={csrfToken}>
         <BackendRecords
           kind={kind}
+          memberMode={principal.role === "ANGGOTA"}
           canReset={principal.role === "SUPER_USER"}
           initialRecords={records}
           csrfToken={csrfToken}

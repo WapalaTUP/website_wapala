@@ -1,0 +1,167 @@
+.album-media {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: #101714;
+  color: #fff;
+  border-radius: 12px;
+}
+.album-media > img,
+.album-media > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+.album-media--landscape > img,
+.album-media--landscape > video {
+  aspect-ratio: 16/9;
+}
+.album-media--portrait > img,
+.album-media--portrait > video {
+  aspect-ratio: 9/16;
+}
+.album-media figcaption {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.album-media-embed {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+.album-media-embed iframe {
+  width: 100%;
+  max-width: 540px;
+  min-height: 540px;
+  border: 0;
+  background: white;
+}
+.album-media-embed a {
+  font-size: 0.8rem;
+  text-decoration: underline;
+  color: inherit;
+}
+.album-embed-load {
+  width: 100%;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #19291f;
+  color: #fff;
+  border: 1px solid #4a6655;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.album-embed-load small {
+  opacity: 0.75;
+}
+.album-editor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #ccd4cd;
+  border-radius: 12px;
+}
+.album-editor legend {
+  font-weight: 700;
+  padding: 0 8px;
+}
+.album-editor p {
+  margin: 0;
+}
+.album-editor label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.album-editor label:has(input[type="radio"]) {
+  display: flex;
+  align-items: center;
+}
+.album-editor input[type="url"],
+.album-editor input:not([type]),
+.album-editor select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccd4cd;
+  border-radius: 6px;
+  background: #fff;
+  color: #18241c;
+}
+.album-editor-link {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+.album-editor-link label {
+  flex: 1;
+}
+.album-editor-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 20px;
+}
+.album-editor-items > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px;
+  background: #f4f6f2;
+  border-radius: 10px;
+}
+.album-editor-controls {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  color: #18241c;
+}
+.album-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.album-editor button:not(.album-embed-load) {
+  padding: 8px 12px;
+  border: 1px solid #b7c7ba;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.album-editor button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.album-editor [role="alert"] {
+  color: #a82424;
+}
+.album-editor small {
+  line-height: 1.5;
+}
+.album-editor-items .album-media > img,
+.album-editor-items .album-media > video {
+  max-height: 300px;
+}
+@media (max-width: 640px) {
+  .album-editor-items > li {
+    grid-template-columns: 1fr;
+  }
+  .album-editor-link {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .album-editor {
+    padding: 12px;
+  }
+  .album-media-embed iframe {
+    min-height: 480px;
+  }
+}

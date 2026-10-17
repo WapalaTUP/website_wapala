@@ -283,6 +283,11 @@ model ContentRecord {
   kind       ContentKind
   version    Int @default(1)
   fields     Json
+  authorId   String? @db.Uuid
+  workflowStatus String @default("draft")
+  reviewNote String @default("")
+  draftFields Json?
+  contentMeta Json @default("{}")
   published  Boolean @default(false)
   sourceId   String?
   archivedAt DateTime?
@@ -290,6 +295,7 @@ model ContentRecord {
   updatedAt  DateTime @updatedAt
   @@unique([kind, sourceId])
   @@index([kind, published, archivedAt])
+  @@index([authorId, workflowStatus])
 }
 
 model Equipment {

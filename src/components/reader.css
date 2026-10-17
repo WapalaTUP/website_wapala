@@ -1,0 +1,162 @@
+.flipbook-reader {
+  background: #edf0eb;
+  padding: 28px 0 40px;
+}
+.flipbook-reader:fullscreen {
+  overflow: auto;
+  background: #edf0eb;
+}
+.flipbook-reader .reader-toolbar {
+  gap: 24px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.flipbook-reader .reader-toolbar h2 {
+  max-width: 380px;
+}
+.flipbook-reader .reader-controls {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.flipbook-reader .reader-controls .icon-btn {
+  flex: 0 0 40px;
+}
+.flipbook-reader .reader-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+.flipbook-reader .reader-layout.has-thumbnails {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+.flipbook-reader .reader-navigation {
+  display: block;
+  max-height: 82vh;
+  overflow: auto;
+  padding: 16px;
+  background: #fafbf8;
+}
+.reader-thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.flipbook-reader .reader-navigation .reader-thumbnail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid transparent;
+  padding: 5px;
+  background: #e7ebe4;
+  color: #25382b;
+  border-radius: 4px;
+}
+.reader-thumbnail canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-shadow: 0 2px 5px #0002;
+}
+.reader-thumbnail span {
+  font-size: 12px;
+}
+.reader-thumbnail-fallback {
+  min-height: 90px;
+  display: grid;
+  place-items: center;
+}
+.flipbook-reader .reader-navigation .reader-thumbnail[aria-current="page"] {
+  border-color: #375b3c;
+  background: #d6e1ce;
+}
+.reader-thumbnail-paging {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 22px;
+  font-size: 12px;
+}
+.flipbook-reader .reader-navigation .reader-thumbnail-paging button {
+  padding: 5px;
+  width: 30px;
+  min-height: 30px;
+}
+.flipbook-reader .reader-outline-link {
+  margin-bottom: 8px;
+}
+.flipbook-reader .book-stage {
+  min-width: 0;
+  min-height: 60vh;
+  max-height: 82vh;
+  background: #dbe0d6;
+  border: 1px solid #c9d1c3;
+  border-radius: 8px;
+}
+.flipbook-reader .book-spread {
+  padding: 8px 0 14px;
+}
+.flipbook-reader .book-sheet {
+  animation: reader-turn-forward 320ms ease-out both;
+}
+.flipbook-reader .turn-back .book-sheet {
+  animation-name: reader-turn-back;
+}
+.reader-instructions {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: #52604e;
+  text-align: center;
+}
+@keyframes reader-turn-forward {
+  from {
+    opacity: 0.65;
+    transform: rotateY(-9deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0);
+  }
+}
+@keyframes reader-turn-back {
+  from {
+    opacity: 0.65;
+    transform: rotateY(9deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0);
+  }
+}
+@media (max-width: 900px) {
+  .flipbook-reader .reader-layout.has-thumbnails {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .flipbook-reader .reader-navigation {
+    max-height: 245px;
+    position: static;
+  }
+  .reader-thumbnail-grid {
+    grid-template-columns: repeat(6, minmax(54px, 1fr));
+    overflow-x: auto;
+  }
+  .flipbook-reader .book-stage {
+    min-height: 48vh;
+    max-height: 76vh;
+    padding: 15px 20px;
+  }
+  .flipbook-reader .reader-toolbar h2 {
+    max-width: none;
+  }
+}
+@media (max-width: 540px) {
+  .reader-thumbnail-grid {
+    grid-template-columns: repeat(4, minmax(50px, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flipbook-reader .book-sheet {
+    animation: none;
+  }
+}

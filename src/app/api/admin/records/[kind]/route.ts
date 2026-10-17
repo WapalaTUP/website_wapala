@@ -5,9 +5,9 @@ import {
   listMembers,
   saveMember,
   memberSchema,
-  contentFields,
   listContent,
   saveContent,
+  contentSaveSchema,
 } from "@/server/domains/records";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,14 +35,7 @@ export function POST(request: Request, { params }: Context) {
     );
     if (kind === "anggota")
       return jsonResponse(await saveMember(principal, await readJson(request, memberSchema), ctx));
-    const schema = z
-      .object({
-        id: z.uuid().optional(),
-        version: z.number().int().positive().optional(),
-        fields: contentFields[kind],
-        archived: z.boolean().optional(),
-      })
-      .strict();
+    const schema = contentSaveSchema(kind);
     return jsonResponse(
       await saveContent(principal, kind, await readJson(request, schema, 262144), ctx),
     );

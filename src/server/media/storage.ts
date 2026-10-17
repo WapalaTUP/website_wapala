@@ -1,4 +1,5 @@
 import { parseMediaUrl } from "@/lib/media-url";
+import { parseByteRange } from "@/lib/media-range";
 import "server-only";
 import { z } from "zod";
 import { randomUUID, createHash } from "node:crypto";
@@ -14,11 +15,12 @@ import { assertFresh, assertFreshRead } from "../auth/sessions";
 import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
 import { mediaRoot, mediaPath } from "./paths";
-import { sanitizeImage, sanitizeBook } from "./validation";
+import { sanitizeImage, sanitizeBook, sanitizeVideo, MAX_VIDEO_BYTES } from "./validation";
 import { scanMedia } from "./scanner";
 export const purposeSchema = z.enum([
   "generation-photo",
   "content",
+  "content-video",
   "campaign",
   "inventory",
   "branding",
@@ -37,7 +39,8 @@ const writePermissions: Record<MediaPurpose, Permission> = {
   "event-cover": "events:write",
   "event-poster": "events:write",
   "event-upload": "events:write",
-  content: "content:write",
+  content: "articles:submit",
+  "content-video": "articles:submit",
   campaign: "campaigns:write",
   inventory: "inventory:write",
   branding: "settings:write",
@@ -57,6 +60,7 @@ const publicPurposes = new Set<MediaPurpose>([
   "event-cover",
   "event-poster",
   "content",
+  "content-video",
   "campaign",
   "inventory",
   "branding",
@@ -105,6 +109,10 @@ export async function registerMedia(
     permission = writePermissions[purpose];
   requirePermission(principal, permission);
   return mediaSlot("admin", async () => {
+    const limit =
+      purpose === "book" || purpose === "content-video" ? MAX_VIDEO_BYTES : 5 * 1024 * 1024;
+    if (!input.bytes.length || input.bytes.length > limit)
+      throw new DomainError("MEDIA_TOO_LARGE", 413);
     const root = options.root || mediaRoot(),
       id = randomUUID(),
       quarantine = join(root, "quarantine", id + ".bin");
@@ -117,9 +125,11 @@ export async function registerMedia(
       await writeFile(quarantine, input.bytes, { flag: "wx", mode: 0o600 });
       await scanMedia(quarantine, options.scan);
       const result =
-        purpose === "book"
-          ? await sanitizeBook(input.bytes, input.mime)
-          : await sanitizeImage(input.bytes, input.mime);
+        purpose === "content-video"
+          ? await sanitizeVideo(input.bytes, input.mime)
+          : purpose === "book"
+            ? await sanitizeBook(input.bytes, input.mime)
+            : await sanitizeImage(input.bytes, input.mime);
       const final = mediaPath(root, id, result.extension);
       finalPath = final;
       await mkdir(dirname(final), { recursive: true, mode: 0o700 });
@@ -195,7 +205,7 @@ async function readMediaMeta(
   const path = mediaPath(
     options.root || mediaRoot(),
     media.id,
-    media.extension as "webp" | "pdf" | "epub",
+    media.extension as "webp" | "pdf" | "epub" | "mp4",
   );
   await stat(path).catch(() => {
     throw new DomainError("MEDIA_CORRUPT", 503);
@@ -206,12 +216,23 @@ async function readMediaMeta(
 export async function readMediaStream(
   id: string,
   principal: Principal | null,
-  options: Pick<StorageOptions, "root"> = {},
+  options: Pick<StorageOptions, "root"> & { range?: string | null; ifRange?: string | null } = {},
 ) {
   const { media, path } = await readMediaMeta(id, principal, options);
-  const stream = Readable.toWeb(createReadStream(path)) as unknown as ReadableStream<Uint8Array>;
+  const size = (await stat(path)).size;
+  const requested =
+    options.range && (!options.ifRange || options.ifRange === '"' + media.checksum + '"');
+  const range = requested ? parseByteRange(options.range!, size) : undefined;
+  const stream =
+    range === null
+      ? null
+      : (Readable.toWeb(
+          createReadStream(path, range || undefined),
+        ) as unknown as ReadableStream<Uint8Array>);
   return {
     stream,
+    size,
+    range,
     mime: media.mime,
     checksum: media.checksum,
     visibility: media.visibility,

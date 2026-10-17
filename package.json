@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --conditions=react-server --import tsx --test tests/*.test.ts src/lib/*.test.ts src/server/media/*.test.ts",
+    "test:content:integration": "node --conditions=react-server --import tsx scripts/content-integration.ts",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",

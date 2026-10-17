@@ -39,6 +39,13 @@ export async function backendApi<T>(
   return data as T;
 }
 export async function uploadMedia(file: File, purpose: string, csrfToken: string) {
+  return (await uploadMediaDetails(file, purpose, csrfToken)).url;
+}
+export async function uploadMediaDetails(
+  file: File,
+  purpose: string,
+  csrfToken: string,
+): Promise<{ url: string; width: number | null; height: number | null }> {
   const body = new FormData();
   body.set("file", file);
   body.set("purpose", purpose);
@@ -50,5 +57,9 @@ export async function uploadMedia(file: File, purpose: string, csrfToken: string
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Foto belum dapat diunggah.");
-  return data.url as string;
+  return {
+    url: data.url as string,
+    width: typeof data.width === "number" ? data.width : null,
+    height: typeof data.height === "number" ? data.height : null,
+  };
 }

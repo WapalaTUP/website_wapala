@@ -10,7 +10,7 @@ const modules = {
   anggota: "Anggota",
   angkatan: "Angkatan",
   koreksi: "Koreksi data anggota",
-  konten: "Konten",
+  konten: "Berita & pengumuman",
   galeri: "Galeri",
   buku: "Buku",
   or: "Open Recruitment",
@@ -29,7 +29,7 @@ const permissions: Record<Role, Array<keyof typeof modules>> = {
   POH: ["anggota", "angkatan", "koreksi", "or"],
   MULTIMEDIA: ["angkatan", "koreksi", "konten", "galeri", "buku", "or", "donasi", "event"],
   INVENTARIS: ["inventaris", "peminjaman", "or"],
-  ANGGOTA: ["anggota"],
+  ANGGOTA: ["anggota", "konten"],
 };
 export { modules as backendModules, permissions as backendRoleModules };
 export function BackendAdminShell({

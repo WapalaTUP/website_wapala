@@ -10,7 +10,7 @@ export function contentSecurityPolicy(nonce: string, production: boolean) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "frame-src https://www.google.com https://maps.google.com blob:",
+    "frame-src https://www.google.com https://maps.google.com https://www.instagram.com https://www.tiktok.com https://www.youtube-nocookie.com https://player.vimeo.com blob:",
     "worker-src 'self' blob:",
     `connect-src 'self'${production ? "" : " ws: wss:"}`,
     "media-src 'self' blob:",

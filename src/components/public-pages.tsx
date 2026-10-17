@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, MapPin, Mail, ChevronLeft, ChevronRight, X, BookOpen } from "lucide-react";
 import { useDemo } from "@/lib/store";
 import { divisions, history, missions, vision, date } from "@/lib/content";
-import { Empty, Pagination } from "./ui";
+import { Empty } from "./ui";
 import type { RecordRow, Settings } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { Generations } from "./generations";
@@ -12,6 +12,11 @@ import { HeroGallery } from "./hero-gallery";
 import { CategoryGallery } from "./category-gallery";
 import { getPublicAlbums, albumDate } from "@/lib/gallery";
 import { PageIntro } from "./page-intro";
+import { useSearchParams } from "next/navigation";
+import { AlbumMediaView } from "./album-media";
+import { CONTENT_TAGS } from "@/lib/content-tags";
+import { DivisionPage } from "./division-page";
+import { NewsPage } from "./articles/news-page";
 import { EventPages } from "./events/event-pages";
 const LoanForm = dynamic(() => import("./forms").then((m) => m.LoanForm));
 const LoanTracking = dynamic(() => import("./forms").then((m) => m.LoanTracking));
@@ -334,154 +339,16 @@ function Profile() {
   );
 }
 function Divisions({ slug }: { slug?: string }) {
-  const { settings } = useDemo();
-  const current = divisions.find((d) => d.slug === slug);
-  return (
-    <>
-      <PageIntro
-        title={current?.name || "Alam adalah\nruang belajar kita."}
-        description={
-          current?.detail ||
-          "Setiap divisi mempertemukan pengetahuan, latihan, dan pengalaman lapangan."
-        }
-      />
-      <div className="container section">
-        <div className="division-grid">
-          {(current ? [current] : divisions).map((d) => {
-            const image = divisionImage(settings, divisions.indexOf(d));
-            return (
-              <article className="division-card" key={d.slug}>
-                <div
-                  className={"division-photo" + (image ? " has-image" : "")}
-                  style={
-                    image
-                      ? {
-                          backgroundImage: `url("${image}")`,
-                          backgroundPosition: d.position,
-                        }
-                      : { backgroundPosition: d.position }
-                  }
-                  role="img"
-                  aria-label={d.name}
-                />
-                <h2>{d.name}</h2>
-                <p>{d.description}</p>
-                <Link className="text-link" href="/galeri">
-                  Dokumentasi kegiatan
-                  <ArrowUpRight size={18} />
-                </Link>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
+  return <DivisionPage slug={slug} />;
 }
 function News({ slug, announcement = false }: { slug?: string; announcement?: boolean }) {
-  const { records } = useDemo();
-  const [filter, setFilter] = useState(announcement ? "Announcement" : "Semua");
-  const [page, setPage] = useState(1);
-  const posts = records.konten.filter((p) => !p.archived && p.fields.status === "Publik");
-  if (slug) {
-    const post = posts.find((p) => p.fields.slug === slug);
-    if (!post)
-      return (
-        <div className="container section">
-          <Empty
-            title="Konten tidak ditemukan"
-            description="Artikel mungkin telah diarsipkan."
-            action={
-              <Link href="/berita" className="btn secondary">
-                Lihat berita lainnya
-              </Link>
-            }
-          />
-        </div>
-      );
-    const p = post.fields;
-    return (
-      <article>
-        <div className="container article-header">
-          <Link className="text-link" href="/berita">
-            <ChevronLeft size={18} />
-            Kembali ke berita
-          </Link>
-          <div className="editorial-meta">
-            <span>
-              {p.tipe} / {p.kategori}
-            </span>
-            <time dateTime={p.tanggal}>{date(p.tanggal)}</time>
-          </div>
-          <h1>{p.judul}</h1>
-          <p className="lead">{p.ringkasan}</p>
-          <p className="article-author">Ditulis oleh {p.penulis}</p>
-        </div>
-        <figure className="container article-cover">
-          <img src={p.sampul} alt={p.judul} width={1280} height={750} />
-          <figcaption>Dokumentasi WAPALA</figcaption>
-        </figure>
-        <div className="article-body">
-          {p.isi.split("\n\n").map((txt, i) => (
-            <p key={i}>{txt}</p>
-          ))}
-        </div>
-        <div className="container section">
-          <SectionHead title="Perjalanan lainnya." />
-          <div className="editorial-grid">
-            {posts
-              .filter((q) => q.id !== post.id)
-              .slice(0, 3)
-              .map((q) => (
-                <Editorial key={q.id} post={q} />
-              ))}
-          </div>
-        </div>
-      </article>
-    );
-  }
-  const filtered = posts.filter((p) => filter === "Semua" || p.fields.tipe === filter);
-  return (
-    <>
-      <PageIntro
-        title="Catatan perjalanan."
-        description="Kegiatan, pengetahuan, dan kabar terbaru dari WAPALA."
-      />
-      <section className="container section compact-top">
-        <div className="filter-tabs" aria-label="Tipe konten">
-          {["Semua", "Berita", "Announcement"].map((n) => (
-            <button
-              key={n}
-              className={filter === n ? "active" : ""}
-              onClick={() => {
-                setFilter(n);
-                setPage(1);
-              }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        {filtered.length ? (
-          <div className="editorial-grid">
-            {filtered.slice((page - 1) * 6, page * 6).map((p) => (
-              <Editorial key={p.id} post={p} />
-            ))}
-          </div>
-        ) : (
-          <Empty
-            title="Belum ada konten"
-            description="Kabar organisasi akan muncul di sini setelah diterbitkan."
-          />
-        )}
-        <Pagination page={page} total={filtered.length} onChange={setPage} />
-      </section>
-    </>
-  );
+  return <NewsPage slug={slug} announcement={announcement} />;
 }
 function Gallery({ id }: { id?: string }) {
   const state = useDemo();
   const source = getPublicAlbums(state.records.galeri, !state.backend);
+  const search = useSearchParams();
+  const tag = search.get("tag") || "";
   const [category, setCategory] = useState("Semua kegiatan");
   const [location, setLocation] = useState("Semua lokasi");
   const [lightbox, setLightbox] = useState<number | null>(null);
@@ -489,6 +356,7 @@ function Gallery({ id }: { id?: string }) {
   const images = album?.images || [];
   const filtered = source.filter(
     (a) =>
+      (!tag || a.tags?.includes(tag)) &&
       (category === "Semua kegiatan" || a.category === category) &&
       (location === "Semua lokasi" || a.location === location),
   );
@@ -504,20 +372,42 @@ function Gallery({ id }: { id?: string }) {
             <p className="album-date">{albumDate(album)}</p>
           </PageIntro>
           <div className="container section compact-top album-images">
-            {images.map((img, i) => (
-              <button key={img} onClick={() => setLightbox(i)} aria-label={"Lihat foto " + (i + 1)}>
-                <img
-                  src={img}
-                  alt={
-                    album.photoCaptions?.[i] ||
-                    (i === 0 ? album.title : "Dokumentasi kegiatan WAPALA")
-                  }
-                  width={900}
-                  height={650}
-                  loading="lazy"
-                />
-              </button>
-            ))}
+            {album.media?.length
+              ? album.media.map((item) =>
+                  item.type === "image" ? (
+                    <button
+                      key={item.id}
+                      onClick={() => setLightbox(images.indexOf(item.src))}
+                      aria-label={item.caption || "Lihat foto album"}
+                    >
+                      <img
+                        src={item.src}
+                        alt={item.caption || album.title}
+                        width={900}
+                        height={650}
+                        loading="lazy"
+                      />
+                      {item.caption && <span className="album-photo-caption">{item.caption}</span>}
+                    </button>
+                  ) : (
+                    <AlbumMediaView item={item} key={item.id} />
+                  ),
+                )
+              : images.map((img, i) => (
+                  <button
+                    key={img}
+                    onClick={() => setLightbox(i)}
+                    aria-label={"Lihat foto " + (i + 1)}
+                  >
+                    <img
+                      src={img}
+                      alt={album.photoCaptions?.[i] || album.title}
+                      width={900}
+                      height={650}
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
           </div>
         </>
       ) : (
@@ -527,6 +417,20 @@ function Gallery({ id }: { id?: string }) {
             description="Dokumentasi kegiatan, ekspedisi, dan kebersamaan WAPALA."
           />
           <section className="container section compact-top">
+            <nav className="news-tag-nav" aria-label="Filter tag album">
+              <Link href="/galeri" className={!tag ? "active" : ""}>
+                Semua
+              </Link>
+              {CONTENT_TAGS.map((t) => (
+                <Link
+                  key={t}
+                  className={tag === t ? "active" : ""}
+                  href={"/galeri?tag=" + encodeURIComponent(t)}
+                >
+                  {t}
+                </Link>
+              ))}
+            </nav>
             <div className="filters">
               <label>
                 Kategori
@@ -550,7 +454,14 @@ function Gallery({ id }: { id?: string }) {
               <div className="album-grid">
                 {filtered.map((a) => (
                   <Link className="album-card" key={a.id} href={"/galeri/" + a.id}>
-                    <img src={a.image} alt={a.title} width={600} height={700} loading="lazy" />
+                    {a.image ? (
+                      <img src={a.image} alt={a.title} width={600} height={700} loading="lazy" />
+                    ) : (
+                      <div className="album-video-placeholder">
+                        <span>▶</span>
+                        <p>Album video</p>
+                      </div>
+                    )}
                     <div>
                       <p>{a.category}</p>
                       <h2>{a.title}</h2>

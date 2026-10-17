@@ -1,7 +1,7 @@
 import { mediaUrlSchema } from "@/lib/media-url";
 import "server-only";
 import { z } from "zod";
-import type { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import { getDb } from "../db";
 import { DomainError } from "../errors";
 import { requirePermission, type Principal } from "../auth/policy";
@@ -10,6 +10,12 @@ import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
 import { assertMediaReferences } from "../media/storage";
 import { memberFields } from "../../lib/operational-schema";
+import { CONTENT_TAGS } from "../../lib/content-tags";
+import { editorialTransition, type EditorialAction } from "../../lib/editorial-workflow";
+import { articleBlocksSchema } from "../../lib/article-content";
+import { albumMediaItemsSchema } from "../../lib/album-media";
+import { parseMediaUrl } from "../../lib/media-url";
+import { splitContentFields, mergedContentFields } from "../../lib/content-compatibility";
 export { memberFields } from "../../lib/operational-schema";
 const text = z.string().trim().max(300);
 const optional = text.optional().default("");
@@ -146,6 +152,7 @@ const date = z
   .optional()
   .default("");
 const status = z.enum(["Draft", "Publik"]).optional().default("Draft");
+const tags = z.array(z.enum(CONTENT_TAGS)).max(6).optional().default([]);
 export const contentFields = {
   konten: z
     .object({
@@ -161,7 +168,23 @@ export const contentFields = {
       sampul: media,
       status,
       ringkasan: longText,
-      isi: longText,
+      isi: z.string().trim().max(100000).optional().default(""),
+      tags,
+      bloki: z
+        .string()
+        .max(150000)
+        .refine((value) => {
+          if (!value) return true;
+          try {
+            return articleBlocksSchema.safeParse(JSON.parse(value)).success;
+          } catch {
+            return false;
+          }
+        }, "Blok artikel tidak valid.")
+        .optional()
+        .default(""),
+      sampul_caption: optional,
+      sampul_credit: optional,
     })
     .strict(),
   galeri: z
@@ -176,6 +199,21 @@ export const contentFields = {
       highlight: z.enum(["Ya", "Tidak"]).optional().default("Tidak"),
       status,
       gambar: z.array(media).max(500).optional().default([]),
+      tags,
+      media_items: z
+        .string()
+        .max(150000)
+        .refine((value) => {
+          if (!value) return true;
+          try {
+            return albumMediaItemsSchema.safeParse(JSON.parse(value)).success;
+          } catch {
+            return false;
+          }
+        }, "Media album tidak valid.")
+        .optional()
+        .default(""),
+      featured_media: optional,
       sumber: z
         .union([
           z.literal(""),
@@ -201,6 +239,19 @@ export const contentFields = {
     .strict(),
 };
 export const contentKind = z.enum(["konten", "galeri", "buku"]);
+export const contentActionSchema = z.enum(["save", "submit", "return", "publish", "unpublish"]);
+export function contentSaveSchema(kind: "konten" | "galeri" | "buku") {
+  return z
+    .object({
+      id: z.uuid().optional(),
+      version: z.number().int().positive().optional(),
+      fields: contentFields[kind],
+      archived: z.boolean().optional(),
+      action: contentActionSchema.optional(),
+      note: z.string().trim().max(3000).optional(),
+    })
+    .strict();
+}
 type Kind = z.infer<typeof contentKind>;
 export async function saveContent(
   principal: Principal,
@@ -208,19 +259,14 @@ export async function saveContent(
   input: unknown,
   ctx: RequestContext,
 ) {
-  requirePermission(principal, "content:write");
+  const member = principal.role === "ANGGOTA" && kind === "konten";
+  const permission = member ? "articles:submit" : "content:write";
+  requirePermission(principal, permission);
   contentKind.parse(kind);
-  const v = z
-    .object({
-      id: z.uuid().optional(),
-      version: z.number().int().positive().optional(),
-      fields: contentFields[kind],
-      archived: z.boolean().optional(),
-    })
-    .strict()
-    .parse(input);
+  const v = contentSaveSchema(kind).parse(input);
+  if (member && v.archived) throw new DomainError("FORBIDDEN", 403);
   return getDb().$transaction(async (tx) => {
-    await assertFresh(tx, principal, "content:write");
+    await assertFresh(tx, principal, permission);
     if ("sampul" in v.fields)
       await assertMediaReferences(
         tx,
@@ -228,18 +274,115 @@ export async function saveContent(
         ["content"],
         "public",
       );
+    if (kind === "konten" && "bloki" in v.fields && v.fields.bloki) {
+      const blocks = articleBlocksSchema.parse(JSON.parse(v.fields.bloki));
+      await assertMediaReferences(
+        tx,
+        blocks.filter((b) => b.type === "image").map((b) => b.src || ""),
+        ["content"],
+        "public",
+      );
+      await assertMediaReferences(
+        tx,
+        blocks
+          .filter((b) => b.type === "video" && b.src?.startsWith("/api/media/"))
+          .map((b) => b.src || ""),
+        ["content-video"],
+        "public",
+      );
+    }
+    if (kind === "galeri" && "media_items" in v.fields && v.fields.media_items) {
+      const items = albumMediaItemsSchema.parse(JSON.parse(v.fields.media_items));
+      const featured = v.fields.featured_media;
+      if (featured && !items.some((item) => item.id === featured))
+        throw new DomainError("INVALID_INPUT", 400, "Media unggulan tidak ditemukan di album.");
+      await assertMediaReferences(
+        tx,
+        items
+          .filter((item) => item.type === "image" && parseMediaUrl(item.src))
+          .map((item) => item.src),
+        ["content"],
+        "public",
+      );
+      await assertMediaReferences(
+        tx,
+        items.filter((item) => item.type === "video").map((item) => item.src),
+        ["content-video"],
+        "public",
+      );
+    }
     if ("file" in v.fields) await assertMediaReferences(tx, [v.fields.file], ["book"], "private");
+    let previous;
     if (v.id) {
       await tx.$queryRaw`SELECT id FROM "ContentRecord" WHERE id=${v.id}::uuid FOR UPDATE`;
       const row = await tx.contentRecord.findUnique({ where: { id: v.id } });
       if (!row || row.kind !== kind) throw new DomainError("NOT_FOUND", 404);
+      if (member && row.authorId !== principal.userId) throw new DomainError("NOT_FOUND", 404);
+      if (member && row.archivedAt) throw new DomainError("NOT_FOUND", 404);
       if (!v.version || row.version !== v.version) throw new DomainError("CONFLICT", 409);
+      previous = row;
     }
+    const action: EditorialAction =
+      v.action || (member ? "save" : v.fields.status === "Publik" ? "publish" : "save");
+    let workflowStatus =
+      previous?.draftFields || !previous?.published
+        ? previous?.workflowStatus || "draft"
+        : "published";
+    if (kind === "konten") {
+      try {
+        workflowStatus = editorialTransition(principal.role, workflowStatus, action);
+      } catch (error) {
+        throw new DomainError(
+          "FORBIDDEN",
+          403,
+          error instanceof Error ? error.message : "Aksi tidak diizinkan.",
+        );
+      }
+      if (action === "return" && !v.note?.trim())
+        throw new DomainError("INVALID_INPUT", 400, "Isi catatan revisi untuk penulis.");
+    }
+    const fields = { ...v.fields };
+    if (member && "penulis" in fields) {
+      const author = await tx.user.findUniqueOrThrow({
+        where: { id: principal.userId },
+        select: { name: true },
+      });
+      fields.penulis = author.name;
+      fields.tipe = "Berita";
+    }
+    if (kind === "konten") fields.status = workflowStatus === "published" ? "Publik" : "Draft";
+    const keepPublished =
+      kind === "konten" && !!previous?.published && action !== "unpublish" && !v.archived;
+    const split = splitContentFields(fields);
     const data = {
       kind,
-      fields: v.fields as Prisma.InputJsonValue,
-      published: v.fields.status === "Publik",
+      fields: (kind === "konten" && keepPublished && action !== "publish"
+        ? previous!.fields
+        : split.fields) as Prisma.InputJsonValue,
+      contentMeta: (kind === "konten" && keepPublished && action !== "publish"
+        ? previous!.contentMeta
+        : split.contentMeta) as Prisma.InputJsonValue,
+      published:
+        kind === "konten"
+          ? workflowStatus === "published" || keepPublished
+          : fields.status === "Publik",
       archivedAt: v.archived ? new Date() : null,
+      ...(kind === "konten"
+        ? {
+            authorId: previous?.authorId || principal.userId,
+            workflowStatus,
+            reviewNote:
+              action === "return"
+                ? v.note || ""
+                : action === "save"
+                  ? previous?.reviewNote || ""
+                  : "",
+            draftFields:
+              keepPublished && action !== "publish"
+                ? (fields as Prisma.InputJsonValue)
+                : Prisma.DbNull,
+          }
+        : {}),
     };
     const row = v.id
       ? await tx.contentRecord.update({
@@ -252,33 +395,47 @@ export async function saveContent(
       actorId: principal.userId,
       action: "CONTENT_SAVED",
       entityId: row.id,
-      summary: { kind, published: row.published },
+      summary: { kind, published: row.published, action, workflowStatus },
       context: ctx,
     });
     return {
       id: row.id,
       version: row.version,
-      fields: row.fields,
+      fields: row.draftFields || mergedContentFields(row.fields, row.contentMeta),
       archived: !!row.archivedAt,
+      authorId: row.authorId,
+      published: row.published,
+      workflowStatus: row.draftFields
+        ? row.workflowStatus
+        : row.published
+          ? "published"
+          : row.workflowStatus,
+      reviewNote: row.reviewNote,
     };
   });
 }
 export async function listContent(principal: Principal, kind: Kind) {
-  requirePermission(principal, "content:write");
+  const member = principal.role === "ANGGOTA" && kind === "konten";
+  const permission = member ? "articles:submit" : "content:write";
+  requirePermission(principal, permission);
   contentKind.parse(kind);
   return getDb().$transaction(async (tx) => {
-    await assertFresh(tx, principal, "content:write");
+    await assertFresh(tx, principal, permission);
     return (
       await tx.contentRecord.findMany({
-        where: { kind },
+        where: { kind, ...(member ? { authorId: principal.userId, archivedAt: null } : {}) },
         orderBy: { createdAt: "desc" },
         take: 1000,
       })
     ).map((r) => ({
       id: r.id,
       version: r.version,
-      fields: r.fields,
+      fields: r.draftFields || mergedContentFields(r.fields, r.contentMeta),
       archived: !!r.archivedAt,
+      authorId: r.authorId,
+      published: r.published,
+      workflowStatus: r.workflowStatus,
+      reviewNote: r.reviewNote,
     }));
   });
 }
@@ -290,5 +447,8 @@ export async function publicContent(kind: Kind) {
       orderBy: { createdAt: "desc" },
       take: 1000,
     })
-  ).map((r) => ({ id: r.id, fields: r.fields }));
+  ).map((r) => ({
+    id: r.id,
+    fields: mergedContentFields(r.fields, r.contentMeta) as Prisma.JsonObject,
+  }));
 }

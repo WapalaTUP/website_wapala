@@ -1,6 +1,11 @@
 import { albums, date } from "./content";
 import type { RecordRow } from "./types";
+import { parseContentTags } from "./content-tags";
+import { parseAlbumMedia, type AlbumMediaItem } from "./album-media";
 export interface PublicAlbum {
+  tags?: string[];
+  media?: AlbumMediaItem[];
+  featuredMedia?: AlbumMediaItem;
   photoCaptions?: string[];
   sourceYear?: string;
   id: string;
@@ -33,8 +38,12 @@ export function getPublicAlbums(records: RecordRow[], includePreview = true): Pu
       continue;
     }
     const f = record.fields;
+    if (f.status && f.status !== "Publik") continue;
+    const mediaItems = parseAlbumMedia(f);
+    const featuredMedia = mediaItems.find((item) => item.id === f.featured_media) || mediaItems[0];
     const base = index >= 0 ? source[index] : undefined;
-    const image = f.sampul || base?.image || "";
+    const image =
+      (featuredMedia?.type === "image" ? featuredMedia.src : "") || f.sampul || base?.image || "";
     let registeredImages: string[] = [];
     if (f.gambar) {
       try {
@@ -45,15 +54,22 @@ export function getPublicAlbums(records: RecordRow[], includePreview = true): Pu
         /* Older preview records may have no serialized image list. */
       }
     }
-    const images = [
-      ...new Set(
-        [image, ...(registeredImages.length ? registeredImages : base?.images || [])].filter(
-          Boolean,
-        ),
-      ),
-    ];
+    const images = f.media_items?.trim()
+      ? mediaItems.filter((item) => item.type === "image").map((item) => item.src)
+      : [
+          ...new Set(
+            [image, ...(registeredImages.length ? registeredImages : base?.images || [])].filter(
+              Boolean,
+            ),
+          ),
+        ];
     const entry: PublicAlbum = {
+      tags: parseContentTags(f.tags),
+      media: mediaItems,
+      featuredMedia,
       photoCaptions: (() => {
+        if (f.media_items?.trim())
+          return mediaItems.filter((item) => item.type === "image").map((item) => item.caption);
         try {
           const value: unknown = JSON.parse(f.keterangan_foto || "[]");
           return Array.isArray(value)
@@ -84,7 +100,7 @@ export function getPublicAlbums(records: RecordRow[], includePreview = true): Pu
     if (index >= 0) source[index] = entry;
     else source.push(entry);
   }
-  return source.filter((a) => Boolean(a.image));
+  return source.filter((a) => Boolean(a.image || a.media?.length));
 }
 export function getRecentGalleryPhotos(albums: PublicAlbum[]) {
   const photos = albums.flatMap((album) =>
@@ -120,7 +136,7 @@ export function albumDate(
 }
 export function getHeroGalleryPhotos(albums: PublicAlbum[]) {
   const pinned = albums
-    .filter((a) => a.highlight)
+    .filter((a) => a.highlight && a.image)
     .map((album) => ({ image: album.image, album, order: 0, highlight: true }));
   const recent = getRecentGalleryPhotos(albums).map((photo) => ({
     ...photo,

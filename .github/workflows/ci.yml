@@ -34,6 +34,12 @@ jobs:
       - name: Prisma generate
         run: npm run db:generate
 
+      - name: Install video validation tool
+        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+
+      - name: Content and media tests
+        run: npm test
+
       - name: Typecheck
         run: npm run typecheck
 

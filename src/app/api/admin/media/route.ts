@@ -12,7 +12,10 @@ export function POST(request: Request) {
     const purpose = purposeSchema.parse(request.headers.get("x-media-purpose"));
     requirePermission(principal, mediaWritePermission(purpose));
     await takeThrottle("admin-upload:" + principal.userId, 20, 3600000);
-    const form = await readMultipart(request, (purpose === "book" ? 50 : 5) * 1024 * 1024 + 65536);
+    const form = await readMultipart(
+      request,
+      (purpose === "book" || purpose === "content-video" ? 50 : 5) * 1024 * 1024 + 65536,
+    );
     if (
       form.get("purpose") !== purpose ||
       form.getAll("file").length !== 1 ||

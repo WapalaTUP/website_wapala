@@ -1,6 +1,7 @@
 import { DomainError } from "../errors";
 export type Role = "SUPER_USER" | "POH" | "MULTIMEDIA" | "INVENTARIS" | "ANGGOTA";
 export type Permission =
+  | "articles:submit"
   | "data:reset"
   | "generations:write"
   | "members:directory"
@@ -28,6 +29,7 @@ export interface Principal {
 }
 const matrix: Record<Role, Permission[]> = {
   SUPER_USER: [
+    "articles:submit",
     "data:reset",
     "generations:write",
     "corrections:review",
@@ -54,6 +56,7 @@ const matrix: Record<Role, Permission[]> = {
     "corrections:review",
   ],
   MULTIMEDIA: [
+    "articles:submit",
     "generations:write",
     "corrections:review",
     "events:write",
@@ -63,7 +66,7 @@ const matrix: Record<Role, Permission[]> = {
     "campaigns:write",
   ],
   INVENTARIS: ["inventory:write", "loans:write", "recruitment:read"],
-  ANGGOTA: ["members:directory", "members:correct"],
+  ANGGOTA: ["members:directory", "members:correct", "articles:submit"],
 };
 export function requirePermission(principal: Principal, permission: Permission) {
   if (principal.mustChangePassword || !matrix[principal.role]?.includes(permission))

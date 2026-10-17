@@ -65,7 +65,7 @@ log "Memasang paket sistem (bisa beberapa menit)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg build-essential git \
-  postgresql postgresql-contrib postgresql-client nginx certbot
+  postgresql postgresql-contrib postgresql-client nginx certbot ffmpeg
 
 if ! command -v node >/dev/null || [ "$(node -v | cut -dv -f2 | cut -d. -f1)" -lt 20 ]; then
   log "Memasang Node.js 24 (NodeSource)..."

@@ -2,7 +2,7 @@ import "server-only";
 import { getDb } from "../db";
 import { assertFresh } from "../auth/sessions";
 import { requirePermission, type Principal } from "../auth/policy";
-import type { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import { z } from "zod";
 import { DomainError } from "../errors";
 import { writeAudit } from "../audit";
@@ -93,6 +93,9 @@ export async function restoreArchive(principal: Principal, input: unknown, ctx: 
             archivedAt: null,
             published: false,
             fields: { ...fields, status: "Draft" },
+            workflowStatus: "draft",
+            reviewNote: "",
+            draftFields: Prisma.DbNull,
             version: { increment: 1 },
           },
         });
