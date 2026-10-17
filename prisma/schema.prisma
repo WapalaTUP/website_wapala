@@ -377,6 +377,7 @@ model LoanItem {
   loan            Loan @relation(fields: [loanId], references: [id], onDelete: Restrict)
   equipmentId     String @db.Uuid
   equipment       Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  equipmentSnapshot Json @default("{}")
   requested       Int
   approved        Int @default(0)
   reason          String @default("")

@@ -79,7 +79,7 @@ const transitions: Record<string, string[]> = {
   rejected: [],
 };
 const include = {
-  items: { include: { equipment: { select: { name: true, code: true } } } },
+  items: { include: { equipment: { select: { name: true, code: true, typeColor: true } } } },
   history: { orderBy: { createdAt: "asc" as const } },
 };
 function dto(l: Prisma.LoanGetPayload<{ include: typeof include }>) {
@@ -170,7 +170,19 @@ export async function requestLoan(
             ),
             originYear: settings.managementYear,
             managementYear: settings.managementYear,
-            items: { create: v.items },
+            items: {
+              create: v.items.map((item) => {
+                const eq = eqs.find((equipment) => equipment.id === item.equipmentId)!;
+                return {
+                  ...item,
+                  equipmentSnapshot: {
+                    code: eq.code,
+                    name: eq.name,
+                    typeColor: eq.typeColor,
+                  },
+                };
+              }),
+            },
             history: {
               create: { status: "requested", note: "Pengajuan diterima." },
             },

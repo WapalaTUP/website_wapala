@@ -16,7 +16,7 @@ export const importLabels: Record<string, string> = {
   name: "Nama alat",
   category: "Kategori",
   brand: "Merek",
-  typeColor: "Tipe / warna",
+  typeColor: "Jenis / tipe / warna",
   source: "Sumber pengadaan",
   yearEntered: "Tahun masuk",
   total: "Jumlah total",
@@ -69,7 +69,7 @@ export function prepareBackendImport(
             ...raw,
             total: raw.total ? Number(raw.total) : NaN,
             fit: raw.fit ? Number(raw.fit) : NaN,
-            available: false,
+            available: true,
             maxDays: 7,
             maxQuantity: Math.max(1, Number(raw.fit) || 1),
           };

@@ -1,5 +1,8 @@
 "use client";
 import Link from "next/link";
+import { Package } from "lucide-react";
+import { equipmentDisplayName } from "@/lib/equipment-identity";
+import "./loan-catalog.css";
 import { useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/lib/store";
 import { getBankAccounts, canConfirmDonation, campaignTotal } from "@/lib/campaigns";
@@ -57,6 +60,7 @@ export function LoanForm() {
     [selection, setSelection] = useState<Record<string, number>>({}),
     [search, setSearch] = useState(""),
     [category, setCategory] = useState("Semua kategori"),
+    [typeFilter, setTypeFilter] = useState("Semua jenis"),
     [fields, setFields] = useState<Record<string, string>>({}),
     [receipt, setReceipt] = useState("");
   const key = useRef<string | null>(null);
@@ -65,7 +69,11 @@ export function LoanForm() {
     filtered = catalog.filter(
       (e) =>
         (category === "Semua kategori" || e.category === category) &&
-        e.name.toLowerCase().includes(search.toLowerCase()),
+        (typeFilter === "Semua jenis" || e.typeColor === typeFilter) &&
+        [e.name, e.code, e.typeColor, e.brand]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase()),
     );
   const stepsNav = (
     <ol className="steps">
@@ -103,7 +111,7 @@ export function LoanForm() {
             Kembali
           </button>
         )}
-        <button className="btn primary" disabled={t.busy}>
+        <button type="submit" form="loan-request-form" className="btn primary" disabled={t.busy}>
           {t.busy
             ? "Mengirim…"
             : step === 0
@@ -166,7 +174,7 @@ export function LoanForm() {
       />
       {step === 1 ? (
         <section className="container form-section">
-          <form className="form-main" onSubmit={next}>
+          <form id="loan-request-form" className="form-main" onSubmit={next}>
             {stepsNav}
             <aside className="form-aside aside-inline">{asideInfo}</aside>
             <div className="form-grid">
@@ -194,12 +202,12 @@ export function LoanForm() {
           </form>
         </section>
       ) : (
-        <section className="container form-section form-layout">
-          <form className="form-main" onSubmit={next}>
+        <section className="container form-section form-layout loan-catalog-layout">
+          <form id="loan-request-form" className="form-main" onSubmit={next}>
             {stepsNav}
             {step === 0 ? (
               <>
-                <div className="form-grid">
+                <div className="form-grid loan-catalog-filters">
                   <Field
                     label="Cari alat"
                     value={search}
@@ -211,27 +219,63 @@ export function LoanForm() {
                     value={category}
                     onChange={setCategory}
                   />
+                  <Select
+                    label="Jenis / tipe"
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    options={[
+                      "Semua jenis",
+                      ...new Set(catalog.map((e) => e.typeColor).filter(Boolean)),
+                    ]}
+                  />
                 </div>
-                <div className="equipment-list">
+                <div className="equipment-list loan-catalog-grid">
                   {filtered.map((eq) => (
-                    <div className="equipment-card" key={eq.id}>
-                      <div>
+                    <div
+                      className={
+                        "equipment-card loan-catalog-card" +
+                        ((selection[eq.id] ?? 0) > 0 ? " is-selected" : "")
+                      }
+                      key={eq.id}
+                    >
+                      <div className="loan-equipment-photo">
+                        {eq.photo ? (
+                          <img
+                            src={eq.photo}
+                            alt={equipmentDisplayName(eq)}
+                            width={480}
+                            height={360}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="loan-equipment-placeholder">
+                            <Package size={40} aria-hidden="true" />
+                            <span>Foto belum tersedia</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="loan-equipment-info">
+                        <small className="loan-equipment-code">{eq.code}</small>
                         <h3>{eq.name}</h3>
+                        <p className="loan-equipment-type">
+                          Jenis: <strong>{eq.typeColor || "Belum dicatat"}</strong>
+                        </p>
+                        {eq.brand && <p>{eq.brand}</p>}
                         <p>{eq.category}</p>
                         <p>{eq.available ? "Tersedia" : "Tidak tersedia saat ini"}</p>
                         <p>
                           Maksimal {eq.maxDays} hari · {eq.maxQuantity} per pengajuan
                         </p>
                       </div>
-                      <div>
-                        <label htmlFor={eq.id}>Jumlah</label>
+                      <div className="loan-equipment-quantity">
+                        <label htmlFor={eq.id}>Jumlah diminta</label>
                         <input
                           id={eq.id}
                           type="number"
                           min={0}
                           max={eq.maxQuantity}
                           disabled={!eq.available}
-                          aria-label={"Jumlah " + eq.name}
+                          aria-label={"Jumlah " + equipmentDisplayName(eq) + " " + eq.code}
                           value={selection[eq.id] ?? 0}
                           onChange={(e) => {
                             key.current = null;
@@ -276,7 +320,11 @@ export function LoanForm() {
                     <tbody>
                       {chosen.map((eq) => (
                         <tr key={eq.id}>
-                          <td>{eq.name}</td>
+                          <td>
+                            {equipmentDisplayName(eq)}
+                            <br />
+                            <small>{eq.code}</small>
+                          </td>
                           <td>{selection[eq.id]}</td>
                         </tr>
                       ))}
@@ -286,9 +334,12 @@ export function LoanForm() {
                 <Consent />
               </>
             )}
-            {actions}
+            {step !== 0 && actions}
           </form>
-          <aside className="form-aside">{asideInfo}</aside>
+          <aside className="form-aside">
+            {asideInfo}
+            {step === 0 && actions}
+          </aside>
         </section>
       )}
     </>
@@ -303,7 +354,7 @@ type LookupRecord = {
   end?: string;
   notes?: string;
   penalty?: number;
-  items?: Array<{ name: string; requested: number; approved: number }>;
+  items?: Array<{ name: string; code?: string; requested: number; approved: number }>;
   history?: Array<{ status: string; note: string; at: string }>;
   fields?: Record<string, string>;
   revisions?: number;
@@ -388,7 +439,15 @@ export function LoanTracking({ initialCode = "" }: { initialCode?: string }) {
                 <tbody>
                   {found.record.items?.map((item, i) => (
                     <tr key={i}>
-                      <td>{item.name}</td>
+                      <td>
+                        {item.name}
+                        {item.code && (
+                          <>
+                            <br />
+                            <small>{item.code}</small>
+                          </>
+                        )}
+                      </td>
                       <td>{item.requested}</td>
                       <td>{item.approved}</td>
                     </tr>

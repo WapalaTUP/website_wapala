@@ -35,7 +35,7 @@ const fields = [
   ["name", "Nama alat"],
   ["category", "Kategori"],
   ["brand", "Merek"],
-  ["typeColor", "Tipe / warna"],
+  ["typeColor", "Jenis / tipe / warna"],
   ["source", "Sumber"],
   ["yearEntered", "Tahun masuk"],
   ["total", "Jumlah total"],
@@ -63,7 +63,9 @@ export function BackendInventory({
   const rows = equipment.filter(
     (e) =>
       !e.archived &&
-      (e.code + " " + e.name + " " + e.category).toLowerCase().includes(search.toLowerCase()),
+      (e.code + " " + e.name + " " + e.category + " " + e.typeColor + " " + e.brand)
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
   async function refresh() {
     const data = await backendApi<{ equipment: Equipment[] }>("/api/admin/inventory", csrfToken);
@@ -174,6 +176,8 @@ export function BackendInventory({
                     )}
                     <br />
                     {row.name}
+                    <br />
+                    <small>Jenis: {row.typeColor || "Belum dicatat"}</small>
                   </td>
                   <td>
                     {row.category}
@@ -253,6 +257,12 @@ export function BackendInventory({
                 <Field
                   key={key}
                   label={label}
+                  list={key === "typeColor" ? "equipment-type-options" : undefined}
+                  hint={
+                    key === "typeColor"
+                      ? "Contoh Carabiner: Autolock, Screw, Snap. Catat tiap jenis dengan kode dan stok tersendiri."
+                      : undefined
+                  }
                   type={typeof draft[key] === "number" ? "number" : "text"}
                   min={key === "maxDays" || key === "maxQuantity" ? 1 : 0}
                   value={draft[key]}
@@ -285,6 +295,11 @@ export function BackendInventory({
                 </select>
               </label>
             </div>
+            <datalist id="equipment-type-options">
+              {["Autolock", "Screw", "Snap"].map((type) => (
+                <option key={type} value={type} />
+              ))}
+            </datalist>
             {!draft.id && (
               <p className="inventory-availability-hint">
                 Alat baru disimpan sebagai tidak tersedia. Aktifkan melalui toggle pada kolom Aksi

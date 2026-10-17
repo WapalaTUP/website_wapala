@@ -216,7 +216,9 @@ export async function lookupPublicForm(input: unknown, owner: string, ctx: Reque
             tx.loan.findUnique({
               where: { code: v.code.toUpperCase() },
               include: {
-                items: { include: { equipment: { select: { name: true, code: true } } } },
+                items: {
+                  include: { equipment: { select: { name: true, code: true, typeColor: true } } },
+                },
                 history: { orderBy: { createdAt: "asc" } },
               },
             }),
@@ -243,6 +245,7 @@ export async function lookupPublicForm(input: unknown, owner: string, ctx: Reque
           notes: row.notes,
           items: loanItemsForHistory(row).map((i) => ({
             name: i.name,
+            code: i.code,
             requested: i.requested,
             approved: i.approved,
             reason: i.reason,

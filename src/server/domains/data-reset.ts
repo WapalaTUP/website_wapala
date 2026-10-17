@@ -146,7 +146,7 @@ export async function resetData(p: Principal, input: unknown, ctx: RequestContex
             where: { items: { some: {} } },
             include: {
               items: {
-                include: { equipment: { select: { code: true, name: true } } },
+                include: { equipment: { select: { code: true, name: true, typeColor: true } } },
               },
             },
           });

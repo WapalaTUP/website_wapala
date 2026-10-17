@@ -50,6 +50,9 @@ export interface Equipment {
 }
 export interface PublicEquipment {
   id: string;
+  code: string;
+  typeColor: string;
+  brand: string;
   name: string;
   category: string;
   photo: string;

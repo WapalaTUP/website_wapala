@@ -51,7 +51,10 @@ export async function publicState() {
         where: { archivedAt: null },
         select: {
           id: true,
+          code: true,
           name: true,
+          typeColor: true,
+          brand: true,
           category: true,
           photo: true,
           available: true,

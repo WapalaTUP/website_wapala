@@ -1,0 +1,78 @@
+.loan-catalog-filters {
+  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr));
+}
+.loan-catalog-grid .loan-catalog-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  align-content: start;
+}
+.loan-catalog-card.is-selected {
+  border-color: var(--field);
+  box-shadow: 0 0 0 1px var(--field);
+}
+.loan-equipment-photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  background: #f2f3ef;
+  border-bottom: 1px solid var(--border);
+}
+.loan-equipment-photo img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 20px;
+}
+.loan-equipment-placeholder {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  color: #657168;
+  font-size: 12px;
+}
+.loan-equipment-info {
+  padding: 20px 20px 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.loan-equipment-code {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.loan-catalog-card .loan-equipment-type {
+  font-size: 13px;
+  color: var(--ink);
+}
+.loan-catalog-grid .loan-catalog-card > .loan-equipment-quantity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.loan-equipment-quantity input {
+  width: 90px;
+}
+.loan-catalog-layout > .form-aside .form-actions {
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.loan-catalog-layout > .form-aside .form-actions .btn {
+  margin: 0;
+}
+.loan-catalog-layout > .form-aside .notice {
+  margin-top: 16px;
+}
+@media (max-width: 760px) {
+  .loan-catalog-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

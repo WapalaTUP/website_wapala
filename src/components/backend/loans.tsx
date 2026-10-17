@@ -217,7 +217,11 @@ export function BackendLoans({
                 <tbody>
                   {detail.items.map((i) => (
                     <tr key={i.equipmentId}>
-                      <td>{i.name}</td>
+                      <td>
+                        {i.name}
+                        <br />
+                        <small>{i.code}</small>
+                      </td>
                       <td>{i.requested}</td>
                       <td>{i.approved}</td>
                       <td>
@@ -285,7 +289,7 @@ export function BackendLoans({
                 {draft.loan.items.map((i) => (
                   <div className="form-grid" key={i.equipmentId}>
                     <Field
-                      label={i.name + " (diminta " + i.requested + ")"}
+                      label={i.name + " [" + i.code + "] (diminta " + i.requested + ")"}
                       type="number"
                       min={0}
                       max={i.requested}
@@ -329,7 +333,7 @@ export function BackendLoans({
                   .filter((i) => i.approved > 0)
                   .map((i) => (
                     <label key={i.equipmentId}>
-                      Kondisi {i.name}
+                      Kondisi {i.name} [{i.code}]
                       <select
                         required
                         value={draft.conditions[i.equipmentId]}

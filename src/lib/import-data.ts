@@ -206,7 +206,7 @@ export function applyImport(state: DemoState, kind: ImportKind, preview: ImportP
         condition: row.condition as Equipment["condition"],
         location: row.location,
         notes: row.notes,
-        available: false,
+        available: true,
         maxDays: 7,
         maxQuantity: Number(row.fit),
       });

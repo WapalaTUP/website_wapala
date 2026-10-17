@@ -1,5 +1,12 @@
 import "server-only";
 import { z } from "zod";
+import { equipmentDisplayName } from "../../lib/equipment-identity";
+
+const equipmentIdentitySchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  typeColor: z.string().default(""),
+});
 
 const historicalItem = z.object({
   equipmentId: z.uuid(),
@@ -15,7 +22,8 @@ export const archivedLoanItems = z.array(historicalItem.extend({ itemId: z.uuid(
 type LiveItem = {
   id: string;
   equipmentId: string;
-  equipment: { code: string; name: string };
+  equipment: { code: string; name: string; typeColor?: string };
+  equipmentSnapshot?: unknown;
   requested: number;
   approved: number;
   reason: string;
@@ -23,17 +31,21 @@ type LiveItem = {
   returnCondition: string;
 };
 export function snapshotLoanItems(items: LiveItem[]) {
-  return items.map((item) => ({
-    itemId: item.id,
-    equipmentId: item.equipmentId,
-    code: item.equipment.code,
-    name: item.equipment.name,
-    requested: item.requested,
-    approved: item.approved,
-    reason: item.reason,
-    outCondition: item.outCondition,
-    returnCondition: item.returnCondition,
-  }));
+  return items.map((item) => {
+    const saved = equipmentIdentitySchema.safeParse(item.equipmentSnapshot);
+    const identity = saved.success ? saved.data : item.equipment;
+    return {
+      itemId: item.id,
+      equipmentId: item.equipmentId,
+      code: identity.code,
+      name: equipmentDisplayName(identity),
+      requested: item.requested,
+      approved: item.approved,
+      reason: item.reason,
+      outCondition: item.outCondition,
+      returnCondition: item.returnCondition,
+    };
+  });
 }
 // The DTO remains unchanged: every history/invoice consumer sees the same item
 // fields whether its inventory master still exists or was permanently deleted.

@@ -31,7 +31,7 @@ export function BackendImportPreview({
   const columns =
     kind === "anggota"
       ? ["nomor", "nama", "nim", "nia", "status", "kontak"]
-      : ["code", "name", "category", "total", "fit", "condition"];
+      : ["code", "name", "typeColor", "category", "total", "fit", "condition"];
   const invalid = new Set(result.errors.map((e) => e.row));
   return (
     <section className="import-preview" aria-label="Hasil validasi impor">
@@ -98,7 +98,15 @@ export function BackendImportPreview({
         </table>
       </div>
       <div className="import-submit">
-        <p>Impor hanya menambah data baru. Batch bermasalah ditolak seluruhnya.</p>
+        <div>
+          <p>Impor hanya menambah data baru. Batch bermasalah ditolak seluruhnya.</p>
+          {kind === "inventaris" && (
+            <p>
+              Alat hasil impor langsung tersedia pada katalog peminjaman. Ketersediaan dapat diubah
+              oleh pengelola inventaris.
+            </p>
+          )}
+        </div>
         <button
           className="btn primary"
           disabled={busy || !!result.errors.length || !result.rows.length}

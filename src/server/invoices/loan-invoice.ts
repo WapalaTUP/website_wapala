@@ -10,7 +10,7 @@ import { readMedia } from "@/server/media/storage";
 import { loanItemsForHistory } from "@/server/domains/loan-history-items";
 
 const include = {
-  items: { include: { equipment: { select: { name: true, code: true } } } },
+  items: { include: { equipment: { select: { name: true, code: true, typeColor: true } } } },
 } satisfies Prisma.LoanInclude;
 
 export type InvoiceLoanRow = Prisma.LoanGetPayload<{ include: typeof include }>;

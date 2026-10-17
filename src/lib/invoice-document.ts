@@ -58,7 +58,10 @@ export function buildInvoiceDocument(loan: Loan, state: DemoState, assets: Invoi
   const rows = loan.items
     .filter((item) => item.approved > 0)
     .map((item, i) => {
-      const name = state.equipment.find((e) => e.id === item.equipmentId)?.name || item.equipmentId;
+      const equipment = state.equipment.find((e) => e.id === item.equipmentId);
+      const name = equipment
+        ? [equipment.name, equipment.code].filter(Boolean).join(" / ")
+        : item.equipmentId;
       const nameLines = doc.splitTextToSize(name, 76) as string[];
       const conditionLines = doc.splitTextToSize(item.outCondition, 23) as string[];
       return {

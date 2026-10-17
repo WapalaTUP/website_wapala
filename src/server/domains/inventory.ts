@@ -137,7 +137,11 @@ export async function publicEquipment() {
     where: { available: true, archivedAt: null },
     select: {
       id: true,
+      code: true,
       name: true,
+      typeColor: true,
+      brand: true,
+      available: true,
       category: true,
       photo: true,
       maxDays: true,
@@ -178,7 +182,7 @@ export async function importEquipment(principal: Principal, input: unknown, ctx:
           void _id;
           void _version;
           void _archived;
-          return { ...row, code: row.code.toUpperCase() };
+          return { ...row, available: true, code: row.code.toUpperCase() };
         }),
       });
       await writeAudit(tx, {
