@@ -100,8 +100,8 @@ export function ArticleEditor({
     [error, setError] = useState(""),
     [preview, setPreview] = useState(false),
     [note, setNote] = useState("");
-  const initialSnapshot = useRef(JSON.stringify({ fields, blocks }));
-  const dirty = JSON.stringify({ fields, blocks }) !== initialSnapshot.current;
+  const [initialSnapshot] = useState(() => JSON.stringify({ fields, blocks }));
+  const dirty = JSON.stringify({ fields, blocks }) !== initialSnapshot;
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
