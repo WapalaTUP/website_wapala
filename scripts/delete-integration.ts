@@ -6,9 +6,9 @@ import { Client } from "pg";
 import { parse } from "dotenv";
 import assert from "node:assert/strict";
 import { getDb } from "../src/server/db";
-import { validateTestDatabaseUrl } from "../src/server/config";
+import { validateTestDatabaseUrl, getConfig } from "../src/server/config";
 import { hashPassword } from "../src/server/security/password";
-import { digestToken } from "../src/server/security/tokens";
+import { digestToken, hmacToken } from "../src/server/security/tokens";
 import { previewDataReset, resetData } from "../src/server/domains/data-reset";
 import { loanItemsForHistory } from "../src/server/domains/loan-history-items";
 import type { Principal } from "../src/server/auth/policy";
@@ -93,6 +93,15 @@ async function main() {
     );
   }
   try {
+    // Simulate the previous release's exhausted shared operation limit.
+    const oldBucket = Math.floor(Date.now() / 900000);
+    const oldKey = hmacToken(
+      `throttle:data-reset:${p.userId}:${oldBucket}`,
+      getConfig().securityKey,
+    );
+    await db.securityThrottle.create({
+      data: { key: oldKey, count: 100, expiresAt: new Date((oldBucket + 1) * 900000) },
+    });
     await assert.rejects(
       () =>
         previewDataReset(
@@ -194,8 +203,6 @@ async function main() {
     await remove("members", cascadeMember.id);
     assert.equal(await db.user.count({ where: { id: cascadeUser.id } }), 0);
     assert.equal(await db.memberCorrection.count({ where: { memberId: cascadeMember.id } }), 0);
-    // Separate scenario; throttle cleanup is restricted to this isolated test DB.
-    await db.securityThrottle.deleteMany({});
     const eq = (code: string) =>
       db.equipment.create({
         data: {
@@ -261,8 +268,32 @@ async function main() {
     assert.equal(await db.$transaction((tx) => reservedPeak(tx, second.id)), 0);
     await remove("inventory", second.id);
     assert.equal(await db.member.count({ where: { id: untouched.id } }), 1);
+    const { verifyDataResetPassword, dataResetPasswordBucket } =
+      await import("../src/server/security/data-reset-password");
+    for (let attempt = 0; attempt < 8; attempt++) await verifyDataResetPassword(user, password);
+    let bucket = dataResetPasswordBucket(user.id);
+    assert.equal(await db.securityThrottle.count({ where: { key: bucket.key } }), 0);
+    await assert.rejects(
+      () => verifyDataResetPassword(user, "incorrect-password"),
+      rejected("PASSWORD_INVALID"),
+    );
+    bucket = dataResetPasswordBucket(user.id);
+    assert.equal(
+      (await db.securityThrottle.findUniqueOrThrow({ where: { key: bucket.key } })).count,
+      1,
+    );
+    await verifyDataResetPassword(user, password);
+    assert.equal(await db.securityThrottle.count({ where: { key: bucket.key } }), 0);
+    for (let attempt = 0; attempt < 5; attempt++)
+      await assert.rejects(() => verifyDataResetPassword(user, "incorrect-password"));
+    await assert.rejects(() => verifyDataResetPassword(user, password), rejected("RATE_LIMIT"));
+    // Previews stay available while password failures are cooling down.
+    assert.equal(
+      (await previewDataReset(p, { target: "members", id: untouched.id, mode: "delete" })).count,
+      1,
+    );
     console.log(
-      "PASS: permissions, self-delete protection, member/account/correction cascade, session/token cleanup, selected-only deletion, stale preview, active-loan equipment snapshots, borrower deletion releases reservations, invoice history preservation",
+      "PASS: permissions, self-delete protection, member/account/correction cascade, session/token cleanup, selected-only deletion, stale preview, active-loan equipment snapshots, borrower deletion releases reservations, invoice history preservation, old throttle ignored, valid passwords do not consume limits, wrong passwords throttle and reset on valid authorization",
     );
   } finally {
     await db.$disconnect();

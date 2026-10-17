@@ -5,8 +5,7 @@ import type { Prisma } from "../../generated/prisma/client";
 import { getDb } from "../db";
 import { requirePermission, type Principal } from "../auth/policy";
 import { assertFresh } from "../auth/sessions";
-import { verifyPassword } from "../security/password";
-import { takeThrottle } from "../security/throttle";
+import { verifyDataResetPassword } from "../security/data-reset-password";
 import { DomainError } from "../errors";
 import { writeAudit } from "../audit";
 import type { RequestContext } from "../security/request-context";
@@ -189,10 +188,8 @@ export async function previewDataReset(p: Principal, input: unknown) {
 export async function resetData(p: Principal, input: unknown, ctx: RequestContext) {
   requirePermission(p, "data:reset");
   const v = resetSchema.parse(input);
-  await takeThrottle("data-reset:" + p.userId, 5, 900000);
   const old = await getDb().user.findUniqueOrThrow({ where: { id: p.userId } });
-  if (!(await verifyPassword(old.passwordHash, v.password)))
-    throw new DomainError("PASSWORD_INVALID", 400, "Password Super User tidak sesuai.");
+  await verifyDataResetPassword(old, v.password);
   return getDb().$transaction(
     async (tx) => {
       // Match requestLoan/management reset: advisory lock precedes user/row locks.
