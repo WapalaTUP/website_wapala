@@ -14,6 +14,7 @@ export function AlbumMediaView({
   onPlaybackChange?: (playing: boolean) => void;
 }) {
   const figureRef = useRef<HTMLElement>(null);
+  const playerRef = useRef<HTMLIFrameElement>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [inView, setInView] = useState(false);
@@ -33,7 +34,7 @@ export function AlbumMediaView({
   if (external?.type === "tiktok") {
     const params = new URLSearchParams({
       autoplay: "1",
-      muted: manualOpen ? "0" : "1",
+      muted: "0",
       description: "0",
       music_info: "0",
       rel: "0",
@@ -90,6 +91,7 @@ export function AlbumMediaView({
           {embedOpen ? (
             <>
               <iframe
+                ref={playerRef}
                 src={embedSrc}
                 title={item.caption || `Video ${item.type}`}
                 loading="lazy"
@@ -100,8 +102,19 @@ export function AlbumMediaView({
               />
               <div className="album-embed-actions">
                 {autoStarting && !manualOpen && (
-                  <button type="button" onClick={() => setManualOpen(true)}>
-                    Putar dengan suara
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualOpen(true);
+                      for (const type of ["unMute", "play"]) {
+                        playerRef.current?.contentWindow?.postMessage(
+                          { type, "x-tiktok-player": true },
+                          "https://www.tiktok.com",
+                        );
+                      }
+                    }}
+                  >
+                    Putar video
                   </button>
                 )}
                 <button
