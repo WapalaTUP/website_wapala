@@ -1,10 +1,10 @@
 .flipbook-reader {
-  background: #edf0eb;
+  background: var(--surface);
   padding: 28px 0 40px;
 }
 .flipbook-reader:fullscreen {
   overflow: auto;
-  background: #edf0eb;
+  background: var(--surface);
 }
 .flipbook-reader .reader-toolbar {
   gap: 24px;
@@ -33,7 +33,9 @@
   max-height: 82vh;
   overflow: auto;
   padding: 16px;
-  background: #fafbf8;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 .reader-thumbnail-grid {
   display: grid;
@@ -47,8 +49,8 @@
   gap: 6px;
   border: 2px solid transparent;
   padding: 5px;
-  background: #e7ebe4;
-  color: #25382b;
+  background: var(--surface);
+  color: var(--ink);
   border-radius: 4px;
 }
 .reader-thumbnail canvas {
@@ -66,8 +68,8 @@
   place-items: center;
 }
 .flipbook-reader .reader-navigation .reader-thumbnail[aria-current="page"] {
-  border-color: #375b3c;
-  background: #d6e1ce;
+  border-color: var(--field);
+  background: var(--success);
 }
 .reader-thumbnail-paging {
   display: flex;
@@ -90,8 +92,11 @@
   min-height: 60vh;
   max-height: 82vh;
   background: #dbe0d6;
-  border: 1px solid #c9d1c3;
+  border: 1px solid var(--border);
   border-radius: 8px;
+}
+:root[data-theme="dark"] .flipbook-reader .book-stage {
+  background: #101b17;
 }
 .flipbook-reader .book-spread {
   padding: 8px 0 14px;
@@ -106,7 +111,7 @@
   grid-column: 1 / -1;
   margin: 0;
   font-size: 12px;
-  color: #52604e;
+  color: var(--muted);
   text-align: center;
 }
 @keyframes reader-turn-forward {

@@ -14,7 +14,7 @@ import { getPublicAlbums, albumDate } from "@/lib/gallery";
 import { PageIntro } from "./page-intro";
 import { useSearchParams } from "next/navigation";
 import { AlbumMediaView } from "./album-media";
-import { CONTENT_TAGS } from "@/lib/content-tags";
+import { DEFAULT_CONTENT_TAGS } from "@/lib/content-tags";
 import { DivisionPage } from "./division-page";
 import { NewsPage } from "./articles/news-page";
 import { EventPages } from "./events/event-pages";
@@ -421,7 +421,7 @@ function Gallery({ id }: { id?: string }) {
               <Link href="/galeri" className={!tag ? "active" : ""}>
                 Semua
               </Link>
-              {CONTENT_TAGS.map((t) => (
+              {(state.contentTags ?? [...DEFAULT_CONTENT_TAGS]).map((t) => (
                 <Link
                   key={t}
                   className={tag === t ? "active" : ""}

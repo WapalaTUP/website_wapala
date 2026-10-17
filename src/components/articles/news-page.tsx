@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useDemo } from "@/lib/store";
 import { date } from "@/lib/content";
-import { CONTENT_TAGS, parseContentTags, hasContentTag } from "@/lib/content-tags";
+import { DEFAULT_CONTENT_TAGS, parseContentTags, hasContentTag } from "@/lib/content-tags";
 import type { RecordRow } from "@/lib/types";
 import { ArticleBody } from "./article-body";
 import { Empty, Pagination } from "../ui";
@@ -42,7 +42,7 @@ export function NewsPage({
   slug?: string;
   announcement?: boolean;
 }) {
-  const { records } = useDemo();
+  const { records, contentTags = [...DEFAULT_CONTENT_TAGS] } = useDemo();
   const search = useSearchParams();
   const tag = search.get("tag") || "";
   const [page, setPage] = useState(1);
@@ -68,7 +68,7 @@ export function NewsPage({
       <article className="news-article">
         <nav className="news-topic-bar" aria-label="Topik berita">
           <Link href="/berita">Kabar WAPALA</Link>
-          {CONTENT_TAGS.map((t) => (
+          {contentTags.map((t) => (
             <Link key={t} href={"/berita?tag=" + encodeURIComponent(t)}>
               {t}
             </Link>
@@ -166,7 +166,7 @@ export function NewsPage({
         >
           Semua
         </Link>
-        {CONTENT_TAGS.map((t) => (
+        {contentTags.map((t) => (
           <Link
             key={t}
             className={tag === t ? "active" : ""}

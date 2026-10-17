@@ -94,12 +94,6 @@ export function DivisionPage({ slug }: { slug?: string }) {
             </article>
           ))}
         </div>
-        <p className="division-source">
-          Bahan pengenalan:{" "}
-          <a href={guide.source} target="_blank" rel="noopener noreferrer">
-            {guide.book} WAPALA ↗
-          </a>
-        </p>
       </section>
       <div id="cerita-divisi">
         {posts.length > 0 && (
