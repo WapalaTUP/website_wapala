@@ -165,3 +165,39 @@
     min-height: 480px;
   }
 }
+
+/* Native video players follow the album's chosen orientation. */
+.album-media-embed--tiktok,
+.album-media-embed--youtube {
+  width: 100%;
+}
+.album-media-embed--tiktok iframe,
+.album-media-embed--youtube iframe {
+  max-width: none;
+  height: auto;
+  min-height: 200px;
+  background: #101714;
+}
+.album-media--landscape .album-media-embed--tiktok iframe,
+.album-media--landscape .album-media-embed--youtube iframe {
+  aspect-ratio: 16 / 9;
+}
+.album-media--portrait .album-media-embed--tiktok iframe,
+.album-media--portrait .album-media-embed--youtube iframe {
+  aspect-ratio: 9 / 16;
+  max-width: 380px;
+}
+.album-embed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.album-embed-actions button {
+  border: 1px solid #4a6655;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #19291f;
+  color: #fff;
+  cursor: pointer;
+}

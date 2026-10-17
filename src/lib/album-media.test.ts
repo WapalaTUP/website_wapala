@@ -73,3 +73,50 @@ test("media payload rejects external uploads, malformed JSON, duplicate IDs and 
   );
   assert.deepEqual(parseAlbumMedia({ gambar: "javascript:alert(1)" }), []);
 });
+
+test("YouTube album links normalize supported formats and reject lookalike hosts", () => {
+  const id = "M7lc1UVf-VE";
+  for (const value of [
+    `https://www.youtube.com/watch?v=${id}&feature=shared`,
+    `https://m.youtube.com/watch?v=${id}`,
+    `https://youtu.be/${id}?si=tracking`,
+    `https://www.youtube.com/shorts/${id}`,
+    `https://www.youtube.com/embed/${id}`,
+    `https://www.youtube-nocookie.com/embed/${id}`,
+  ]) {
+    const external = parseExternalAlbumUrl(value);
+    assert.equal(external?.type, "youtube");
+    assert.equal(external?.src, `https://www.youtube.com/watch?v=${id}`);
+    assert.equal(external?.embed, `https://www.youtube-nocookie.com/embed/${id}`);
+    assert.equal(
+      albumMediaItemsSchema.safeParse([
+        {
+          id: "youtube-video",
+          type: "youtube",
+          src: value,
+          orientation: "landscape",
+        },
+      ]).success,
+      true,
+    );
+  }
+  for (const value of [
+    `https://youtube.com.evil.test/watch?v=${id}`,
+    `https://youtube.com@evil.test/watch?v=${id}`,
+    `https://www.youtube.com:8443/watch?v=${id}`,
+    "https://www.youtube.com/watch?v=short",
+    `https://youtu.be/${id}/extra`,
+    `https://www.youtube.com/playlist?list=${id}`,
+  ])
+    assert.equal(parseExternalAlbumUrl(value), null);
+  assert.equal(
+    albumMediaItemsSchema.safeParse([
+      {
+        id: "bad-type",
+        type: "tiktok",
+        src: `https://youtu.be/${id}`,
+      },
+    ]).success,
+    false,
+  );
+});

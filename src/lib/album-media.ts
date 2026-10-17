@@ -19,6 +19,24 @@ export function parseExternalAlbumUrl(value: string) {
         embed: `https://www.tiktok.com/player/v1/${tiktok[1]}`,
       };
     }
+    let youtubeId = "";
+    if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(host)) {
+      youtubeId =
+        url.pathname === "/watch"
+          ? url.searchParams.get("v") || ""
+          : url.pathname.match(/^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})\/?$/)?.[1] || "";
+    } else if (["youtu.be", "www.youtu.be"].includes(host)) {
+      youtubeId = url.pathname.match(/^\/([A-Za-z0-9_-]{11})\/?$/)?.[1] || "";
+    } else if (host === "www.youtube-nocookie.com") {
+      youtubeId = url.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})\/?$/)?.[1] || "";
+    }
+    if (/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) {
+      return {
+        type: "youtube" as const,
+        src: `https://www.youtube.com/watch?v=${youtubeId}`,
+        embed: `https://www.youtube-nocookie.com/embed/${youtubeId}`,
+      };
+    }
   } catch {
     /* Invalid and untrusted URLs do not become embeds. */
   }
@@ -32,7 +50,7 @@ export const albumMediaItemSchema = z
       .min(1)
       .max(100)
       .regex(/^[A-Za-z0-9_-]+$/),
-    type: z.enum(["image", "video", "instagram", "tiktok"]),
+    type: z.enum(["image", "video", "instagram", "tiktok", "youtube"]),
     src: z.string().min(1).max(2048),
     caption: z.string().max(500).default(""),
     orientation: z.enum(["portrait", "landscape"]).default("landscape"),
@@ -47,7 +65,7 @@ export const albumMediaItemSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["src"],
-        message: "Gunakan unggahan terdaftar atau tautan Instagram/TikTok yang valid.",
+        message: "Gunakan unggahan terdaftar atau tautan Instagram/TikTok/YouTube yang valid.",
       });
   });
 export const albumMediaItemsSchema = z

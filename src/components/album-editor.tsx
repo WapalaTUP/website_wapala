@@ -85,7 +85,7 @@ export function AlbumMediaEditor({
   function addExternal() {
     const external = parseExternalAlbumUrl(url.trim());
     if (!external) {
-      setError("Masukkan tautan posting/reel Instagram atau video TikTok lengkap.");
+      setError("Masukkan tautan posting/reel Instagram, video TikTok lengkap, atau video YouTube.");
       return;
     }
     if (items.length >= 500) {
@@ -99,7 +99,8 @@ export function AlbumMediaEditor({
         type: external.type,
         src: external.src,
         caption: "",
-        orientation: "portrait",
+        orientation:
+          external.type === "youtube" && !url.includes("/shorts/") ? "landscape" : "portrait",
       },
     ]);
     setUrl("");
@@ -118,7 +119,10 @@ export function AlbumMediaEditor({
   return (
     <fieldset className="album-editor" disabled={busy}>
       <legend>Media album</legend>
-      <p>Susun foto, video MP4, serta tautan Instagram/TikTok. Tag berlaku untuk seluruh album.</p>
+      <p>
+        Susun foto, video MP4, serta tautan Instagram/TikTok/YouTube. Tag berlaku untuk seluruh
+        album.
+      </p>
       <label>
         Unggah foto atau video
         <input
@@ -134,10 +138,10 @@ export function AlbumMediaEditor({
       <small>Foto maksimal 5 MB. Video MP4 H.264/H.265 maksimal 50 MB, 20 menit, dan 4K.</small>
       <div className="album-editor-link">
         <label>
-          Tautan Instagram / TikTok
+          Tautan Instagram / TikTok / YouTube
           <input
             type="url"
-            placeholder="https://www.instagram.com/reel/..."
+            placeholder="https://www.youtube.com/watch?v=..."
             value={url}
             onChange={(event) => setUrl(event.target.value)}
           />
@@ -151,7 +155,7 @@ export function AlbumMediaEditor({
       <ol className="album-editor-items">
         {items.map((item, index) => (
           <li key={item.id}>
-            <AlbumMediaView item={item} />
+            <AlbumMediaView item={item} autoPlay={false} />
             <div className="album-editor-controls">
               <strong>
                 Media {index + 1} · {item.type}

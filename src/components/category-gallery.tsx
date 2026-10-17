@@ -78,7 +78,12 @@ export function CategoryGallery() {
               onFocus={() => setPaused(true)}
             >
               {media && media.type !== "image" ? (
-                <AlbumMediaView key={media.id} item={media} onPlaybackChange={playbackChange} />
+                <AlbumMediaView
+                  key={media.id}
+                  item={media}
+                  autoPlay={offset === 0}
+                  onPlaybackChange={playbackChange}
+                />
               ) : (
                 <Link className="moment-image" href={"/galeri/" + p.album.id}>
                   <Image
