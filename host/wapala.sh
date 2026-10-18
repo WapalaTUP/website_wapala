@@ -303,7 +303,7 @@ manage_flow() {
   4) Rollback ke release sebelumnya
   5) Backup database + media
   6) Prune maintenance manual
-  7) Pasang ClamAV (jika belum)
+  7) Pasang/periksa ClamAV + dukungan video (FFmpeg)
   8) Import Album awal (paket publik import-packages)
   9) Info sertifikat TLS
   u) Update kode repo ini (git pull)
@@ -451,14 +451,35 @@ backup_flow() {
   fi
 }
 
+video_tools_setup() {
+  if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+    run "apt-get update dan install ffmpeg (termasuk ffprobe)"
+    if ! apt-get update || ! apt-get install -y ffmpeg; then
+      err "Pemasangan FFmpeg gagal. Periksa koneksi/repository apt, lalu ulangi menu 7."
+      return 1
+    fi
+  fi
+  local probe
+  probe="$(sed -n 's/^MEDIA_FFPROBE=//p' "$ENV_FILE" | tail -n 1)"
+  probe="${probe:-$(command -v ffprobe)}"
+  if sudo -u "$RUNTIME_USER" "$probe" -version >/dev/null 2>&1; then
+    ok "FFmpeg tersedia; ffprobe dapat dijalankan oleh $RUNTIME_USER."
+  else
+    err "ffprobe tidak dapat dijalankan oleh $RUNTIME_USER. Periksa MEDIA_FFPROBE di $ENV_FILE dan izin executable."
+    return 1
+  fi
+}
+
 clamav_flow() {
   if grep -q '^MEDIA_SCANNER=' "$ENV_FILE" && ! grep -q '^# MEDIA_SCANNER' "$ENV_FILE"; then
     ok "MEDIA_SCANNER sudah aktif di env."
     systemctl is-active --quiet clamav-daemon && ok "clamav-daemon active." ||
       warn "clamav-daemon tidak aktif: sudo systemctl restart clamav-daemon"
+    video_tools_setup
     return
   fi
-  confirm "Pasang ClamAV sekarang? (~1-1.5 GB RAM tambahan)" y || return
+  confirm "Pasang ClamAV + dukungan video FFmpeg sekarang? (~1-1.5 GB RAM tambahan untuk ClamAV)" y || return
+  video_tools_setup || return 1
   run "apt-get install clamav clamav-daemon clamav-freshclam"
   apt-get install -y clamav clamav-daemon clamav-freshclam
   run "freshclam (5-15 menit)"
