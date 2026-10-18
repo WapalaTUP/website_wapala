@@ -36,3 +36,17 @@ Pengenalan dirangkum dari diktat WAPALA pada AnyFlip; ringkasan bukan salinan pe
 - Rafting: https://anyflip.com/sdvoe/pldf/
 - SAR: https://anyflip.com/sdvoe/vpaz/
 - Konservasi: https://anyflip.com/sdvoe/syle/
+
+## Perbaikan penyimpanan video album (18 Oktober 2026)
+
+Migration `202610180003_album_video_media` memperluas constraint Media agar MP4 berpurpose `content-video` bisa tersimpan sebagai media publik. Migration sebelumnya hanya mengizinkan ekstensi WebP/PDF/EPUB dan media publik gambar WebP, sehingga video yang lolos pemeriksaan akan gagal saat INSERT (HTTP 500). Foto dan buku lama dipertahankan; PDF/EPUB tetap tidak boleh menjadi media publik.
+
+Deploy lewat alur update `wapala.sh` dengan migration aktif (jangan gunakan `WAPALA_SKIP_MIGRATE=1`). Tidak ada perubahan data atau kebutuhan unggah ulang foto lama. Setelah deploy, unggah ulang video yang sebelumnya gagal. Pemeriksaan `ffprobe` dan pemindaian keamanan tetap berlaku.
+
+Tes PostgreSQL ditambahkan pada `tests/media-video-constraints.test.ts`. Tes memakai database khusus berakhiran `_test` melalui `MEDIA_TEST_DATABASE_URL`, menyalin migration ke tabel sementara, mereproduksi penolakan MP4 pada skema lama, lalu memeriksa penerimaan MP4 dan penolakan media publik yang tidak diizinkan setelah migration baru. Seluruh transaksi di-rollback; tabel aplikasi tidak disentuh. Jalankan di VPS dengan env test yang telah disiapkan:
+
+```sh
+node --conditions=react-server --import tsx --test tests/media-video-constraints.test.ts
+```
+
+Tanpa `MEDIA_TEST_DATABASE_URL`, tes ini dilewati. Tes/build tidak dijalankan di komputer lokal sesuai instruksi pengguna.
