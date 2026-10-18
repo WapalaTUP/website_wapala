@@ -61,3 +61,23 @@ Tanpa `MEDIA_TEST_DATABASE_URL`, tes ini dilewati. Tes/build tidak dijalankan di
 Referensi: [kebijakan autoplay browser](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay), [parameter YouTube](https://developers.google.com/youtube/player_parameters), [pemutar TikTok](https://developers.tiktok.com/docs/en/embed-player).
 
 Tes kebijakan pemutaran ditambahkan pada `tests/album-autoplay.test.ts`, belum dijalankan lokal. Di VPS jalankan `node --conditions=react-server --import tsx --test tests/album-autoplay.test.ts`, lalu periksa MP4, TikTok, YouTube, Instagram, scroll keluar layar, tab latar, reduced motion, serta preview editor di browser. Perubahan autoplay ini tidak memerlukan migration baru.
+
+## Kompatibilitas ffprobe Hostdata (FFmpeg 4.4)
+
+Reproduksi di Hostdata menunjukkan `No match for section 'stream_side_data'`. Binary Ubuntu 22.04/FFmpeg 4.4 tidak menerima alias section itu sehingga proses berhenti sebelum membaca video. Validator menggunakan nama section bersama `side_data=rotation`, yang juga tersedia pada versi baru. Pembacaan orientasi, codec, dimensi, durasi, batas input/output, timeout, dan pembatasan protokol tetap berlaku. Tidak perlu upgrade paket melalui repository tambahan.
+
+Perbaikan kode ini memerlukan build/deploy baru; tidak ada migration. Tes fixture MP4 dan rotasi yang sudah ada mencakup jalur ini, tetapi belum dijalankan lokal sesuai instruksi pengguna. Jika checkout tempat menjalankan test belum memiliki `node_modules`, jangan menganggap kegagalan `Cannot find package 'tsx'` sebagai kegagalan video. Pengelola dapat memeriksa kompatibilitas CLI di VPS tanpa instalasi npm, dari root checkout yang memiliki fixture:
+
+```sh
+sudo -u wapala /usr/bin/ffprobe \
+  -v error -threads 1 -max_alloc 67108864 \
+  -protocol_whitelist pipe \
+  -probesize 52428800 -analyzeduration 10000000 \
+  -show_entries 'stream=codec_type,codec_name,width,height:side_data=rotation:format=format_name,duration' \
+  -of json pipe:0 \
+  < src/server/media/fixtures/album-video.mp4
+```
+
+Harus keluar JSON berisi video `h264`, ukuran `160 × 120`, dan durasi positif. Untuk fixture `album-video-portrait.mp4`, periksa `side_data_list` memuat rotasi sehingga validator menghasilkan orientasi portrait. Pemeriksaan CLI tidak menggantikan uji upload melalui aplikasi setelah deploy, terutama karena service systemd memakai sandbox tersendiri.
+
+Referensi: [section ffprobe](https://ffmpeg.org/ffprobe.html#Main-options), [definisi section pada FFmpeg 4.4](https://github.com/FFmpeg/FFmpeg/blob/n4.4/fftools/ffprobe.c).

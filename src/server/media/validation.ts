@@ -57,7 +57,8 @@ export async function sanitizeVideo(bytes: Buffer, mime: string) {
         "-analyzeduration",
         "10000000",
         "-show_entries",
-        "stream=codec_type,codec_name,width,height:stream_side_data=rotation:format=format_name,duration",
+        // FFmpeg 4.4 exposes this section as side_data, without the newer unique alias.
+        "stream=codec_type,codec_name,width,height:side_data=rotation:format=format_name,duration",
         "-of",
         "json",
         "pipe:0",
