@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { parseExternalAlbumUrl, type AlbumMediaItem } from "@/lib/album-media";
+import { albumPlaybackEmbed, playAlbumVideo } from "@/lib/album-autoplay";
 import "./album-media.css";
 
 export function AlbumMediaView({
@@ -15,6 +16,7 @@ export function AlbumMediaView({
 }) {
   const figureRef = useRef<HTMLElement>(null);
   const playerRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [inView, setInView] = useState(false);
@@ -28,32 +30,26 @@ export function AlbumMediaView({
       : external?.type === "youtube"
         ? "YouTube"
         : "TikTok";
-  const autoStarting = autoPlay && item.type === "tiktok" && inView && !dismissed;
+  const autoStarting = autoPlay && !!external && inView && !dismissed;
   const embedOpen = manualOpen || autoStarting;
-  let embedSrc = external?.embed;
-  if (external?.type === "tiktok") {
-    const params = new URLSearchParams({
-      autoplay: "1",
-      muted: "0",
-      description: "0",
-      music_info: "0",
-      rel: "0",
-    });
-    embedSrc = `${external.embed}?${params}`;
-  } else if (external?.type === "youtube") {
-    embedSrc = `${external.embed}?autoplay=1&playsinline=1&rel=0`;
-  }
+  const embedSrc = external ? albumPlaybackEmbed(item.src) : undefined;
   useEffect(() => {
-    if (!autoPlay || item.type !== "tiktok" || !figureRef.current) return;
+    if (!autoPlay || item.type === "image" || !figureRef.current) return;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let intersecting = false;
-    const refresh = () => setInView(intersecting && !motion.matches && !document.hidden);
+    const refresh = () => {
+      setInView(intersecting && !motion.matches && !document.hidden);
+      if (!intersecting || document.hidden) {
+        setManualOpen(false);
+        videoRef.current?.pause();
+      }
+    };
     const observer = new IntersectionObserver(
       ([entry]) => {
-        intersecting = entry.isIntersecting;
+        intersecting = entry.isIntersecting && entry.intersectionRatio >= 0.25;
         refresh();
       },
-      { threshold: 0 },
+      { threshold: [0, 0.25] },
     );
     observer.observe(figureRef.current);
     motion.addEventListener("change", refresh);
@@ -64,6 +60,17 @@ export function AlbumMediaView({
       document.removeEventListener("visibilitychange", refresh);
     };
   }, [autoPlay, item.id, item.type]);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (item.type !== "video" || !video) return;
+    let active = autoPlay && inView;
+    if (active) void playAlbumVideo(video, () => active);
+    else video.pause();
+    return () => {
+      active = false;
+      video.pause();
+    };
+  }, [autoPlay, inView, item.id, item.src, item.type]);
   const externalSrc = external?.src;
   useEffect(() => {
     if (externalSrc && embedOpen) onPlaybackChange?.(true);
@@ -76,6 +83,7 @@ export function AlbumMediaView({
       )}
       {item.type === "video" && (
         <video
+          ref={videoRef}
           src={item.src}
           controls
           playsInline
@@ -101,7 +109,7 @@ export function AlbumMediaView({
                 referrerPolicy="strict-origin-when-cross-origin"
               />
               <div className="album-embed-actions">
-                {autoStarting && !manualOpen && (
+                {autoStarting && !manualOpen && external.type === "tiktok" && (
                   <button
                     type="button"
                     onClick={() => {
@@ -139,6 +147,9 @@ export function AlbumMediaView({
               Putar dari {provider}
               <small>Memuat konten dari layanan terkait</small>
             </button>
+          )}
+          {embedOpen && external.type === "instagram" && (
+            <small>Ketuk Play pada pemutar Instagram untuk memulai video dengan suara.</small>
           )}
           <a href={external.src} target="_blank" rel="noopener noreferrer">
             Buka di {provider}

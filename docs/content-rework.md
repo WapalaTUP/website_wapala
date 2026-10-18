@@ -50,3 +50,14 @@ node --conditions=react-server --import tsx --test tests/media-video-constraints
 ```
 
 Tanpa `MEDIA_TEST_DATABASE_URL`, tes ini dilewati. Tes/build tidak dijalankan di komputer lokal sesuai instruksi pengguna.
+
+## Autoplay album
+
+- MP4 unggahan mencoba `play()` dengan suara saat minimal 25% pemutar terlihat dan tab aktif. Jika browser menolak dengan `NotAllowedError`, pemutar mencoba sekali lagi tanpa suara; kontrol volume/play tetap tersedia. Kesalahan sumber video tidak memicu percobaan mute.
+- TikTok dan YouTube dimuat otomatis saat terlihat dengan parameter autoplay. TikTok memakai `muted=0`; YouTube tidak dimute oleh aplikasi. Browser atau preferensi pemutar tetap dapat memblokir suara sebelum interaksi.
+- Instagram dimuat otomatis, tetapi pemutaran tetap memakai tombol Play pada embed Instagram. Tidak ada parameter autoplay/unmute yang dipaksakan pada iframe Instagram.
+- Video dijeda dan embed ditutup saat keluar layar atau tab tidak aktif. Preferensi reduced motion menonaktifkan pemutaran otomatis; pemutaran manual tetap tersedia. Preview editor dan panel album berikutnya tetap manual.
+
+Referensi: [kebijakan autoplay browser](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay), [parameter YouTube](https://developers.google.com/youtube/player_parameters), [pemutar TikTok](https://developers.tiktok.com/docs/en/embed-player).
+
+Tes kebijakan pemutaran ditambahkan pada `tests/album-autoplay.test.ts`, belum dijalankan lokal. Di VPS jalankan `node --conditions=react-server --import tsx --test tests/album-autoplay.test.ts`, lalu periksa MP4, TikTok, YouTube, Instagram, scroll keluar layar, tab latar, reduced motion, serta preview editor di browser. Perubahan autoplay ini tidak memerlukan migration baru.
