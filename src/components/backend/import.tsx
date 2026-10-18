@@ -30,7 +30,7 @@ export function BackendImportPreview({
 }) {
   const columns =
     kind === "anggota"
-      ? ["nomor", "nama", "nim", "nia", "status", "kontak"]
+      ? ["nomor", "nama", "nim", "nia", "angkatan", "angkatan_wapala", "status", "kontak"]
       : ["code", "name", "typeColor", "category", "total", "fit", "condition"];
   const invalid = new Set(result.errors.map((e) => e.row));
   return (

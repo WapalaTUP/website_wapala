@@ -7,6 +7,7 @@ import { getDb } from "../db";
 import { requirePermission, type Principal } from "../auth/policy";
 import { assertFresh } from "../auth/sessions";
 import { applicantFields, periodSchema } from "./recruitment";
+import { mergedMemberFields } from "../../lib/member-fields";
 import { memberFields } from "../../lib/operational-schema";
 import { listArchives } from "./archives";
 import { readMedia } from "../media/storage";
@@ -48,7 +49,7 @@ export async function exportOperational(
           return {
             headers: keys.map((k) => k.replaceAll("_", " ")),
             values: rows.map((r) => {
-              const fields = memberFields.parse(r.fields);
+              const fields = mergedMemberFields(r);
               return keys.map((k) => fields[k]);
             }),
           };

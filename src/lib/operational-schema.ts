@@ -13,6 +13,7 @@ export const memberFields = z
     nim: text.max(40),
     prodi: text.min(1),
     angkatan: text.min(1),
+    angkatan_wapala: optional,
     jenis_kelamin: z.enum(["Laki-laki", "Perempuan"]),
     nia: text.min(1).max(60),
     status: z.enum(["Aktif", "AB", "AM", "ALB", "AK"]),

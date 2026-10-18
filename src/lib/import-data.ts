@@ -13,6 +13,7 @@ export const importFields: Record<ImportKind, string[]> = {
     "nim",
     "prodi",
     "angkatan",
+    "angkatan_wapala",
     "jenis_kelamin",
     "nia",
     "status",

@@ -15,6 +15,7 @@ import { articleBlocksSchema } from "../../lib/article-content";
 import { albumMediaItemsSchema } from "../../lib/album-media";
 import { parseMediaUrl } from "../../lib/media-url";
 import { splitContentFields, mergedContentFields } from "../../lib/content-compatibility";
+import { legacyMemberFields, mergedMemberFields } from "../../lib/member-fields";
 export { memberFields } from "../../lib/operational-schema";
 const text = z.string().trim().max(300);
 const optional = text.optional().default("");
@@ -50,7 +51,7 @@ export async function listMembers(principal: Principal) {
     return rows.map((m) => ({
       id: m.id,
       version: m.version,
-      fields: memberFields.parse(m.fields),
+      fields: mergedMemberFields(m),
       archived: !!m.archivedAt,
     }));
   });
@@ -85,7 +86,8 @@ export async function importMembers(principal: Principal, input: unknown, ctx: R
         data: rows.map((fields) => ({
           nia: fields.nia.toLowerCase(),
           nim: fields.nim ? fields.nim.toLowerCase() : null,
-          fields,
+          fields: legacyMemberFields(fields),
+          angkatanWapala: fields.angkatan_wapala,
         })),
       });
       await writeAudit(tx, {
@@ -117,7 +119,10 @@ export async function saveMember(principal: Principal, input: unknown, ctx: Requ
       const data = {
         nia: v.fields.nia.toLowerCase(),
         nim: v.fields.nim ? v.fields.nim.toLowerCase() : null,
-        fields: v.fields,
+        fields: legacyMemberFields(v.fields),
+        ...(Object.hasOwn((input as { fields: object }).fields, "angkatan_wapala")
+          ? { angkatanWapala: v.fields.angkatan_wapala }
+          : {}),
         archivedAt: v.archived ? new Date() : null,
       };
       const row = v.id
@@ -137,7 +142,7 @@ export async function saveMember(principal: Principal, input: unknown, ctx: Requ
       return {
         id: row.id,
         version: row.version,
-        fields: memberFields.parse(row.fields),
+        fields: mergedMemberFields(row),
         archived: !!row.archivedAt,
       };
     });

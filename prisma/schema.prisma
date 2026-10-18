@@ -232,6 +232,7 @@ model PublicFormReceipt {
 model Member {
   user User?
   corrections MemberCorrection[]
+  angkatanWapala String @default("")
   id         String @id @default(uuid()) @db.Uuid
   version    Int @default(1)
   nia        String @unique

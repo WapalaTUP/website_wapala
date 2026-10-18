@@ -9,7 +9,7 @@ const labels = {
   nama: "Nama lengkap",
   nim: "NIM",
   prodi: "Program studi",
-  angkatan: "Angkatan",
+  angkatan: "Angkatan kuliah",
   jenis_kelamin: "Jenis kelamin",
   kontak: "Kontak",
 } as const;
@@ -101,14 +101,15 @@ export function BackendMemberPortal({
             <tr>
               <th>Nama / NIA</th>
               <th>Program studi</th>
-              <th>Angkatan</th>
+              <th>Angkatan kuliah</th>
+              <th>Angkatan WAPALA</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {data.directory
               .filter((r) =>
-                (r.nama + " " + r.nia + " " + r.angkatan)
+                (r.nama + " " + r.nia + " " + r.angkatan + " " + r.angkatan_wapala)
                   .toLowerCase()
                   .includes(search.toLowerCase()),
               )
@@ -121,6 +122,7 @@ export function BackendMemberPortal({
                   </td>
                   <td>{r.prodi}</td>
                   <td>{r.angkatan}</td>
+                  <td>{r.angkatan_wapala || "—"}</td>
                   <td>{r.status}</td>
                 </tr>
               ))}

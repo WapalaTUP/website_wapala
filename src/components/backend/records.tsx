@@ -26,7 +26,8 @@ export const recordFields: Record<Kind, Array<[string, string, string[]?]>> = {
     ["nama", "Nama"],
     ["nim", "NIM"],
     ["prodi", "Program studi"],
-    ["angkatan", "Angkatan"],
+    ["angkatan", "Angkatan kuliah"],
+    ["angkatan_wapala", "Angkatan WAPALA"],
     ["jenis_kelamin", "Jenis kelamin", ["Laki-laki", "Perempuan"]],
     ["nia", "NIA"],
     ["status", "Status", ["Aktif", "AB", "AM", "ALB", "AK"]],
@@ -195,7 +196,7 @@ export function BackendRecords({
           <table>
             <thead>
               <tr>
-                {recordFields[kind].slice(0, 4).map(([key, label]) => (
+                {recordFields[kind].slice(0, kind === "anggota" ? 6 : 4).map(([key, label]) => (
                   <th key={key}>{label}</th>
                 ))}
                 <th>Aksi</th>
@@ -205,7 +206,7 @@ export function BackendRecords({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  {recordFields[kind].slice(0, 4).map(([key]) => (
+                  {recordFields[kind].slice(0, kind === "anggota" ? 6 : 4).map(([key]) => (
                     <td key={key}>{row.fields[key] || "—"}</td>
                   ))}
                   <td>

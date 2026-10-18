@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "../db";
 import { assertFresh } from "../auth/sessions";
 import { requirePermission, type Principal } from "../auth/policy";
+import { legacyMemberFields, mergedMemberFields } from "../../lib/member-fields";
 import { memberFields } from "../../lib/operational-schema";
 import { DomainError } from "../errors";
 import { writeAudit } from "../audit";
@@ -40,13 +41,14 @@ export async function memberPortal(p: Principal) {
       take: 2000,
     });
     const directory = members.map((m) => {
-      const f = memberFields.parse(m.fields);
+      const f = mergedMemberFields(m);
       return {
         id: m.id,
         nama: f.nama,
         nia: f.nia,
         prodi: f.prodi,
         angkatan: f.angkatan,
+        angkatan_wapala: f.angkatan_wapala,
         status: f.status,
       };
     });
@@ -57,7 +59,7 @@ export async function memberPortal(p: Principal) {
           ? {
               id: own.id,
               version: own.version,
-              fields: memberFields.parse(own.fields),
+              fields: mergedMemberFields(own),
             }
           : null,
       requests: await tx.memberCorrection.findMany({
@@ -116,7 +118,7 @@ export async function requestCorrection(p: Principal, input: unknown, ctx: Reque
         memberId: member.id,
         requesterId: p.userId,
         baseVersion: member.version,
-        proposed,
+        proposed: legacyMemberFields(proposed),
       },
     });
     await writeAudit(tx, {
@@ -147,8 +149,8 @@ export async function listCorrections(p: Principal, cursor?: string) {
       note: r.note,
       baseVersion: r.baseVersion,
       memberId: r.memberId,
-      current: memberFields.parse(r.member.fields),
-      proposed: memberFields.parse(r.proposed),
+      current: mergedMemberFields(r.member),
+      proposed: mergedMemberFields({ fields: r.proposed, angkatanWapala: r.member.angkatanWapala }),
     }));
   });
 }
@@ -184,7 +186,7 @@ export async function reviewCorrection(p: Principal, input: unknown, ctx: Reques
         await tx.member.update({
           where: { id: member.id },
           data: {
-            fields,
+            fields: legacyMemberFields(fields),
             nim: fields.nim ? fields.nim.toLowerCase() : null,
             version: { increment: 1 },
           },
