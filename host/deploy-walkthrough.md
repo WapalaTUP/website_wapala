@@ -190,6 +190,8 @@ Super User → wajib ganti password saat login pertama.
 
 ## 6. Pasang ClamAV (agar upload aktif)
 
+Saat deploy ulang, `host-deploy.sh` kini mem-pause ClamAV/socket, updater signature, serta worker/timer email dan maintenance untuk mengurangi tekanan RAM. Website dan database tetap hidup; upload yang perlu scan sementara ditolak dan email tertunda. Layanan dipulihkan setelah selesai/gagal. Ada lock deploy dan pemeriksaan RAM tersedia (default minimum 1024 MB). Lihat [panduan deploy hemat RAM dan recovery](../docs/deploy-memory.md) sebelum deploy pada VPS 2 GB tanpa swap, termasuk cara memulihkan layanan bila shell deploy dibunuh OOM/SIGKILL. Ini mengurangi risiko, bukan menjamin build bebas OOM.
+
 Menu **7 — Pasang/periksa ClamAV + dukungan video (FFmpeg)** pada `sudo bash host/wapala.sh` juga memasang paket `ffmpeg` (termasuk `ffprobe`) bila belum tersedia. Menu tetap memeriksa/memasang dukungan video meskipun `MEDIA_SCANNER` sudah aktif, lalu memeriksa executable sebagai user runtime. Ini dependensi server untuk pemeriksaan video MP4; pemutar browser sudah menjadi bagian website. Paket yang sudah tersedia tidak diinstal ulang. Jika `MEDIA_FFPROBE` memakai path khusus, pastikan path itu valid. Menginstal paket sistem ini tidak memerlukan build ulang aplikasi.
 
 > Bila provisioning dijalankan dengan `WAPALA_PROVISION_CLAMAV=1` (atau lewat

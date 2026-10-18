@@ -27,6 +27,8 @@
 #   WAPALA_SKIP_RESTART   0     (1 = lewati restart/health check)
 #   WAPALA_MIN_DISK_MB    2048
 #   WAPALA_BACKUP_CMD     (opsional) perintah backup sebelum migrate
+#   WAPALA_PAUSE_BACKGROUND 1     (pause scanner/workers sementara)
+#   WAPALA_MIN_BUILD_AVAILABLE_MB 1024 (minimum MemAvailable sebelum build)
 
 set -Eeuo pipefail
 
@@ -43,17 +45,97 @@ WAPALA_SKIP_MIGRATE="${WAPALA_SKIP_MIGRATE:-0}"
 WAPALA_SKIP_RESTART="${WAPALA_SKIP_RESTART:-0}"
 WAPALA_MIN_DISK_MB="${WAPALA_MIN_DISK_MB:-2048}"
 WAPALA_HEALTH_TRIES="${WAPALA_HEALTH_TRIES:-30}"
+WAPALA_PAUSE_BACKGROUND="${WAPALA_PAUSE_BACKGROUND:-1}"
+WAPALA_MIN_BUILD_AVAILABLE_MB="${WAPALA_MIN_BUILD_AVAILABLE_MB:-1024}"
 
 RELEASES_DIR="$WAPALA_BASE_DIR/releases"
 CURRENT_LINK="$WAPALA_BASE_DIR/current"
 RELEASE_ID="$(date -u +%Y%m%d-%H%M%S)"
 RELEASE_DIR="$RELEASES_DIR/$RELEASE_ID"
 CACHE_DIR="$(mktemp -d /var/tmp/wapala-npm-cache.XXXXXX)"
+PAUSE_STATE_FILE="$WAPALA_BASE_DIR/.deploy-paused-services"
+PAUSE_STATE_CREATED=0
+PAUSED_UNITS=()
 
 log() { printf '[wapala-deploy] %s\n' "$*"; }
 die() { printf '[wapala-deploy] ERROR: %s\n' "$*" >&2; exit 1; }
-cleanup() { rm -rf "$CACHE_DIR"; }
+# BEGIN DEPLOY RESOURCE FUNCTIONS (also used by the isolated Bash harness)
+pause_background_services() {
+  [ "$WAPALA_PAUSE_BACKGROUND" = "1" ] || return 0
+  local prefix="${WAPALA_SERVICE%.service}" unit load state
+  local -a present=()
+  # Snapshot all units before stopping anything: socket dependencies can change state.
+  for unit in "$prefix-email.timer" "$prefix-maintenance.timer" \
+    "$prefix-email.service" "$prefix-maintenance.service" \
+    clamav-freshclam.service clamav-daemon.socket clamav-daemon.service; do
+    load="$(systemctl show --property=LoadState --value "$unit")" || {
+      [ "$load" = "not-found" ] && continue
+      return 1
+    }
+    [ "$load" != "not-found" ] || continue
+    present+=("$unit")
+    state="$(systemctl show --property=ActiveState --value "$unit")" || return 1
+    case "$state" in active|activating|reloading) PAUSED_UNITS+=("$unit") ;; esac
+  done
+  # Persist before the first stop so recovery is possible after SIGKILL/OOM/reboot.
+  (umask 077; : > "$PAUSE_STATE_FILE") || return 1
+  PAUSE_STATE_CREATED=1
+  if [ "${#PAUSED_UNITS[@]}" -gt 0 ]; then
+    printf '%s\n' "${PAUSED_UNITS[@]}" > "$PAUSE_STATE_FILE" || return 1
+  fi
+  for unit in "${present[@]}"; do
+    log "Pause sementara: $unit"
+    systemctl stop "$unit" || return 1
+  done
+}
+
+restore_background_services() {
+  [ "$PAUSE_STATE_CREATED" = "1" ] || return 0
+  local unit i
+  local -a failed=()
+  # Restore scanner before workers/timers; never enable units that were disabled.
+  for ((i=${#PAUSED_UNITS[@]}-1; i>=0; i--)); do
+    unit="${PAUSED_UNITS[$i]}"
+    log "Pulihkan layanan: $unit"
+    if ! systemctl start "$unit"; then
+      log "PERINGATAN: gagal memulihkan $unit; jalankan systemctl start $unit."
+      failed=("$unit" "${failed[@]}")
+    fi
+  done
+  PAUSED_UNITS=("${failed[@]}")
+  if [ "$PAUSE_STATE_CREATED" = "1" ]; then
+    if [ "${#failed[@]}" -gt 0 ]; then
+      printf '%s\n' "${failed[@]}" > "$PAUSE_STATE_FILE"
+      return 1
+    fi
+    rm -f -- "$PAUSE_STATE_FILE" || return 1
+    PAUSE_STATE_CREATED=0
+  fi
+}
+
+check_build_memory() {
+  local available
+  available="$(awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo)"
+  [[ "$available" =~ ^[0-9]+$ ]] || die "MemAvailable tidak dapat dibaca."
+  log "RAM tersedia: ${available}MB; minimum build: ${WAPALA_MIN_BUILD_AVAILABLE_MB}MB."
+  [ "$available" -ge "$WAPALA_MIN_BUILD_AVAILABLE_MB" ] ||
+    die "RAM tersedia terlalu kecil untuk build. Layanan dipulihkan; pertimbangkan build di CI atau tambah RAM."
+}
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if ! restore_background_services; then
+    log "Pemulihan belum lengkap; daftar tersimpan di $PAUSE_STATE_FILE."
+    [ "$result" -ne 0 ] || result=1
+  fi
+  rm -rf "$CACHE_DIR" || true
+  exit "$result"
+}
+# END DEPLOY RESOURCE FUNCTIONS
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 # ---------- Preflight ----------
 WAPALA_REPO_URL="${WAPALA_REPO_URL:-https://github.com/WapalaTUP/website_wapala.git}"
@@ -62,8 +144,15 @@ command -v git >/dev/null || die "git tidak ditemukan."
 command -v node >/dev/null || die "node tidak ditemukan."
 command -v npm >/dev/null || die "npm tidak ditemukan."
 command -v runuser >/dev/null || die "runuser tidak ditemukan (butuh util-linux)."
+command -v flock >/dev/null || die "flock tidak ditemukan (butuh util-linux)."
 id -u "$WAPALA_BUILDER" >/dev/null 2>&1 || die "User build '$WAPALA_BUILDER' tidak ada. Jalankan provisioning dulu."
 [ -f "$WAPALA_ENV_FILE" ] || die "Env file $WAPALA_ENV_FILE tidak ada. Jalankan provisioning dulu."
+[[ "$WAPALA_PAUSE_BACKGROUND" =~ ^[01]$ ]] || die "WAPALA_PAUSE_BACKGROUND harus 0 atau 1."
+[[ "$WAPALA_MIN_BUILD_AVAILABLE_MB" =~ ^[0-9]+$ ]] || die "Batas minimum RAM harus berupa angka MB."
+exec 200>"$WAPALA_BASE_DIR/.deploy.lock"
+flock -n 200 || die "Deploy lain masih berjalan. Tunggu sampai selesai."
+[ ! -e "$PAUSE_STATE_FILE" ] ||
+  die "Ada layanan dari deploy terputus yang belum dipulihkan. Periksa $PAUSE_STATE_FILE sebelum deploy lagi."
 
 available_mb="$(df -Pm "$WAPALA_BASE_DIR" | awk 'NR==2 {print $4}')"
 [ "$available_mb" -ge "$WAPALA_MIN_DISK_MB" ] ||
@@ -88,6 +177,8 @@ run_psql() {
 }
 
 log "Deploy branch=$WAPALA_BRANCH release=$RELEASE_ID"
+pause_background_services || die "Tidak dapat menghentikan layanan pendukung dengan aman."
+check_build_memory
 
 # ---------- Prune release gagal SEBELUM build ----------
 # Deploy gagal beruntun tidak boleh menghabiskan disk: sisakan
@@ -130,6 +221,7 @@ run_as_builder env NODE_OPTIONS="--max-old-space-size=$WAPALA_HEAP_CI" \
 run_as_builder env NODE_OPTIONS="--max-old-space-size=$WAPALA_HEAP_CI" \
   npm --prefix "$RELEASE_DIR" run db:generate || die "prisma generate gagal."
 
+check_build_memory
 log "next build (heap ${WAPALA_HEAP_BUILD}MB)..."
 run_as_builder env NODE_OPTIONS="--max-old-space-size=$WAPALA_HEAP_BUILD" \
   npm --prefix "$RELEASE_DIR" run build || die "next build gagal."
@@ -200,6 +292,7 @@ mv -T "$CURRENT_LINK.new.$$" "$CURRENT_LINK"
 log "Aktif: $CURRENT_LINK -> $RELEASE_DIR"
 
 if [ "$WAPALA_SKIP_RESTART" = "1" ]; then
+  restore_background_services || die "Pemulihan layanan pendukung belum lengkap."
   log "Restart dilewati (WAPALA_SKIP_RESTART=1). Selesai."
   exit 0
 fi
@@ -252,4 +345,5 @@ while IFS= read -r dir; do
   log "Dihapus: $full"
 done < <(ls -1 "$RELEASES_DIR" | sort -r)
 
+restore_background_services || die "Deploy aktif, tetapi pemulihan layanan pendukung belum lengkap."
 log "DEPLOY SELESAI: $CURRENT_LINK -> $current_target (HEAD $HEAD_SHA)"
