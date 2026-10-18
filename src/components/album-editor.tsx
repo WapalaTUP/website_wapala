@@ -45,14 +45,17 @@ export function AlbumMediaEditor({
       return;
     }
     const chosen = Array.from(files);
+    const videoMimes = ["video/mp4", "video/quicktime", "video/webm", "video/x-matroska"];
     if (
       chosen.some(
         (file) =>
-          !["image/jpeg", "image/png", "image/webp", "video/mp4"].includes(file.type) ||
-          file.size > (file.type === "video/mp4" ? 50 : 5) * 1024 * 1024,
+          !["image/jpeg", "image/png", "image/webp", ...videoMimes].includes(file.type) ||
+          file.size > (videoMimes.includes(file.type) ? 50 : 5) * 1024 * 1024,
       )
     ) {
-      setError("Gunakan foto JPG/PNG/WebP maksimal 5 MB atau video MP4 maksimal 50 MB.");
+      setError(
+        "Gunakan foto JPG/PNG/WebP maksimal 5 MB atau video MP4/MOV/WebM/MKV maksimal 50 MB.",
+      );
       return;
     }
     setBusy(true);
@@ -60,7 +63,7 @@ export function AlbumMediaEditor({
     const next = [...items];
     try {
       for (const file of chosen) {
-        const video = file.type === "video/mp4";
+        const video = videoMimes.includes(file.type);
         const uploaded = await uploadMediaDetails(
           file,
           video ? "content-video" : "content",
@@ -127,7 +130,7 @@ export function AlbumMediaEditor({
         Unggah foto atau video
         <input
           type="file"
-          accept="image/jpeg,image/png,image/webp,video/mp4"
+          accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,video/x-matroska"
           multiple
           onChange={(event) => {
             void upload(event.target.files);

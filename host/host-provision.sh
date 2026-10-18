@@ -124,8 +124,8 @@ fi
 if [ ! -f "$ENV_FILE" ]; then
   log "Membuat $ENV_FILE (mode email: $EMAIL_MODE_OPT)..."
   security_key="$(openssl rand -base64 32)"
-  media_scanner_line="# MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala"
-  [ "$PROVISION_CLAMAV" = "1" ] && media_scanner_line="MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala"
+  media_scanner_line="# MEDIA_SCANNER=clamscan"
+  [ "$PROVISION_CLAMAV" = "1" ] && media_scanner_line="MEDIA_SCANNER=clamscan"
   # Bagian statis via heredoc (nilai aman: hex/base64/regex domain);
   # nilai dari operator (SMTP) ditulis via printf %s agar karakter
   # khusus pada password tidak diekspansikan shell.
@@ -169,9 +169,6 @@ fi
 log "Memasang unit systemd (aplikasi + maintenance)..."
 unit_tmp="$(mktemp)"
 sed "s|/usr/bin/node|$NODE_BIN|" "$(here)/wapala-host.service" > "$unit_tmp"
-if [ "$PROVISION_CLAMAV" = "1" ]; then
-  sed -i 's/^Group=wapala$/Group=wapala\nSupplementaryGroups=clamav/' "$unit_tmp"
-fi
 mv "$unit_tmp" /etc/systemd/system/wapala.service
 chmod 0644 /etc/systemd/system/wapala.service
 NPM_BIN="$(dirname "$NODE_BIN")/npm"
@@ -198,19 +195,13 @@ fi
 systemctl enable wapala-maintenance.timer >/dev/null 2>&1 || true
 systemctl start wapala-maintenance.timer >/dev/null 2>&1 || true
 
-# ---------- ClamAV (opsional) ----------
+# ---------- ClamAV on-demand (opsional) ----------
 if [ "$PROVISION_CLAMAV" = "1" ]; then
-  log "Memasang ClamAV (unduhan signature besar, tunggu)..."
-  apt-get install -y clamav clamav-daemon clamav-freshclam
-  # Buku app hingga 50 MB; default clamd 25M akan menolak scan-nya.
-  grep -q '^StreamMaxLength' /etc/clamav/clamd.conf 2>/dev/null ||
-    echo 'StreamMaxLength 60M' >> /etc/clamav/clamd.conf
+  log "Memasang ClamAV scanner on-demand (tanpa daemon 24/7 — RAM idle lega)..."
+  apt-get install -y clamav clamav-freshclam
   systemctl enable --now clamav-freshclam >/dev/null 2>&1 || true
   freshclam || log "freshclam gagal; jalankan ulang manual sebelum upload dipakai."
-  systemctl enable --now clamav-daemon >/dev/null 2>&1 || true
-  systemctl restart clamav-daemon >/dev/null 2>&1 || true
-  install -m 0755 "$(here)/clamdscan-wapala.sh" /usr/local/libexec/clamdscan-wapala
-  log "Scanner wrapper: /usr/local/libexec/clamdscan-wapala (StreamMaxLength 60M)"
+  log "Scanner: clamscan (dijalankan per unggahan; ~10-30 dtk/file, RAM memuncak sementara)."
 else
   log "ClamAV dilewati. TANPA scanner, upload media akan ditolak (fail-closed)."
 fi

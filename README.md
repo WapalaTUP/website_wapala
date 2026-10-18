@@ -39,7 +39,7 @@ deployment yang dapat diulang di VPS mana pun.
 | Aplikasi | Next.js 16 (standalone output), React 19, TypeScript |
 | Data | PostgreSQL + Prisma 7 (driver adapter `pg`) |
 | Keamanan | Argon2, cookie sesi HttpOnly, CSRF same-origin, throttling persisten, audit log |
-| Media | Penyimpanan privat di disk + pemindaian ClamAV (fail-closed) |
+| Media | Penyimpanan privat di disk + pemindaian ClamAV on-demand (fail-closed, tanpa daemon 24/7) |
 | Runtime | systemd (sandbox ketat) · Nginx · TLS Let's Encrypt |
 | Otomasi | GitHub Actions (CI gate + deploy SSH opsional) |
 
@@ -217,8 +217,10 @@ Untuk migration besar/berisiko: jalankan **menu 5 (Backup)** sebelum deploy.
   migrasi lewat role owner terpisah; build & migrate sebagai user `builder` non-root.
 - **Sandbox systemd** — `ProtectSystem=strict`, `PrivateDevices`, filter syscall,
   kernel interfaces dibatasi; kode release root-owned (RCE tidak dapat menimpa kode).
-- **Fail-closed media** — unggahan dipindai ClamAV **sebelum** di-decode; tanpa
-  scanner, unggahan ditolak (503).
+- **Fail-closed media** — unggahan dipindai ClamAV **sebelum** di-decode
+  (clamscan on-demand, tanpa daemon 24/7); tanpa scanner, unggahan ditolak (503).
+- **Video** — container MP4/MOV/WebM/MKV, codec H.264/H.265/VP9/AV1,
+  maksimal 50 MB / 20 menit / 4K; pesan validasi menyebut kriteria yang gagal.
 - **Brute-force** — lockout login per kombinasi (email, IP) 24 jam tanpa lock
   permanen; throttle Nginx + aplikasi berlapis; audit log untuk aksi sensitif.
 - **Secret minim permukaan** — hanya `/etc/wapala/production.env` (root `0600`)
@@ -229,7 +231,7 @@ Untuk migration besar/berisiko: jalankan **menu 5 (Backup)** sebelum deploy.
 
 ## Kapasitas
 
-VPS 2 GB menjalankan PostgreSQL + Next.js (+ ClamAV bila aktif) sekaligus.
+VPS 2 GB menjalankan PostgreSQL + Next.js sekaligus. ClamAV berjalan on-demand (tanpa daemon 24/7 � RAM idle lega; tiap unggahan memuncak ~1-1.5 GB sementara, 10-30 dtk/file).
 `host/host-deploy.sh` memakai batas bawaan berikut:
 
 | Variabel | Default | Fungsi |
@@ -254,7 +256,8 @@ Build `Killed` = RAM kurang; runtime sering restart = periksa OOM di
 | Build `Killed` | RAM — lihat [Kapasitas](#kapasitas) |
 | Health check gagal → rollback | `journalctl -u wapala -n 100`; cek env/database |
 | Login `423` | Lock per (email, IP) aktif (6× salah, 24 jam) — tunggu atau unlock via panel |
-| Upload `503` | ClamAV belum terpasang/mati — `host/wapala.sh` → Pasang ClamAV |
+| Upload `503` | Scanner belum terpasang — `host/wapala.sh` → Pasang ClamAV (on-demand) |
+| Video ditolak | Baca pesan spesifiknya: ≤50 MB, ≤20 menit, codec H.264/H.265/VP9/AV1, ≤4K — konversi via ffmpeg lalu unggah ulang |
 | Upload `413` | Buku maks 50 MB; pastikan nginx `client_max_body_size 60m` |
 | Semua pengunjung berbagi throttle saat di belakang Cloudflare | Pastikan template Nginx terbaru (blok `real_ip_header CF-Connecting-IP`) terpasang — deploy ulang |
 | Akses normal masih `Server: nginx` padahal Cloudflare aktif | DNS cache jalur UDP lama — gunakan DNS over HTTPS (Secure OS/browser) atau tunggu TTL |

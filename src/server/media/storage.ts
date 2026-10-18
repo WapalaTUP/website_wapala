@@ -205,7 +205,7 @@ async function readMediaMeta(
   const path = mediaPath(
     options.root || mediaRoot(),
     media.id,
-    media.extension as "webp" | "pdf" | "epub" | "mp4",
+    media.extension as "webp" | "pdf" | "epub" | "mp4" | "mov" | "webm" | "mkv",
   );
   await stat(path).catch(() => {
     throw new DomainError("MEDIA_CORRUPT", 503);

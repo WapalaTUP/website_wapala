@@ -137,7 +137,7 @@ install_flow() {
   local smtp=0 smtp_host="" smtp_port=587 smtp_user="" smtp_pass="" smtp_from=""
 
   echo
-  warn "ClamAV menambah pemakaian RAM ~1-1.5 GB (signature penuh). Tanpa ClamAV, upload media ditolak (fail-closed)."
+  warn "ClamAV on-demand: RAM idle lega (tanpa daemon 24/7); tiap unggahan discan clamscan (~10-30 dtk/file). Tanpa ClamAV, upload media ditolak (fail-closed)."
   if confirm "Pasang ClamAV sekarang? (agar upload langsung bisa diuji setelah live)" y; then clamav=1; else clamav=0; fi
 
   choose "Mode VPS yang dipakai?" \
@@ -471,35 +471,35 @@ video_tools_setup() {
 }
 
 clamav_flow() {
-  if grep -q '^MEDIA_SCANNER=' "$ENV_FILE" && ! grep -q '^# MEDIA_SCANNER' "$ENV_FILE"; then
-    ok "MEDIA_SCANNER sudah aktif di env."
-    systemctl is-active --quiet clamav-daemon && ok "clamav-daemon active." ||
-      warn "clamav-daemon tidak aktif: sudo systemctl restart clamav-daemon"
+  # ClamAV on-demand: clamscan dijalankan per unggahan (tanpa daemon 24/7).
+  if grep -q '^MEDIA_SCANNER=clamscan' "$ENV_FILE"; then
+    ok "MEDIA_SCANNER sudah clamscan (on-demand)."
+    command -v clamscan >/dev/null && ok "clamscan tersedia."
     video_tools_setup
     return
   fi
-  confirm "Pasang ClamAV + dukungan video FFmpeg sekarang? (~1-1.5 GB RAM tambahan untuk ClamAV)" y || return
+  if grep -q '^MEDIA_SCANNER=.*clamdscan' "$ENV_FILE"; then
+    warn "Server ini memakai clamd (daemon 24/7). Migrasi ke clamscan on-demand:"
+    warn "  sudo systemctl disable --now clamav-daemon clamav-freshclam 2>/dev/null"
+    warn "  lalu ubah MEDIA_SCANNER=clamscan di $ENV_FILE dan restart wapala."
+    video_tools_setup
+    return
+  fi
+  confirm "Pasang ClamAV on-demand + dukungan video FFmpeg? (RAM idle lega; scan unggahan ~10-30 dtk/file)" y || return
   video_tools_setup || return 1
-  run "apt-get install clamav clamav-daemon clamav-freshclam"
-  apt-get install -y clamav clamav-daemon clamav-freshclam
+  run "apt-get install clamav clamav-freshclam"
+  apt-get install -y clamav clamav-freshclam
   run "freshclam (5-15 menit)"
   systemctl stop clamav-freshclam 2>/dev/null || true
   freshclam || warn "freshclam gagal — ulangi manual."
-  grep -q '^StreamMaxLength' /etc/clamav/clamd.conf 2>/dev/null ||
-    echo 'StreamMaxLength 60M' >> /etc/clamav/clamd.conf
   systemctl enable --now clamav-freshclam >/dev/null 2>&1 || true
-  systemctl restart clamav-daemon
-  mkdir -p /usr/local/libexec
-  install -m 0755 "$SCRIPT_DIR/clamdscan-wapala.sh" /usr/local/libexec/clamdscan-wapala
-  sed -i 's|^# MEDIA_SCANNER=.*|MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala|' "$ENV_FILE"
-  grep -q '^MEDIA_SCANNER=' "$ENV_FILE" ||
-    echo 'MEDIA_SCANNER=/usr/local/libexec/clamdscan-wapala' >> "$ENV_FILE"
-  sed -i 's|^Group=wapala$|Group=wapala\nSupplementaryGroups=clamav|' /etc/systemd/system/wapala.service
+  sed -i 's|^#\{0,1\} MEDIA_SCANNER=.*|MEDIA_SCANNER=clamscan|' "$ENV_FILE"
+  grep -q '^MEDIA_SCANNER=' "$ENV_FILE" || echo 'MEDIA_SCANNER=clamscan' >> "$ENV_FILE"
   chmod 0600 "$ENV_FILE" && chown root:root "$ENV_FILE"
-  systemctl daemon-reload && systemctl restart wapala
-  ok "ClamAV terpasang. Uji:"
-  sudo -u "$RUNTIME_USER" /usr/local/libexec/clamdscan-wapala --no-summary --infected -- /etc/hostname &&
-    ok "Scanner OK (exit 0)" || err "Scanner gagal — periksa clamav-daemon."
+  systemctl restart wapala
+  ok "ClamAV on-demand terpasang. Uji:"
+  sudo -u "$RUNTIME_USER" clamscan --no-summary --infected -- /etc/hostname &&
+    ok "Scanner OK (exit 0)" || err "Scanner gagal — periksa instalasi clamav."
 }
 
 tls_info() {

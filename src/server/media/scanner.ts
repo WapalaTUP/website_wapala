@@ -32,7 +32,9 @@ const nativeScanner = (path: string, recursive = false): Promise<number> =>
         child.kill();
         reject(new DomainError("SCANNER_UNAVAILABLE", 503, unavailableMessage));
       },
-      recursive ? 180000 : 45000,
+      // clamscan on-demand memuat database signature setiap kali dipanggil
+      // (RAM memuncak sementara, tanpa daemon 24/7) — beri waktu cukup.
+      recursive ? 300000 : 120000,
     );
     child.once("error", () => {
       clearTimeout(timeout);
